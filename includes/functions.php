@@ -1,0 +1,1937 @@
+<?php
+// Database helper functions - Clean version
+
+function getProducts(PDO $pdo, $limit = null) {
+    $sql = "SELECT * FROM products WHERE status = 'active'";
+    if ($limit) {
+        $sql .= " LIMIT ?";
+    }
+
+    $stmt = $pdo->prepare($sql);
+    if ($limit) {
+        $stmt->execute([$limit]);
+    } else {
+        $stmt->execute();
+    }
+
+    return $stmt->fetchAll();
+}
+
+function ensureSocialTables(PDO $pdo) {
+    // Create social tables if they don't exist
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS friendships (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            requester_id INT NOT NULL,
+            addressee_id INT NOT NULL,
+            status ENUM('pending', 'accepted', 'rejected') DEFAULT 'pending',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_requester (requester_id),
+            INDEX idx_addressee (addressee_id)
+        )
+    ");
+    
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS posts (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            content TEXT,
+            image_path VARCHAR(255) DEFAULT NULL,
+            feeling VARCHAR(100) DEFAULT NULL,
+            privacy ENUM('public', 'friends', 'private') DEFAULT 'public',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_user (user_id)
+        )
+    ");
+    try { $pdo->exec("ALTER TABLE posts ADD COLUMN feeling VARCHAR(100) DEFAULT NULL"); } catch (Exception $e) {}
+    
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS post_likes (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            post_id INT NOT NULL,
+            user_id INT NOT NULL,
+            reaction_type VARCHAR(20) DEFAULT 'like',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY idx_post_user (post_id, user_id)
+        )
+    ");
+    try { $pdo->exec("ALTER TABLE post_likes ADD COLUMN reaction_type VARCHAR(20) DEFAULT 'like'"); } catch (Exception $e) {}
+    
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS post_comments (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            post_id INT NOT NULL,
+            user_id INT NOT NULL,
+            comment_text TEXT,
+            parent_comment_id INT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_post (post_id)
+        )
+    ");
+    
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS post_shares (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            post_id INT NOT NULL,
+            user_id INT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_post (post_id)
+        )
+    ");
+
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS comment_reactions (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            comment_id INT NOT NULL,
+            user_id INT NOT NULL,
+            reaction_type VARCHAR(20) DEFAULT 'like',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY idx_comment_user (comment_id, user_id)
+        )
+    ");
+    try { $pdo->exec("ALTER TABLE comment_reactions ADD COLUMN reaction_type VARCHAR(20) DEFAULT 'like'"); } catch (Exception $e) {}
+    
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS messages (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            sender_id INT NOT NULL,
+            receiver_id INT NOT NULL,
+            body TEXT,
+            is_read TINYINT(1) DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_sender (sender_id),
+            INDEX idx_receiver (receiver_id)
+        )
+    ");
+    try { $pdo->exec("ALTER TABLE messages CHANGE message_text body TEXT DEFAULT NULL"); } catch (Exception $e) {}
+    
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS notifications (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            type VARCHAR(50),
+            message TEXT,
+            is_read TINYINT(1) DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_user (user_id)
+        )
+    ");
+    
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS user_sessions (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            user_id INT UNSIGNED NOT NULL,
+            session_token VARCHAR(128) NOT NULL,
+            payload LONGTEXT,
+            user_agent TEXT,
+            ip_address VARCHAR(45),
+            last_activity INT UNSIGNED NOT NULL,
+            expires_at DATETIME NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_token (session_token),
+            INDEX idx_user (user_id),
+            INDEX idx_activity (last_activity)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+    // Add missing columns or fix types for existing tables
+    try { $pdo->exec("ALTER TABLE user_sessions MODIFY last_activity INT UNSIGNED NOT NULL"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE user_sessions MODIFY expires_at DATETIME NOT NULL"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE user_sessions ADD UNIQUE INDEX IF NOT EXISTS uniq_token (session_token)"); } catch (Exception $e) {}
+
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS rate_limits (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            type VARCHAR(32) NOT NULL,
+            identifier VARCHAR(64) NOT NULL,
+            attempts INT DEFAULT 1,
+            expires_at TIMESTAMP NULL DEFAULT NULL,
+            INDEX idx_type_identifier (type, identifier)
+        )
+    ");
+
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS security_logs (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT DEFAULT NULL,
+            event_type VARCHAR(64) NOT NULL,
+            ip_address VARCHAR(45) DEFAULT NULL,
+            user_agent TEXT DEFAULT NULL,
+            details TEXT DEFAULT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_user (user_id),
+            INDEX idx_event (event_type)
+        )
+    ");
+
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS login_history (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT DEFAULT NULL,
+            ip_address VARCHAR(45) DEFAULT NULL,
+            user_agent TEXT DEFAULT NULL,
+            location VARCHAR(128) DEFAULT NULL,
+            success TINYINT(1) DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_user (user_id)
+        )
+    ");
+
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS report_messages (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            reporter_id INT NOT NULL,
+            message_id INT NOT NULL,
+            reason VARCHAR(255) DEFAULT NULL,
+            status ENUM('open','resolved','dismissed') DEFAULT 'open',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_reporter (reporter_id),
+            INDEX idx_message (message_id)
+        )
+    ");
+
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS report_comments (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            reporter_id INT NOT NULL,
+            comment_id INT NOT NULL,
+            reason VARCHAR(255) DEFAULT NULL,
+            status ENUM('open','resolved','dismissed') DEFAULT 'open',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_reporter (reporter_id),
+            INDEX idx_comment (comment_id)
+        )
+    ");
+
+    // Ensure users table has registered_at column
+    try {
+        $pdo->exec("ALTER TABLE users ADD COLUMN registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+    } catch (Exception $e) {}
+
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS pinned_conversations (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            other_user_id INT NOT NULL,
+            pinned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uk_user_other (user_id, other_user_id),
+            INDEX idx_user (user_id)
+        )
+    ");
+
+    // Add missing notification columns
+    try {
+        $pdo->exec("ALTER TABLE notifications ADD COLUMN actor_id INT DEFAULT NULL");
+    } catch (PDOException $e) {}
+    try {
+        $pdo->exec("ALTER TABLE notifications ADD COLUMN entity_id INT DEFAULT NULL");
+    } catch (PDOException $e) {}
+
+    // Dismissed suggestions
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS dismissed_suggestions (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            dismissed_user_id INT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uk_user_dismissed (user_id, dismissed_user_id),
+            INDEX idx_user (user_id)
+        )
+    ");
+
+    // Saved posts
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS saved_posts (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            post_id INT NOT NULL,
+            user_id INT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY idx_save (post_id, user_id)
+        )
+    ");
+    // Post reports
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS post_reports (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            post_id INT NOT NULL,
+            user_id INT NOT NULL,
+            reason VARCHAR(100) DEFAULT NULL,
+            status ENUM('pending','resolved','dismissed') DEFAULT 'pending',
+            admin_note TEXT DEFAULT NULL,
+            resolved_by INT DEFAULT NULL,
+            resolved_at TIMESTAMP NULL DEFAULT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_status (status)
+        )
+    ");
+    // Migrate existing tables that may lack newer columns
+    try { $pdo->exec("ALTER TABLE post_reports ADD COLUMN status ENUM('pending','resolved','dismissed') DEFAULT 'pending' AFTER reason"); } catch (PDOException $e) {}
+    try { $pdo->exec("ALTER TABLE post_reports ADD COLUMN admin_note TEXT DEFAULT NULL AFTER status"); } catch (PDOException $e) {}
+    try { $pdo->exec("ALTER TABLE post_reports ADD COLUMN resolved_by INT DEFAULT NULL AFTER admin_note"); } catch (PDOException $e) {}
+    try { $pdo->exec("ALTER TABLE post_reports ADD COLUMN resolved_at TIMESTAMP NULL DEFAULT NULL AFTER resolved_by"); } catch (PDOException $e) {}
+    try { $pdo->exec("ALTER TABLE post_reports ADD INDEX idx_status (status)"); } catch (PDOException $e) {}
+}
+
+function getFriendshipStatus(PDO $pdo, int $viewerId, int $otherUserId): ?string {
+    $stmt = $pdo->prepare("
+        SELECT status
+        FROM friendships
+        WHERE (requester_id = ? AND addressee_id = ?)
+           OR (requester_id = ? AND addressee_id = ?)
+        LIMIT 1
+    ");
+    $stmt->execute([$viewerId, $otherUserId, $otherUserId, $viewerId]);
+    $friendship = $stmt->fetch();
+    
+    if (!$friendship) {
+        return null;
+    }
+    
+    return $friendship['status'];
+}
+
+function getProfileStats(PDO $pdo, int $userId) {
+    $stats = [
+        'posts' => 0,
+        'friends' => 0,
+        'photos' => 0
+    ];
+    
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM posts WHERE user_id = ?");
+    $stmt->execute([$userId]);
+    $stats['posts'] = (int) $stmt->fetchColumn();
+    
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM friendships
+        WHERE status = 'accepted'
+          AND (requester_id = ? OR addressee_id = ?)
+    ");
+    $stmt->execute([$userId, $userId]);
+    $stats['friends'] = (int) $stmt->fetchColumn();
+    
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM posts WHERE user_id = ? AND image_path IS NOT NULL AND image_path != ''");
+    $stmt->execute([$userId]);
+    $stats['photos'] = (int) $stmt->fetchColumn();
+    
+    return $stats;
+}
+
+function getProfilePosts(PDO $pdo, int $profileUserId, int $viewerId, int $limit = 10) {
+    $limit = max(1, $limit);
+    $isFriend = getFriendshipStatus($pdo, $viewerId, $profileUserId) === 'friends';
+    $isOwner = $viewerId === $profileUserId;
+    
+    $privacyCondition = $isOwner
+        ? "1 = 1"
+        : ($isFriend
+            ? "(p.privacy IN ('public', 'friends'))"
+            : "p.privacy = 'public'");
+    
+    $sql = "
+        SELECT
+            p.*,
+            u.username,
+            u.full_name,
+            u.avatar,
+            COUNT(DISTINCT pl.id) AS like_count,
+            COUNT(DISTINCT pc.id) AS comment_count,
+            COUNT(DISTINCT ps.id) AS share_count,
+            MAX(CASE WHEN pl.user_id = ? THEN pl.reaction_type ELSE NULL END) AS viewer_reaction
+        FROM posts p
+        INNER JOIN users u ON u.id = p.user_id
+        LEFT JOIN post_likes pl ON pl.post_id = p.id
+        LEFT JOIN post_comments pc ON pc.post_id = p.id
+        LEFT JOIN post_shares ps ON ps.post_id = p.id
+        WHERE p.user_id = ?
+          AND {$privacyCondition}
+        GROUP BY p.id
+        ORDER BY p.created_at DESC
+        LIMIT ?
+    ";
+    
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$viewerId, $profileUserId, $limit]);
+    $posts = $stmt->fetchAll();
+    
+    foreach ($posts as &$post) {
+        hydratePostSocial($pdo, $post, $viewerId, 5);
+    }
+    
+    return $posts;
+}
+
+function hydratePostSocial(PDO $pdo, array &$post, int $viewerId, int $commentLimit): void {
+    $post['comments'] = getPostComments($pdo, (int) $post['id'], $commentLimit, $viewerId, (int) $post['user_id']);
+    $post['viewer_reaction'] = $post['viewer_reaction'] ?: null;
+    $post['liked_by_viewer'] = !empty($post['viewer_reaction']);
+    $raw = getReactionSummary($pdo, (int) $post['id']);
+    $summary = [];
+    foreach ($raw as $type => $count) {
+        $summary[] = ['type' => $type, 'count' => $count, 'meta' => getReactionMeta($type)];
+    }
+    $post['reaction_summary'] = $summary;
+    $post['can_delete'] = ((int) $post['user_id'] === $viewerId);
+}
+
+function getFriendsList(PDO $pdo, int $userId, int $limit = 12) {
+    $limit = max(1, $limit);
+    $sql = "
+        SELECT u.id, u.username, u.full_name, u.avatar, u.bio
+        FROM friendships f
+        INNER JOIN users u
+            ON u.id = CASE
+                WHEN f.requester_id = ? THEN f.addressee_id
+                ELSE f.requester_id
+            END
+        WHERE (f.requester_id = ? OR f.addressee_id = ?)
+          AND f.status = 'accepted'
+        ORDER BY COALESCE(f.accepted_at, f.updated_at, f.created_at) DESC
+        LIMIT ?
+    ";
+    
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$userId, $userId, $userId, $limit]);
+    return $stmt->fetchAll();
+}
+
+function getFriendRequests(PDO $pdo, int $userId, int $limit = 10) {
+    $limit = max(1, $limit);
+    $sql = "
+        SELECT f.id, f.created_at, u.id AS user_id, u.username, u.full_name, u.avatar, u.bio
+        FROM friendships f
+        INNER JOIN users u ON u.id = f.requester_id
+        WHERE f.addressee_id = ?
+          AND f.status = 'pending'
+        ORDER BY f.created_at DESC
+        LIMIT ?
+    ";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$userId, $limit]);
+    return $stmt->fetchAll();
+}
+
+function getSuggestedFriends(PDO $pdo, int $userId, int $limit = 6) {
+    $limit = max(1, $limit);
+    
+    // First try mutual friends approach
+    $sql = "
+        SELECT
+            u.id,
+            u.username,
+            u.full_name,
+            u.avatar,
+            u.bio,
+            u.location,
+            CASE
+                WHEN viewer.location IS NOT NULL
+                 AND viewer.location <> ''
+                 AND u.location = viewer.location THEN 1
+                ELSE 0
+            END AS same_location,
+            (
+                SELECT COUNT(DISTINCT viewer_friends.friend_id)
+                FROM (
+                    SELECT CASE
+                         WHEN f1.requester_id = ? THEN f1.addressee_id
+                         ELSE f1.requester_id
+                     END AS friend_id
+                    FROM friendships f1
+                    WHERE (f1.requester_id = ? OR f1.addressee_id = ?)
+                      AND f1.status = 'accepted'
+                ) viewer_friends
+                INNER JOIN friendships f2
+                    ON f2.status = 'accepted'
+                    AND (
+                        (f2.requester_id = viewer_friends.friend_id AND f2.addressee_id = u.id)
+                     OR (f2.addressee_id = viewer_friends.friend_id AND f2.requester_id = u.id)
+                    )
+            ) AS mutual_count
+        FROM users u
+        LEFT JOIN users viewer ON viewer.id = ?
+        WHERE u.id != ?
+          AND NOT EXISTS (
+              SELECT 1
+              FROM friendships f
+              WHERE (
+                    (f.requester_id = ? AND f.addressee_id = u.id)
+                 OR (f.requester_id = u.id AND f.addressee_id = ?)
+              )
+          )
+          AND NOT EXISTS (
+              SELECT 1 FROM dismissed_suggestions ds
+              WHERE ds.user_id = ? AND ds.dismissed_user_id = u.id
+          )
+        ORDER BY
+            mutual_count DESC,
+            same_location DESC,
+            CASE WHEN COALESCE(u.avatar, '') != '' AND COALESCE(u.avatar, '') != 'default.png' THEN 1 ELSE 0 END DESC,
+            COALESCE(NULLIF(u.full_name, ''), u.username) ASC
+        LIMIT ?
+    ";
+    
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$userId, $userId, $userId, $userId, $userId, $userId, $userId, $userId, $limit]);
+    $suggestions = $stmt->fetchAll();
+    
+    foreach ($suggestions as &$suggestion) {
+        $mutualCount = (int) ($suggestion['mutual_count'] ?? 0);
+        $sameLocation = !empty($suggestion['same_location']);
+        
+        if ($mutualCount > 0) {
+            $suggestion['suggestion_reason'] = $mutualCount . ' mutual friend' . ($mutualCount === 1 ? '' : 's');
+        } elseif ($sameLocation && !empty($suggestion['location'])) {
+            $suggestion['suggestion_reason'] = 'Lives in ' . $suggestion['location'];
+        } else {
+            $suggestion['suggestion_reason'] = 'People you may know';
+        }
+    }
+    unset($suggestion);
+    
+    if (!$suggestions) {
+        // Fallback: just get random users
+        $fallbackStmt = $pdo->prepare("
+            SELECT
+                u.id,
+                u.username,
+                u.full_name,
+                u.avatar,
+                u.bio,
+                u.location,
+                0 AS same_location,
+                0 AS mutual_count,
+                'People you may know' AS suggestion_reason
+            FROM users u
+            WHERE u.id != ?
+              AND NOT EXISTS (
+                    SELECT 1
+                    FROM friendships f
+                    WHERE f.status = 'accepted'
+                      AND (
+                            (f.requester_id = ? AND f.addressee_id = u.id)
+                         OR (f.requester_id = u.id AND f.addressee_id = ?)
+                       )
+              )
+              AND NOT EXISTS (
+                    SELECT 1 FROM dismissed_suggestions ds
+                    WHERE ds.user_id = ? AND ds.dismissed_user_id = u.id
+              )
+            ORDER BY
+                CASE WHEN COALESCE(u.avatar, '') != '' AND COALESCE(u.avatar, '') != 'default.png' THEN 1 ELSE 0 END DESC,
+                COALESCE(NULLIF(u.full_name, ''), u.username) ASC
+            LIMIT ?
+        ");
+        $fallbackStmt->execute([$userId, $userId, $userId, $userId, $limit]);
+        $suggestions = $fallbackStmt->fetchAll() ?: [];
+    }
+    
+    return $suggestions;
+}
+
+function getPostComments(PDO $pdo, int $postId, int $limit = 5, int $viewerId = 0, int $postOwnerId = 0) {
+    $limit = max(1, $limit);
+    
+    // 1. Fetch Root Comments (latest first)
+    $stmt = $pdo->prepare("
+        SELECT pc.*, u.username, u.full_name, u.avatar
+        FROM post_comments pc
+        INNER JOIN users u ON u.id = pc.user_id
+        WHERE pc.post_id = ? AND (pc.parent_comment_id IS NULL OR pc.parent_comment_id = 0)
+        ORDER BY pc.created_at DESC
+        LIMIT ?
+    ");
+    $stmt->execute([$postId, $limit]);
+    $rootComments = $stmt->fetchAll() ?: [];
+    
+    if (empty($rootComments)) return [];
+
+    // Reverse root comments to show chronological order at the bottom
+    $rootComments = array_reverse($rootComments);
+    $rootIds = array_column($rootComments, 'id');
+    
+    // 2. Fetch ALL replies for this post (we'll filter in PHP to keep it simple and robust)
+    // For very large posts, we might need a more targeted approach, but for now this is best for tree integrity.
+    $stmt = $pdo->prepare("
+        SELECT pc.*, u.username, u.full_name, u.avatar
+        FROM post_comments pc
+        INNER JOIN users u ON u.id = pc.user_id
+        WHERE pc.post_id = ? AND pc.parent_comment_id > 0
+        ORDER BY pc.created_at ASC
+    ");
+    $stmt->execute([$postId]);
+    $allReplies = $stmt->fetchAll() ?: [];
+
+    // 3. Build a map of ALL comments (roots + replies) for enrichment
+    $allComments = array_merge($rootComments, $allReplies);
+    $commentMap = [];
+    foreach ($allComments as &$c) {
+        $c['can_delete'] = ((int) $c['user_id'] === $viewerId || $viewerId === $postOwnerId);
+        $c['viewer_reaction'] = null;
+        if ($viewerId > 0) {
+            $stmt2 = $pdo->prepare("SELECT reaction_type FROM comment_reactions WHERE comment_id = ? AND user_id = ?");
+            $stmt2->execute([$c['id'], $viewerId]);
+            $cr = $stmt2->fetch();
+            $c['viewer_reaction'] = $cr ? $cr['reaction_type'] : null;
+        }
+        $c['reaction_summary'] = getCommentReactionSummary($pdo, (int) $c['id']);
+        $c['reaction_count'] = array_sum($c['reaction_summary']);
+        $c['created_at_formatted'] = formatTimeAgo($c['created_at'] ?? '');
+        $c['replies'] = [];
+        $commentMap[$c['id']] = &$c;
+    }
+    unset($c);
+
+    // 4. Organize into tree
+    $tree = [];
+    foreach ($rootComments as $rc) {
+        $tree[] = &$commentMap[$rc['id']];
+    }
+
+    foreach ($allReplies as $reply) {
+        $pid = (int) $reply['parent_comment_id'];
+        if (isset($commentMap[$pid])) {
+            $commentMap[$pid]['replies'][] = &$commentMap[$reply['id']];
+        }
+    }
+
+    return $tree;
+}
+
+function getReactionSummary(PDO $pdo, int $postId): array {
+    $stmt = $pdo->prepare("
+        SELECT reaction_type, COUNT(*) as count
+        FROM post_likes
+        WHERE post_id = ?
+        GROUP BY reaction_type
+    ");
+    $stmt->execute([$postId]);
+    $reactions = $stmt->fetchAll();
+    
+    $summary = [];
+    foreach ($reactions as $reaction) {
+        $summary[$reaction['reaction_type']] = (int) $reaction['count'];
+    }
+    
+    return $summary;
+}
+
+function getCommentReactionSummary(PDO $pdo, int $commentId): array {
+    $stmt = $pdo->prepare("
+        SELECT reaction_type, COUNT(*) as count
+        FROM comment_reactions
+        WHERE comment_id = ?
+        GROUP BY reaction_type
+    ");
+    $stmt->execute([$commentId]);
+    $reactions = $stmt->fetchAll();
+    
+    $summary = [];
+    foreach ($reactions as $reaction) {
+        $summary[$reaction['reaction_type']] = (int) $reaction['count'];
+    }
+    
+    return $summary;
+}
+
+function getPostDetails(PDO $pdo, int $postId, int $viewerId): ?array {
+    $stmt = $pdo->prepare("
+        SELECT
+            p.*,
+            u.username,
+            u.full_name,
+            u.avatar,
+            COUNT(DISTINCT pl.id) AS like_count,
+            COUNT(DISTINCT pc.id) AS comment_count,
+            COUNT(DISTINCT ps.id) AS share_count,
+            MAX(CASE WHEN pl.user_id = ? THEN pl.reaction_type ELSE NULL END) AS viewer_reaction
+        FROM posts p
+        INNER JOIN users u ON u.id = p.user_id
+        LEFT JOIN post_likes pl ON pl.post_id = p.id
+        LEFT JOIN post_comments pc ON pc.post_id = p.id
+        LEFT JOIN post_shares ps ON ps.post_id = p.id
+        WHERE p.id = ?
+        GROUP BY p.id
+        LIMIT 1
+    ");
+    $stmt->execute([$viewerId, $postId]);
+    $post = $stmt->fetch();
+    
+    if ($post) {
+        hydratePostSocial($pdo, $post, $viewerId, 50);
+        $post['created_at_formatted'] = formatTimeAgo($post['created_at']);
+    }
+    
+    return $post ?: null;
+}
+
+function getVisibleFeedPosts(PDO $pdo, ?int $viewerId = null, int $limit = 10, string $mode = 'home'): array {
+    $limit = max(1, $limit);
+    $viewerId = $viewerId ?: 0;
+    
+    $sql = "
+        SELECT
+            p.*,
+            u.username,
+            u.full_name,
+            u.avatar,
+            COUNT(DISTINCT pl.id) AS like_count,
+            COUNT(DISTINCT pc.id) AS comment_count,
+            COUNT(DISTINCT ps.id) AS share_count,
+            MAX(CASE WHEN pl.user_id = ? THEN pl.reaction_type ELSE NULL END) AS viewer_reaction
+        FROM posts p
+        INNER JOIN users u ON u.id = p.user_id
+        LEFT JOIN post_likes pl ON pl.post_id = p.id
+        LEFT JOIN post_comments pc ON pc.post_id = p.id
+        LEFT JOIN post_shares ps ON ps.post_id = p.id
+        WHERE p.user_id != ?
+          AND (
+            p.privacy = 'public'
+            OR (
+              ? > 0
+              AND EXISTS (
+                  SELECT 1
+                  FROM friendships f
+                  WHERE f.status = 'accepted'
+                    AND (
+                          (f.requester_id = ? AND f.addressee_id = p.user_id)
+                       OR (f.addressee_id = ? AND f.requester_id = p.user_id)
+                      )
+                    AND p.privacy = 'friends'
+              )
+            )
+          )
+        GROUP BY p.id
+        ORDER BY
+          CASE
+            WHEN EXISTS (
+                SELECT 1
+                FROM friendships f2
+                WHERE f2.status = 'accepted'
+                  AND (
+                        (f2.requester_id = ? AND f2.addressee_id = p.user_id)
+                     OR (f2.addressee_id = ? AND f2.requester_id = p.user_id)
+                    )
+            ) THEN 0
+            WHEN p.privacy = 'public' THEN 1
+            ELSE 2
+          END,
+          RAND()
+        LIMIT ?
+    ";
+    
+    $stmt = $pdo->prepare($sql);
+    $stmt->bindValue(1, $viewerId, PDO::PARAM_INT);
+    $stmt->bindValue(2, $viewerId, PDO::PARAM_INT);
+    $stmt->bindValue(3, $viewerId, PDO::PARAM_INT);
+    $stmt->bindValue(4, $viewerId, PDO::PARAM_INT);
+    $stmt->bindValue(5, $viewerId, PDO::PARAM_INT);
+    $stmt->bindValue(6, $viewerId, PDO::PARAM_INT);
+    $stmt->bindValue(7, $viewerId, PDO::PARAM_INT);
+    $stmt->bindValue(8, $limit, PDO::PARAM_INT);
+    $stmt->execute();
+    $posts = $stmt->fetchAll();
+    
+    foreach ($posts as &$post) {
+        hydratePostSocial($pdo, $post, $viewerId, 3);
+    }
+    
+    return $posts;
+}
+
+function getTopReachPosts(PDO $pdo, ?int $viewerId = null, int $limit = 5): array {
+    $limit = max(1, min($limit, 20));
+    $viewerId = $viewerId ?: 0;
+    
+    $sql = "
+        SELECT
+            p.*,
+            u.username,
+            u.full_name,
+            u.avatar,
+            COUNT(DISTINCT pl.id) AS like_count,
+            COUNT(DISTINCT pc.id) AS comment_count,
+            COUNT(DISTINCT ps.id) AS share_count,
+            MAX(CASE WHEN pl.user_id = ? THEN pl.reaction_type ELSE NULL END) AS viewer_reaction
+        FROM posts p
+        INNER JOIN users u ON u.id = p.user_id
+        LEFT JOIN post_likes pl ON pl.post_id = p.id
+        LEFT JOIN post_comments pc ON pc.post_id = p.id
+        LEFT JOIN post_shares ps ON ps.post_id = p.id
+        WHERE p.privacy = 'public'
+          AND p.user_id != ?
+        GROUP BY p.id
+        ORDER BY (COUNT(DISTINCT pl.id) + COUNT(DISTINCT pc.id) * 2) DESC, RAND()
+        LIMIT ?
+    ";
+    
+    $stmt = $pdo->prepare($sql);
+    $stmt->bindValue(1, $viewerId, PDO::PARAM_INT);
+    $stmt->bindValue(2, $viewerId, PDO::PARAM_INT);
+    $stmt->bindValue(3, $limit, PDO::PARAM_INT);
+    $stmt->execute();
+    $posts = $stmt->fetchAll();
+    
+    foreach ($posts as &$post) {
+        hydratePostSocial($pdo, $post, $viewerId, 3);
+    }
+    
+    return $posts;
+}
+
+function getHomePeopleSuggestions(PDO $pdo, ?int $viewerId = null, int $limit = 6): array {
+    $limit = max(1, $limit);
+    
+    if ($viewerId) {
+        $suggestions = getSuggestedFriends($pdo, (int) $viewerId, $limit);
+        if ($suggestions) {
+            return $suggestions;
+        }
+    }
+    
+    // Fallback: get random active users
+    $stmt = $pdo->prepare("
+        SELECT u.id, u.username, u.full_name, u.avatar, u.bio, u.location,
+                 0 AS same_location, 0 AS mutual_count,
+                 'Active in DreamBD' AS suggestion_reason
+        FROM users u
+        WHERE u.id != ?
+          AND NOT EXISTS (
+              SELECT 1 FROM dismissed_suggestions ds
+              WHERE ds.user_id = ? AND ds.dismissed_user_id = u.id
+          )
+        ORDER BY u.id DESC
+        LIMIT ?
+    ");
+    $stmt->bindValue(1, $viewerId ?: 0, PDO::PARAM_INT);
+    $stmt->bindValue(2, $viewerId ?: 0, PDO::PARAM_INT);
+    $stmt->bindValue(3, $limit, PDO::PARAM_INT);
+    $stmt->execute();
+    return $stmt->fetchAll() ?: [];
+}
+
+function getHomeSearchResults(PDO $pdo, ?int $viewerId, string $query, int $userLimit = 5, int $postLimit = 4): array {
+    $query = trim($query);
+    if ($query === '') {
+        return ['users' => [], 'posts' => []];
+    }
+    
+    $like = "%{$query}%";
+    $prefixLike = $query . '%';
+    
+    $userStmt = $pdo->prepare("
+        SELECT u.id, u.username, u.full_name, u.avatar, u.bio, u.location,
+               CASE WHEN u.full_name LIKE ? THEN 1 ELSE 0 END AS name_exact,
+               CASE WHEN u.username LIKE ? THEN 1 ELSE 0 END AS username_exact
+        FROM users u
+        WHERE u.username LIKE ? OR u.full_name LIKE ? OR u.bio LIKE ?
+        ORDER BY name_exact DESC, username_exact DESC,
+                 CASE WHEN COALESCE(u.avatar, '') != '' AND COALESCE(u.avatar, '') != 'default.png' THEN 1 ELSE 0 END DESC,
+                 u.full_name ASC
+        LIMIT ?
+    ");
+    $userStmt->execute([$like, $like, $like, $like, $prefixLike, $userLimit]);
+    $users = $userStmt->fetchAll() ?: [];
+
+    $postStmt = $pdo->prepare("
+        SELECT p.*, u.username, u.full_name, u.avatar
+        FROM posts p
+        INNER JOIN users u ON u.id = p.user_id
+        WHERE p.content LIKE ?
+          AND p.privacy = 'public'
+        ORDER BY p.created_at DESC
+        LIMIT ?
+    ");
+    $postStmt->execute(["%{$query}%", $postLimit]);
+    $posts = $postStmt->fetchAll() ?: [];
+    
+    foreach ($posts as &$post) {
+        $post['content_excerpt'] = substr(strip_tags($post['content']), 0, 150) . '...';
+    }
+    
+    return ['users' => $users, 'posts' => $posts, 'counts' => ['all' => count($users) + count($posts), 'people' => count($users), 'posts' => count($posts)]];
+}
+
+function getSearchResults(PDO $pdo, ?int $viewerId, string $query, string $tab = 'all', int $userLimit = 12, int $postLimit = 12): array {
+    $results = getHomeSearchResults($pdo, $viewerId, $query, $userLimit, $postLimit);
+    $tab = in_array($tab, ['all', 'people', 'posts'], true) ? $tab : 'all';
+    
+    if ($tab === 'people') {
+        $results['posts'] = [];
+    } elseif ($tab === 'posts') {
+        $results['users'] = [];
+    }
+    
+    return $results;
+}
+
+function getMessageThreads(PDO $pdo, int $userId): array {
+    $stmt = $pdo->prepare("
+        SELECT
+            CASE
+                WHEN m.sender_id = ? THEN m.receiver_id
+                ELSE m.sender_id
+            END AS other_user_id,
+            u.username, u.full_name, u.avatar,
+            MAX(m.created_at) AS last_message_at,
+            SUBSTRING_INDEX(GROUP_CONCAT(COALESCE(m.body, '') ORDER BY m.created_at DESC), ',', 1) AS last_message,
+            COUNT(CASE WHEN m.is_read = 0 AND m.receiver_id = ? THEN 1 END) AS unread_count,
+            EXISTS(SELECT 1 FROM user_sessions us WHERE us.user_id = u.id AND us.expires_at > NOW() AND us.last_activity >= (UNIX_TIMESTAMP() - 300)) AS is_online,
+            EXISTS(SELECT 1 FROM pinned_conversations pc2 WHERE pc2.user_id = ? AND pc2.other_user_id = u.id) AS is_pinned
+        FROM messages m
+        INNER JOIN users u ON u.id = CASE
+                WHEN m.sender_id = ? THEN m.receiver_id
+                ELSE m.sender_id
+            END
+        WHERE m.sender_id = ? OR m.receiver_id = ?
+        GROUP BY other_user_id
+        ORDER BY is_pinned DESC, last_message_at DESC
+    ");
+    $stmt->execute([$userId, $userId, $userId, $userId, $userId, $userId]);
+    return $stmt->fetchAll();
+}
+
+function getMessageContacts(PDO $pdo, int $userId, int $limit = 12): array {
+    $limit = max(1, $limit);
+    $stmt = $pdo->prepare("
+        SELECT
+            u.id,
+            u.username,
+            u.full_name,
+            u.avatar,
+            u.bio,
+            EXISTS(SELECT 1 FROM user_sessions us WHERE us.user_id = u.id AND us.expires_at > NOW() AND us.last_activity >= (UNIX_TIMESTAMP() - 300)) AS is_online,
+            (
+                SELECT MAX(m.created_at)
+                FROM messages m
+                WHERE (m.sender_id = ? AND m.receiver_id = u.id)
+                   OR (m.receiver_id = ? AND m.sender_id = u.id)
+            ) AS last_contact_at
+        FROM users u
+        WHERE u.id IN (
+            SELECT CASE
+                     WHEN f.requester_id = ? THEN f.addressee_id
+                     ELSE f.requester_id
+                 END
+            FROM friendships f
+            WHERE (f.requester_id = ? OR f.addressee_id = ?)
+              AND f.status = 'accepted'
+        )
+        ORDER BY last_contact_at DESC
+        LIMIT ?
+    ");
+    $stmt->bindValue(1, $userId, PDO::PARAM_INT);
+    $stmt->bindValue(2, $userId, PDO::PARAM_INT);
+    $stmt->bindValue(3, $userId, PDO::PARAM_INT);
+    $stmt->bindValue(4, $userId, PDO::PARAM_INT);
+    $stmt->bindValue(5, $userId, PDO::PARAM_INT);
+    $stmt->bindValue(6, $limit, PDO::PARAM_INT);
+    $stmt->execute();
+    return $stmt->fetchAll();
+}
+
+function getConversationMessages(PDO $pdo, int $userId, int $otherUserId, int $limit = 100, ?int $beforeMessageId = null, ?int $afterMessageId = null): array {
+    $limit = max(1, $limit);
+    $extraClause = '';
+    $params = [$userId, $userId, $otherUserId, $otherUserId, $userId];
+
+    if ($beforeMessageId && $beforeMessageId > 0) {
+        $extraClause = ' AND m.id < ?';
+        $params[] = $beforeMessageId;
+    } elseif ($afterMessageId && $afterMessageId > 0) {
+        $extraClause = ' AND m.id > ?';
+        $params[] = $afterMessageId;
+    }
+
+    $params[] = $limit;
+
+    $stmt = $pdo->prepare("
+        SELECT m.*, u.username, u.full_name, u.avatar,
+               r.body AS reply_body, r.image_path AS reply_image_path,
+               ru.full_name AS reply_full_name, ru.username AS reply_username,
+               EXISTS(SELECT 1 FROM message_pins mp WHERE mp.message_id = m.id AND mp.user_id = ?) AS is_pinned,
+               (SELECT reaction_type FROM message_reactions WHERE message_id = m.id AND user_id = ?) AS viewer_reaction
+        FROM messages m
+        INNER JOIN users u ON u.id = m.sender_id
+        LEFT JOIN messages r ON r.id = m.reply_to_message_id
+        LEFT JOIN users ru ON ru.id = r.sender_id
+        WHERE (
+                (m.sender_id = ? AND m.receiver_id = ?)
+             OR (m.sender_id = ? AND m.receiver_id = ?)
+          )
+          {$extraClause}
+        ORDER BY m.id DESC
+        LIMIT ?
+    ");
+    array_splice($params, 1, 0, $userId);
+
+    $stmt->execute($params);
+    $messages = array_reverse($stmt->fetchAll());    
+    $messageIds = array_column($messages, 'id');
+    $reactionsByMsg = [];
+    if (!empty($messageIds)) {
+        $ids = array_map('intval', $messageIds);
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        try {
+            $stmtR = $pdo->prepare("SELECT message_id, reaction_type, COUNT(*) AS cnt FROM message_reactions WHERE message_id IN ($placeholders) GROUP BY message_id, reaction_type");
+            $stmtR->execute($ids);
+            while ($row = $stmtR->fetch()) {
+                $reactionsByMsg[(int) $row['message_id']][] = ['reaction_type' => $row['reaction_type'], 'count' => (int) $row['cnt']];
+            }
+        } catch (Throwable $e) {}
+    }
+    
+    foreach ($messages as &$msg) {
+        $msg['is_pinned'] = (bool) ($msg['is_pinned'] ?? false);
+        $msg['is_read'] = (bool) ($msg['is_read'] ?? false);
+        $msg['reaction_summary'] = $reactionsByMsg[(int) $msg['id']] ?? [];
+    }
+    unset($msg);
+    
+    try {
+        $stmt2 = $pdo->prepare("UPDATE messages SET is_read = 1 WHERE sender_id = ? AND receiver_id = ? AND is_read = 0");
+        $stmt2->execute([$otherUserId, $userId]);
+    } catch (Throwable $e) {}
+    
+    return $messages;
+}
+
+function getAllFriends(PDO $pdo, int $userId, int $limit = 200): array {
+    $limit = max(1, $limit);
+    $stmt = $pdo->prepare("
+        SELECT u.id, u.username, u.full_name, u.avatar, u.bio,
+               EXISTS(SELECT 1 FROM user_sessions us WHERE us.user_id = u.id AND us.expires_at > NOW() AND us.last_activity >= (UNIX_TIMESTAMP() - 300)) AS is_online,
+               (SELECT MAX(m.created_at) FROM messages m WHERE (m.sender_id = ? AND m.receiver_id = u.id) OR (m.receiver_id = ? AND m.sender_id = u.id)) AS last_contact_at
+        FROM friendships f
+        INNER JOIN users u ON u.id = CASE WHEN f.requester_id = ? THEN f.addressee_id ELSE f.requester_id END
+        WHERE (f.requester_id = ? OR f.addressee_id = ?) AND f.status = 'accepted'
+        ORDER BY u.full_name ASC
+        LIMIT ?
+    ");
+    $stmt->execute([$userId, $userId, $userId, $userId, $userId, $limit]);
+    return $stmt->fetchAll();
+}
+
+function searchUsers(PDO $pdo, int $userId, string $query, int $limit = 20): array {
+    $limit = max(1, $limit);
+    $q = '%' . $query . '%';
+    $stmt = $pdo->prepare("
+        SELECT u.id, u.username, u.full_name, u.avatar,
+               CASE WHEN f.id IS NOT NULL THEN 1 ELSE 0 END AS is_friend,
+               EXISTS(SELECT 1 FROM user_sessions us WHERE us.user_id = u.id AND us.expires_at > NOW() AND us.last_activity >= (UNIX_TIMESTAMP() - 300)) AS is_online
+        FROM users u
+        LEFT JOIN friendships f ON (f.requester_id = ? AND f.addressee_id = u.id OR f.requester_id = u.id AND f.addressee_id = ?) AND f.status = 'accepted'
+        WHERE u.id != ? AND (u.full_name LIKE ? OR u.username LIKE ?)
+        ORDER BY is_friend DESC, u.full_name ASC
+        LIMIT ?
+    ");
+    $stmt->execute([$userId, $userId, $userId, $q, $q, $limit]);
+    return $stmt->fetchAll();
+}
+
+function getNotificationsList(PDO $pdo, int $userId, int $limit = 50, string $filter = 'all', ?int $beforeId = null): array {
+    $limit = max(1, $limit);
+    $filterClause = '';
+    $params = [$userId];
+    
+    if ($filter === 'read') {
+        $filterClause .= " AND n.is_read = 1";
+    } elseif ($filter === 'unread') {
+        $filterClause .= " AND n.is_read = 0";
+    }
+    
+    if ($beforeId && $beforeId > 0) {
+        $filterClause .= " AND n.id < ?";
+        $params[] = $beforeId;
+    }
+    
+    $params[] = $limit;
+    
+    $stmt = $pdo->prepare("
+        SELECT n.*, u.username, u.full_name, u.avatar
+        FROM notifications n
+        LEFT JOIN users u ON u.id = n.actor_id
+        WHERE n.user_id = ?
+          {$filterClause}
+        ORDER BY n.created_at DESC
+        LIMIT ?
+    ");
+    
+    $stmt->execute($params);
+    $notifications = $stmt->fetchAll();
+    
+    // Resolve post_id from comment_id for comment-type notifications
+    $commentTypes = ['comment', 'reply', 'mention', 'comment_reaction'];
+    foreach ($notifications as &$notification) {
+        if (in_array($notification['type'], $commentTypes, true) && !empty($notification['entity_id'])) {
+            $cStmt = $pdo->prepare("SELECT post_id FROM post_comments WHERE id = ?");
+            $cStmt->execute([(int)$notification['entity_id']]);
+            $resolvedPostId = (int)$cStmt->fetchColumn();
+            if ($resolvedPostId) {
+                $notification['resolved_post_id'] = $resolvedPostId;
+            }
+        }
+    }
+    unset($notification);
+    
+    foreach ($notifications as &$notification) {
+        hydrateNotification($notification);
+    }
+    
+    return $notifications;
+}
+
+function hydrateNotification(array &$notification): void {
+    $notification['time_ago'] = formatTimeAgo($notification['created_at']);
+    $notification['created_at_exact'] = date('M j, Y g:i A', strtotime((string) $notification['created_at']));
+    
+    // Actor info
+    $notification['actor_name'] = $notification['full_name'] ?: $notification['username'] ?? 'DreamBD';
+    $notification['avatar'] = $notification['avatar'] ?? 'default.png';
+    
+    // Meta based on type
+    $metaMap = [
+        'friend_request' => ['icon' => 'user-plus', 'label' => 'Friend Request', 'accent' => 'is-friend', 'color' => '#10b981'],
+        'friend_accept' => ['icon' => 'user-check', 'label' => 'Accepted', 'accent' => 'is-friend', 'color' => '#10b981'],
+        'like' => ['icon' => 'thumbs-up', 'label' => 'Like', 'accent' => 'is-reaction', 'color' => '#1877f2'],
+        'reaction' => ['icon' => 'thumbs-up', 'label' => 'Reaction', 'accent' => 'is-reaction', 'color' => '#1877f2'],
+        'comment' => ['icon' => 'comment', 'label' => 'Comment', 'accent' => 'is-comment', 'color' => '#0ea5e9'],
+        'share' => ['icon' => 'share', 'label' => 'Share', 'accent' => 'is-system', 'color' => '#64748b'],
+        'tournament' => ['icon' => 'trophy', 'label' => 'Tournament', 'accent' => 'is-system', 'color' => '#f59e0b'],
+        'message' => ['icon' => 'envelope', 'label' => 'Message', 'accent' => 'is-system', 'color' => '#8b5cf6'],
+        'payment_completed' => ['icon' => 'check-circle', 'label' => 'Payment', 'accent' => 'is-system', 'color' => '#059669'],
+        'payment_pending' => ['icon' => 'clock', 'label' => 'Pending', 'accent' => 'is-system', 'color' => '#d97706'],
+        'payment_cancelled' => ['icon' => 'ban', 'label' => 'Cancelled', 'accent' => 'is-cancelled', 'color' => '#dc2626'],
+        'agent_activation' => ['icon' => 'crown', 'label' => 'Agent', 'accent' => 'is-system', 'color' => '#f59e0b'],
+        'coin_conversion' => ['icon' => 'arrows-rotate', 'label' => 'Conversion', 'accent' => 'is-system', 'color' => '#8b5cf6'],
+        'p2p_order_placed' => ['icon' => 'cart-shopping', 'label' => 'P2P Order', 'accent' => 'is-system', 'color' => '#3b82f6'],
+        'p2p_payment_received' => ['icon' => 'money-bill-wave', 'label' => 'P2P Payment', 'accent' => 'is-system', 'color' => '#059669'],
+        'p2p_trade_completed' => ['icon' => 'handshake', 'label' => 'P2P Trade', 'accent' => 'is-system', 'color' => '#10b981'],
+        'report_resolved' => ['icon' => 'shield-alt', 'label' => 'Report Review', 'accent' => 'is-system', 'color' => '#8b5cf6'],
+        'report_received' => ['icon' => 'flag', 'label' => 'Report Received', 'accent' => 'is-system', 'color' => '#f59e0b'],
+    ];
+    $type = $notification['type'] ?? 'system';
+    $notification['meta'] = $metaMap[$type] ?? ['icon' => 'bell', 'label' => 'Update', 'accent' => 'is-system', 'color' => '#64748b'];
+    
+    // Target URL
+    $commentTypes = ['comment', 'reply', 'mention', 'comment_reaction'];
+    $isCommentType = in_array($type, $commentTypes, true);
+    if ($isCommentType) {
+        $postId = $notification['resolved_post_id'] ?? $notification['entity_id'] ?? 0;
+        $commentId = (int) ($notification['entity_id'] ?? 0);
+        $notification['target_url'] = 'index.php?page=community&post=' . $postId;
+        if ($commentId) {
+            $notification['target_url'] .= '&comment=' . $commentId;
+        }
+    } elseif ($type === 'like' || $type === 'reaction') {
+        $notification['target_url'] = 'index.php?page=community&post=' . ($notification['entity_id'] ?? 0);
+    } elseif ($type === 'friend_request') {
+        $notification['target_url'] = 'index.php?page=profile#friends';
+    } elseif ($type === 'friend_accept') {
+        $notification['target_url'] = 'index.php?page=profile&user=' . ($notification['actor_id'] ?? 0);
+    } elseif ($type === 'message') {
+        $notification['target_url'] = 'index.php?page=messages&user=' . ($notification['actor_id'] ?? 0);
+    } elseif ($type === 'report_resolved') {
+        $postId = $notification['entity_id'] ?? 0;
+        $reportMsg = rawurlencode(mb_substr($notification['message'] ?? '', 0, 300));
+        $notification['target_url'] = 'index.php?page=community&post=' . $postId;
+        $notification['target_url'] .= '&report_msg=' . $reportMsg;
+    } else {
+        $urlMap = [
+            'share' => 'index.php?page=community',
+            'tournament' => 'index.php?page=tournaments',
+            'payment_completed' => 'index.php?page=balance',
+            'payment_pending' => 'index.php?page=balance',
+            'payment_cancelled' => 'index.php?page=balance',
+            'agent_activation' => 'index.php?page=tournaments',
+            'coin_conversion' => 'index.php?page=balance',
+            'p2p_order_placed' => 'index.php?page=p2p',
+            'p2p_payment_received' => 'index.php?page=p2p',
+            'p2p_trade_completed' => 'index.php?page=p2p',
+        ];
+        $notification['target_url'] = $urlMap[$type] ?? 'index.php?page=notifications';
+    }
+    
+    // Format message text
+    if ($type === 'message' && !empty($notification['message'])) {
+        $notification['message'] = preg_replace('/^[^:]+:\s*/', '', $notification['message']);
+    }
+}
+
+function createNotification(PDO $db, int $userId, ?int $actorId, string $type, string $message, ?int $entityId = null): void {
+    try {
+        $stmt = $db->prepare("INSERT INTO notifications (user_id, actor_id, type, message, entity_id) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([$userId, $actorId, $type, $message, $entityId]);
+    } catch (Throwable $e) {
+        error_log("Notification error: " . $e->getMessage());
+    }
+}
+
+function getNotificationCounts(PDO $pdo, int $userId): array {
+    $stmt = $pdo->prepare("
+        SELECT
+            COUNT(*) AS total,
+            SUM(CASE WHEN is_read = 0 THEN 1 ELSE 0 END) AS unread,
+            SUM(CASE WHEN is_read = 1 THEN 1 ELSE 0 END) AS read_count
+        FROM notifications
+        WHERE user_id = ?
+    ");
+    $stmt->execute([$userId]);
+    $row = $stmt->fetch();
+    return [
+        'all' => (int) ($row['total'] ?? 0),
+        'unread' => (int) ($row['unread'] ?? 0),
+        'read' => (int) ($row['read_count'] ?? 0)
+    ];
+}
+
+function formatTimeAgo($datetime) {
+    $time = abs(time() - strtotime((string) $datetime));
+    
+    if ($time < 60) return 'just now';
+    if ($time < 3600) return floor($time / 60) . ' minutes ago';
+    if ($time < 86400) return floor($time / 3600) . ' hours ago';
+    if ($time < 604800) return floor($time / 86400) . ' days ago';
+    return date('M j, Y', strtotime((string) $datetime));
+}
+
+function getHeaderSocialCounts(PDO $pdo, ?int $userId): array {
+    if (!$userId) {
+        return ['messages' => 0, 'notifications' => 0];
+    }
+    
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0
+    ");
+    $stmt->execute([$userId]);
+    $notifications = (int) $stmt->fetchColumn();
+    
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*) FROM messages WHERE receiver_id = ? AND is_read = 0
+    ");
+    $stmt->execute([$userId]);
+    $messages = (int) $stmt->fetchColumn();
+    
+    return ['messages' => $messages, 'notifications' => $notifications];
+}
+
+
+function getCommunityOverview(PDO $pdo, ?int $viewerId = null): array {
+    $overview = [
+        'members' => 0,
+        'online_users' => 0,
+        'posts' => 0,
+        'public_posts' => 0,
+        'friends_posts' => 0
+    ];
+
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM users");
+    $stmt->execute();
+    $overview['members'] = (int) $stmt->fetchColumn();
+
+    $stmt = $pdo->prepare("SELECT COUNT(DISTINCT user_id) FROM user_sessions WHERE expires_at > NOW()");
+    $stmt->execute();
+    $overview['online_users'] = (int) $stmt->fetchColumn();
+
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM posts");
+    $stmt->execute();
+    $overview['posts'] = (int) $stmt->fetchColumn();
+
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM posts WHERE privacy = 'public'");
+    $stmt->execute();
+    $overview['public_posts'] = (int) $stmt->fetchColumn();
+
+    if ($viewerId) {
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*)
+            FROM posts p
+            WHERE p.privacy = 'public'
+               OR p.user_id = ?
+               OR EXISTS (
+                    SELECT 1
+                    FROM friendships f
+                    WHERE f.status = 'accepted'
+                      AND (
+                            (f.requester_id = ? AND f.addressee_id = p.user_id)
+                         OR (f.addressee_id = ? AND f.requester_id = p.user_id)
+                        )
+                      AND p.privacy = 'friends'
+                )
+        ");
+        $stmt->execute([$viewerId, $viewerId, $viewerId]);
+        $overview['friends_posts'] = (int) $stmt->fetchColumn();
+    }
+
+    return $overview;
+}
+
+function getNavbarSearchResults(PDO $pdo, ?int $viewerId, string $query, int $userLimit = 4, int $postLimit = 3): array {
+    $results = getHomeSearchResults($pdo, $viewerId, $query, $userLimit, $postLimit);
+    return [
+        'users' => $results['users'] ?? [],
+        'posts' => $results['posts'] ?? [],
+        'counts' => $results['counts'] ?? ['all' => 0, 'people' => 0, 'posts' => 0],
+    ];
+}
+
+function getHomeTopPlayers(PDO $pdo, int $limit = 3): array {
+    $limit = max(1, $limit);
+
+    try {
+        $stmt = $pdo->prepare("
+            SELECT
+                u.id,
+                u.username,
+                u.full_name,
+                u.avatar,
+                COUNT(DISTINCT p.id) AS post_count,
+                COUNT(DISTINCT pl.id) AS reaction_count,
+                COUNT(DISTINCT pc.id) AS comment_count,
+                (
+                    (COUNT(DISTINCT p.id) * 5) +
+                    (COUNT(DISTINCT pl.id) * 3) +
+                    (COUNT(DISTINCT pc.id) * 2)
+                ) AS leaderboard_score
+            FROM users u
+            LEFT JOIN posts p ON p.user_id = u.id
+            LEFT JOIN post_likes pl ON pl.post_id = p.id
+            LEFT JOIN post_comments pc ON pc.post_id = p.id
+            GROUP BY u.id
+            ORDER BY leaderboard_score DESC, reaction_count DESC, post_count DESC, u.id ASC
+            LIMIT ?
+        ");
+        $stmt->bindValue(1, $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        $players = $stmt->fetchAll() ?: [];
+
+        foreach ($players as $index => &$player) {
+            $player['rank'] = $index + 1;
+            $player['display_name'] = $player['full_name'] ?: $player['username'];
+            $player['score_label'] = number_format((int) ($player['leaderboard_score'] ?? 0)) . ' pts';
+        }
+        unset($player);
+
+        return $players;
+    } catch (Throwable $e) {
+        return [];
+    }
+}
+
+function getFeaturedTournamentSummary(PDO $pdo): array {
+    $summary = [
+        'title' => 'Dream Cup',
+        'status' => 'Upcoming event',
+        'starts_at' => null,
+        'display_time' => 'Schedule from admin',
+    ];
+
+    try {
+        $stmt = $pdo->query("
+            SELECT title, status, starts_at
+            FROM tournaments
+            ORDER BY
+                CASE WHEN starts_at IS NULL THEN 1 ELSE 0 END,
+                starts_at ASC,
+                id DESC
+            LIMIT 1
+        ");
+        $tournament = $stmt->fetch();
+        if ($tournament) {
+            $summary['title'] = $tournament['title'] ?: $summary['title'];
+            $summary['status'] = ucfirst((string) ($tournament['status'] ?? 'Upcoming'));
+            $summary['starts_at'] = $tournament['starts_at'] ?? null;
+            $summary['display_time'] = !empty($tournament['starts_at'])
+                ? date('M j, Y g:i A', strtotime((string) $tournament['starts_at']))
+                : 'Schedule from admin';
+        }
+    } catch (Throwable $e) {
+        // Leave fallback data.
+    }
+
+    return $summary;
+}
+
+function getEmoji(string $reaction): string {
+    $meta = getReactionMeta($reaction);
+    return $meta['emoji'] ?? '👍';
+}
+
+function getReactionMeta(string $reaction): array {
+    $map = [
+        'like' => ['label' => 'Like', 'icon' => 'thumbs-up', 'emoji' => '👍', 'class' => 'reaction-like'],
+        'love' => ['label' => 'Love', 'icon' => 'heart', 'emoji' => '❤️', 'class' => 'reaction-love'],
+        'care' => ['label' => 'Care', 'icon' => 'face-smile', 'emoji' => '🥰', 'class' => 'reaction-care'],
+        'haha' => ['label' => 'Haha', 'icon' => 'face-laugh-squint', 'emoji' => '😆', 'class' => 'reaction-haha'],
+        'wow' => ['label' => 'Wow', 'icon' => 'face-surprise', 'emoji' => '😮', 'class' => 'reaction-wow'],
+        'sad' => ['label' => 'Sad', 'icon' => 'face-sad-tear', 'emoji' => '😢', 'class' => 'reaction-sad'],
+        'angry' => ['label' => 'Angry', 'icon' => 'face-angry', 'emoji' => '😡', 'class' => 'reaction-angry']
+    ];
+
+    return $map[$reaction] ?? $map['like'];
+}
+
+function renderReactionButtonInner(?string $reaction): string {
+    if (!$reaction) {
+        return '<i class="fas fa-thumbs-up"></i> Like';
+    }
+
+    $meta = getReactionMeta($reaction);
+    return '<i class="fas fa-' . htmlspecialchars($meta['icon']) . '"></i> ' . htmlspecialchars($meta['label']);
+}
+
+function renderPresenceDot($isOnline, string $extraClass = ''): string {
+    $classes = trim('presence-dot' . ($isOnline ? ' is-online' : '') . ($extraClass ? ' ' . $extraClass : ''));
+    return '<span class="' . htmlspecialchars($classes) . '" aria-hidden="true"></span>';
+}
+
+function formatPresenceStatus($lastActiveAt, $isOnline): string {
+    if ($isOnline) {
+        return 'Active now';
+    }
+
+    if (empty($lastActiveAt)) {
+        return 'Offline';
+    }
+
+    return 'Active ' . formatTimeAgo($lastActiveAt);
+}
+
+function renderReactionSummaryHtml(array $summary, int $totalCount): string {
+    $topReactions = array_slice($summary, 0, 3);
+    $icons = '';
+
+    foreach ($topReactions as $reaction) {
+        $meta = $reaction['meta'] ?? getReactionMeta($reaction['type'] ?? 'like');
+        $icons .= '<span class="reaction-chip ' . htmlspecialchars($meta['class']) . '" title="' . htmlspecialchars($meta['label']) . '"><i class="fas fa-' . htmlspecialchars($meta['icon']) . '"></i></span>';
+    }
+
+    if ($icons === '') {
+        $icons = '<span class="reaction-chip reaction-like" title="Like"><i class="fas fa-thumbs-up"></i></span>';
+    }
+
+    return '<span class="reaction-stack">' . $icons . '</span><span class="like-count">' . (int) $totalCount . '</span>';
+}
+
+function renderCommentReactionButtonInner(?string $reaction): string {
+    return renderReactionButtonInner($reaction);
+}
+
+function renderCommentReactionSummaryHtml(array $summary, int $totalCount): string {
+    return renderReactionSummaryHtml($summary, $totalCount);
+}
+
+function renderPostCommentItem(array $comment, bool $isReply = false): string {
+    $authorName = htmlspecialchars($comment['full_name'] ?: $comment['username'] ?: 'User');
+    $avatar = htmlspecialchars($comment['avatar'] ?? 'default.png');
+    $text = nl2br(htmlspecialchars($comment['comment_text'] ?? ''));
+    $time = htmlspecialchars($comment['created_at_formatted'] ?? formatTimeAgo($comment['created_at'] ?? ''));
+    $timeRaw = htmlspecialchars((string) ($comment['created_at'] ?? ''));
+    $timeExact = !empty($comment['created_at']) ? htmlspecialchars(date('M j, Y g:i A', strtotime((string) $comment['created_at']))) : '';
+    $reactionSummary = renderCommentReactionSummaryHtml($comment['reaction_summary'] ?? [], (int) ($comment['reaction_count'] ?? 0));
+    $reactionButton = renderCommentReactionButtonInner($comment['viewer_reaction'] ?? null);
+    $replyButtonLabel = $isReply ? 'Reply again' : 'Reply';
+    $menuItems = '';
+    if (!empty($comment['can_delete'])) {
+        $menuItems .= '<button class="comment-menu-item edit-comment-btn" type="button" data-comment-id="' . (int) $comment['id'] . '"><i class="fas fa-pen"></i> Edit</button>';
+        $menuItems .= '<button class="comment-menu-item delete-comment-btn" type="button" data-comment-id="' . (int) $comment['id'] . '"><i class="fas fa-trash"></i> Delete</button>';
+    }
+    $menuItems .= '<button class="comment-menu-item report-comment-btn" type="button" data-comment-id="' . (int) $comment['id'] . '"><i class="fas fa-flag"></i> Report</button>';
+
+    $html = '
+        <div class="social-comment-card' . ($isReply ? ' is-reply' : '') . '" data-comment-id="' . (int) $comment['id'] . '">
+            <img src="assets/avatars/' . $avatar . '" alt="" class="social-comment-avatar" onerror="this.src=\'assets/avatars/default.png\'">
+            <div class="social-comment-main">
+                <div class="social-comment-bubble">
+                    <div class="social-comment-topline">
+                        <strong>' . $authorName . '</strong>
+                        <div class="comment-menu-wrap">
+                            <button class="comment-menu-toggle comment-ghost-btn" type="button" data-comment-id="' . (int) $comment['id'] . '" aria-label="Comment options"><i class="fas fa-ellipsis-h"></i></button>
+                            <div class="comment-menu-dropdown">' . $menuItems . '</div>
+                        </div>
+                    </div>
+                    <p>' . $text . '</p>
+                    <div class="social-comment-reactions is-attached" data-comment-reaction-summary>' . $reactionSummary . '</div>
+                </div>
+                <div class="social-comment-meta">
+                    <span class="social-comment-time js-social-relative-time" data-time="' . $timeRaw . '" title="' . $timeExact . '">' . $time . '</span>
+                    <button class="social-comment-action social-comment-react-btn" type="button" data-comment-id="' . (int) $comment['id'] . '" data-reaction="' . htmlspecialchars($comment['viewer_reaction'] ?? '') . '">' . $reactionButton . '</button>
+                    <button class="social-comment-action social-comment-reply-btn" type="button" data-comment-id="' . (int) $comment['id'] . '" data-comment-author="' . $authorName . '" data-comment-preview="' . htmlspecialchars(trim((string) ($comment['comment_text'] ?? ''))) . '">' . $replyButtonLabel . '</button>
+                </div>
+                ';
+
+    if (!empty($comment['replies'])) {
+        $html .= '<div class="social-comment-replies">';
+        foreach ($comment['replies'] as $reply) {
+            $html .= renderPostCommentItem($reply, true);
+        }
+        $html .= '</div>';
+    }
+
+    $html .= '
+            </div>
+        </div>
+    ';
+
+    return $html;
+}
+
+// ─── TOURNAMENT HELPERS ───────────────────────────────────────
+
+function getTournamentsWithCounts(PDO $pdo, ?string $statusFilter = null, int $limit = 50): array {
+    $sql = "
+        SELECT t.*,
+               COUNT(tp.id) AS registered_teams
+        FROM tournaments t
+        LEFT JOIN tournament_participants tp ON tp.tournament_id = t.id AND tp.status = 'confirmed'
+    ";
+    $params = [];
+    if ($statusFilter && $statusFilter !== 'all') {
+        $sql .= " WHERE t.status = ?";
+        $params[] = $statusFilter;
+    }
+    $sql .= " GROUP BY t.id ORDER BY COALESCE(t.starts_at, t.created_at) DESC";
+    if ($limit > 0) {
+        $sql .= " LIMIT ?";
+        $params[] = $limit;
+    }
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll();
+}
+
+function getTournamentParticipants(PDO $pdo, int $tournamentId): array {
+    $stmt = $pdo->prepare("
+        SELECT tp.*, u.full_name, u.username, u.avatar
+        FROM tournament_participants tp
+        LEFT JOIN users u ON u.id = tp.user_id
+        WHERE tp.tournament_id = ? AND tp.status = 'confirmed'
+        ORDER BY tp.created_at ASC
+    ");
+    $stmt->execute([$tournamentId]);
+    return $stmt->fetchAll();
+}
+
+function getUserTournamentRegistrations(PDO $pdo, int $userId): array {
+    $stmt = $pdo->prepare("
+        SELECT tp.*, t.title, t.status AS tournament_status, t.starts_at, t.prize_money, t.game_icon, t.accent_color, t.category
+        FROM tournament_participants tp
+        JOIN tournaments t ON t.id = tp.tournament_id
+        WHERE tp.user_id = ?
+        ORDER BY t.starts_at DESC
+    ");
+    $stmt->execute([$userId]);
+    return $stmt->fetchAll();
+}
+
+function registerForTournament(PDO $pdo, int $userId, int $tournamentId, string $teamName = ''): array {
+    try {
+        // Check if already registered
+        $stmt = $pdo->prepare("SELECT id, status FROM tournament_participants WHERE tournament_id = ? AND user_id = ?");
+        $stmt->execute([$tournamentId, $userId]);
+        $existing = $stmt->fetch();
+
+        if ($existing) {
+            if ($existing['status'] === 'cancelled') {
+                $stmt = $pdo->prepare("UPDATE tournament_participants SET status = 'confirmed', team_name = ?, created_at = NOW() WHERE id = ?");
+                $stmt->execute([$teamName, $existing['id']]);
+                return ['success' => true, 'message' => 'Registration reactivated!'];
+            }
+            return ['success' => false, 'message' => 'You are already registered for this tournament.'];
+        }
+
+        // Get tournament with fee info
+        $stmt = $pdo->prepare("SELECT * FROM tournaments WHERE id = ?");
+        $stmt->execute([$tournamentId]);
+        $tournament = $stmt->fetch();
+        if (!$tournament) return ['success' => false, 'message' => 'Tournament not found.'];
+        if (!in_array($tournament['status'], ['upcoming', 'live'])) return ['success' => false, 'message' => 'Registration closed.'];
+
+        // Check max teams
+        if ((int)$tournament['max_teams'] > 0) {
+            $countStmt = $pdo->prepare("SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = ? AND status = 'confirmed'");
+            $countStmt->execute([$tournamentId]);
+            $currentCount = (int)$countStmt->fetchColumn();
+            if ($currentCount >= (int)$tournament['max_teams']) {
+                return ['success' => false, 'message' => 'Tournament is full.'];
+            }
+        }
+
+        $entryFee = (float)$tournament['entry_fee'];
+        $pdo->beginTransaction();
+
+        if ($entryFee > 0) {
+            $stmt = $pdo->prepare("SELECT balance FROM users WHERE id = ? FOR UPDATE");
+            $stmt->execute([$userId]);
+            $user = $stmt->fetch();
+            $balance = (float)($user['balance'] ?? 0);
+            if ($balance < $entryFee) {
+                $pdo->rollBack();
+                return ['success' => false, 'message' => 'Insufficient balance. Entry fee: ৳' . number_format($entryFee, 0)];
+            }
+            $newBalance = $balance - $entryFee;
+            $stmt = $pdo->prepare("UPDATE users SET balance = ? WHERE id = ?");
+            $stmt->execute([$newBalance, $userId]);
+
+            $agentId = (int)$tournament['agent_id'];
+            if ($agentId > 0) {
+                $stmt = $pdo->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
+                $stmt->execute([$entryFee, $agentId]);
+                $stmt = $pdo->prepare("INSERT INTO agent_transactions (agent_id, type, amount, reference_type, reference_id, description) VALUES (?, 'credit', ?, 'entry_fee', ?, 'Entry fee')");
+                $stmt->execute([$agentId, $entryFee, $tournamentId]);
+            }
+        }
+
+        $stmt = $pdo->prepare("INSERT INTO tournament_participants (tournament_id, user_id, team_name, fee_paid, status) VALUES (?, ?, ?, ?, 'confirmed')");
+        $stmt->execute([$tournamentId, $userId, $teamName, $entryFee > 0 ? 1 : 0]);
+
+        $pdo->commit();
+        return ['success' => true, 'message' => 'Successfully registered for the tournament!'];
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) { $pdo->rollBack(); }
+        return ['success' => false, 'message' => 'Server error.'];
+    }
+}
+
+function unregisterFromTournament(PDO $pdo, int $userId, int $tournamentId): array {
+    $stmt = $pdo->prepare("UPDATE tournament_participants SET status = 'cancelled' WHERE tournament_id = ? AND user_id = ? AND status = 'confirmed'");
+    $stmt->execute([$tournamentId, $userId]);
+    if ($stmt->rowCount() > 0) {
+        return ['success' => true, 'message' => 'Registration cancelled.'];
+    }
+    return ['success' => false, 'message' => 'No active registration found.'];
+}
+
+// ─── AGENT HELPERS ────────────────────────────────────────
+
+function createAgentAccount(PDO $pdo, int $userId, float $fee): array {
+    try {
+        $pdo->beginTransaction();
+        $stmt = $pdo->prepare("SELECT role, balance FROM users WHERE id = ? FOR UPDATE");
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch();
+
+        if (!$user) return ['success' => false, 'message' => 'User not found.'];
+        if ($user['role'] === 'agent') return ['success' => false, 'message' => 'Already an agent.'];
+
+        $newBalance = (float)$user['balance'] - $fee;
+        if ($newBalance < 0) return ['success' => false, 'message' => 'Insufficient balance. Please add funds first.'];
+
+        $stmt = $pdo->prepare("UPDATE users SET role = 'agent', balance = ?, agent_verified_at = NOW() WHERE id = ?");
+        $stmt->execute([$newBalance, $userId]);
+
+        $stmt = $pdo->prepare("INSERT INTO agent_transactions (agent_id, type, amount, balance_before, balance_after, reference_type, description) VALUES (?, 'debit', ?, ?, ?, 'agent_fee', 'Agent account activation fee')");
+        $stmt->execute([$userId, $fee, (float)$user['balance'], $newBalance]);
+
+        $pdo->commit();
+        $_SESSION['role'] = 'agent';
+        return ['success' => true, 'message' => 'Agent account created!', 'balance' => $newBalance];
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        return ['success' => false, 'message' => 'Server error.'];
+    }
+}
+
+function addAgentFunds(PDO $pdo, int $userId, float $amount, string $ref = 'manual'): array {
+    try {
+        $pdo->beginTransaction();
+        $stmt = $pdo->prepare("SELECT balance FROM users WHERE id = ? FOR UPDATE");
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch();
+        if (!$user) { $pdo->rollBack(); return ['success' => false, 'message' => 'User not found.']; }
+
+        $before = (float)$user['balance'];
+        $after = $before + $amount;
+        $stmt = $pdo->prepare("UPDATE users SET balance = ? WHERE id = ?");
+        $stmt->execute([$after, $userId]);
+        $stmt = $pdo->prepare("INSERT INTO agent_transactions (agent_id, type, amount, balance_before, balance_after, reference_type, description) VALUES (?, 'credit', ?, ?, ?, 'deposit', 'Balance top-up')");
+        $stmt->execute([$userId, $amount, $before, $after]);
+        $pdo->commit();
+        return ['success' => true, 'message' => 'Funds added!', 'balance' => $after];
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        return ['success' => false, 'message' => 'Server error.'];
+    }
+}
+
+function deductPrizeFromAgent(PDO $pdo, int $agentId, float $amount, int $tournamentId): array {
+    try {
+        $pdo->beginTransaction();
+        $stmt = $pdo->prepare("SELECT balance FROM users WHERE id = ? AND role = 'agent' FOR UPDATE");
+        $stmt->execute([$agentId]);
+        $user = $stmt->fetch();
+        if (!$user) { $pdo->rollBack(); return ['success' => false, 'message' => 'Agent not found.']; }
+
+        $before = (float)$user['balance'];
+        if ($before < $amount) return ['success' => false, 'message' => 'Insufficient balance. Need ৳' . number_format($amount, 0) . ' but have ৳' . number_format($before, 0)];
+
+        $after = $before - $amount;
+        $stmt = $pdo->prepare("UPDATE users SET balance = ? WHERE id = ?");
+        $stmt->execute([$after, $agentId]);
+        $stmt = $pdo->prepare("INSERT INTO agent_transactions (agent_id, type, amount, balance_before, balance_after, reference_type, reference_id, description) VALUES (?, 'debit', ?, ?, ?, 'tournament_prize', ?, 'Prize pool for tournament')");
+        $stmt->execute([$agentId, $amount, $before, $after, $tournamentId]);
+        $pdo->commit();
+        return ['success' => true, 'message' => 'Prize deducted.', 'balance' => $after];
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        return ['success' => false, 'message' => 'Server error.'];
+    }
+}
+
+function getAgentTransactions(PDO $pdo, int $agentId, int $limit = 20): array {
+    $stmt = $pdo->prepare("SELECT * FROM agent_transactions WHERE agent_id = ? ORDER BY created_at DESC LIMIT ?");
+    $stmt->execute([$agentId, $limit]);
+    return $stmt->fetchAll();
+}
+
+function getAgentStats(PDO $pdo, int $agentId): array {
+    $stats = ['total_tournaments' => 0, 'total_prize_spent' => 0, 'total_participants' => 0, 'total_revenue' => 0];
+    try {
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM tournaments WHERE agent_id = ?");
+        $stmt->execute([$agentId]);
+        $stats['total_tournaments'] = (int)$stmt->fetchColumn();
+
+        $stmt = $pdo->prepare("SELECT COALESCE(SUM(amount), 0) FROM agent_transactions WHERE agent_id = ? AND type = 'debit' AND reference_type = 'tournament_prize'");
+        $stmt->execute([$agentId]);
+        $stats['total_prize_spent'] = (float)$stmt->fetchColumn();
+
+        $stmt = $pdo->prepare("SELECT COUNT(DISTINCT tp.user_id) FROM tournament_participants tp JOIN tournaments t ON t.id = tp.tournament_id WHERE t.agent_id = ? AND tp.status = 'confirmed'");
+        $stmt->execute([$agentId]);
+        $stats['total_participants'] = (int)$stmt->fetchColumn();
+
+        $stmt = $pdo->prepare("SELECT COALESCE(SUM(tp_amount.fee_paid), 0) FROM (SELECT tp.id, tp.fee_paid FROM tournament_participants tp JOIN tournaments t ON t.id = tp.tournament_id WHERE t.agent_id = ? AND tp.status = 'confirmed') tp_amount");
+        $stmt->execute([$agentId]);
+        $total = (float)$stmt->fetchColumn();
+        $entryStmt = $pdo->prepare("SELECT COALESCE(SUM(t.entry_fee), 0) FROM tournaments t WHERE t.agent_id = ?");
+        $entryStmt->execute([$agentId]);
+        $totalEntry = (float)$entryStmt->fetchColumn();
+        $stats['total_revenue'] = $totalEntry;
+    } catch (Throwable $e) {}
+    return $stats;
+}
+
+// ─── TEAM HELPERS ────────────────────────────────────────
+
+function createTeam(PDO $pdo, int $captainId, string $name, string $game = '', string $description = ''): array {
+    $slug = preg_replace('/[^a-z0-9]+/', '-', strtolower($name));
+    $slug = trim($slug, '-');
+    try {
+        $stmt = $pdo->prepare("SELECT id FROM teams WHERE slug = ?");
+        $stmt->execute([$slug]);
+        if ($stmt->fetch()) {
+            $slug .= '-' . substr(uniqid(), -4);
+        }
+        $pdo->beginTransaction();
+        $stmt = $pdo->prepare("INSERT INTO teams (name, slug, captain_id, game, description) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([$name, $slug, $captainId, $game, $description]);
+        $teamId = (int)$pdo->lastInsertId();
+        $stmt = $pdo->prepare("INSERT INTO team_members (team_id, user_id, role) VALUES (?, ?, 'captain')");
+        $stmt->execute([$teamId, $captainId]);
+        $pdo->commit();
+        return ['success' => true, 'message' => 'Team created!', 'team_id' => $teamId, 'slug' => $slug];
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        return ['success' => false, 'message' => 'Could not create team.'];
+    }
+}
+
+function getUserTeams(PDO $pdo, int $userId): array {
+    $stmt = $pdo->prepare("SELECT t.*, tm.role AS my_role FROM teams t JOIN team_members tm ON tm.team_id = t.id WHERE tm.user_id = ? ORDER BY t.created_at DESC");
+    $stmt->execute([$userId]);
+    return $stmt->fetchAll();
+}
+
+function getTeamMembers(PDO $pdo, int $teamId): array {
+    $stmt = $pdo->prepare("SELECT u.id, u.full_name, u.username, u.avatar, tm.role, tm.joined_at FROM team_members tm JOIN users u ON u.id = tm.user_id WHERE tm.team_id = ? ORDER BY FIELD(tm.role, 'captain', 'co-captain', 'member'), tm.joined_at ASC");
+    $stmt->execute([$teamId]);
+    return $stmt->fetchAll();
+}
+
+function addTeamMember(PDO $pdo, int $teamId, int $userId, string $role = 'member'): array {
+    try {
+        $stmt = $pdo->prepare("INSERT IGNORE INTO team_members (team_id, user_id, role) VALUES (?, ?, ?)");
+        $stmt->execute([$teamId, $userId, $role]);
+        if ($stmt->rowCount() > 0) return ['success' => true, 'message' => 'Member added!'];
+        return ['success' => false, 'message' => 'Already a member.'];
+    } catch (Throwable $e) {
+        return ['success' => false, 'message' => 'Could not add member.'];
+    }
+}
+
+function removeTeamMember(PDO $pdo, int $teamId, int $userId): array {
+    $stmt = $pdo->prepare("DELETE FROM team_members WHERE team_id = ? AND user_id = ? AND role != 'captain'");
+    $stmt->execute([$teamId, $userId]);
+    if ($stmt->rowCount() > 0) return ['success' => true, 'message' => 'Member removed.'];
+    return ['success' => false, 'message' => 'Cannot remove captain.'];
+}
+
+// ─── TEAM TOURNAMENT JOIN ─────────────────────────────────
+
+function joinTournamentWithTeam(PDO $pdo, int $teamId, int $tournamentId, int $userId): array {
+    try {
+        // Verify user is captain
+        $stmt = $pdo->prepare("SELECT role FROM team_members WHERE team_id = ? AND user_id = ?");
+        $stmt->execute([$teamId, $userId]);
+        $member = $stmt->fetch();
+        if (!$member || $member['role'] !== 'captain') return ['success' => false, 'message' => 'Only the team captain can register.'];
+
+        // Check already registered
+        $stmt = $pdo->prepare("SELECT id FROM tournament_participants WHERE tournament_id = ? AND team_id = ? AND status = 'confirmed'");
+        $stmt->execute([$tournamentId, $teamId]);
+        if ($stmt->fetch()) return ['success' => false, 'message' => 'Team already registered.'];
+
+        // Get tournament
+        $stmt = $pdo->prepare("SELECT * FROM tournaments WHERE id = ? FOR UPDATE");
+        $stmt->execute([$tournamentId]);
+        $tournament = $stmt->fetch();
+        if (!$tournament) return ['success' => false, 'message' => 'Tournament not found.'];
+        if (!in_array($tournament['status'], ['upcoming', 'live'])) return ['success' => false, 'message' => 'Registration closed.'];
+
+        // Check capacity
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = ? AND status = 'confirmed'");
+        $stmt->execute([$tournamentId]);
+        $count = (int)$stmt->fetchColumn();
+        $max = (int)$tournament['max_teams'];
+        if ($max > 0 && $count >= $max) return ['success' => false, 'message' => 'Tournament is full.'];
+
+        $entryFee = (float)$tournament['entry_fee'];
+        $pdo->beginTransaction();
+
+        if ($entryFee > 0) {
+            // Deduct entry fee from captain's balance or team fund
+            $stmt = $pdo->prepare("SELECT balance FROM users WHERE id = ? FOR UPDATE");
+            $stmt->execute([$userId]);
+            $user = $stmt->fetch();
+            $balance = (float)($user['balance'] ?? 0);
+            if ($balance < $entryFee) {
+                $pdo->rollBack();
+                return ['success' => false, 'message' => 'Insufficient balance. Entry fee: ৳' . number_format($entryFee, 0)];
+            }
+            $newBalance = $balance - $entryFee;
+            $stmt = $pdo->prepare("UPDATE users SET balance = ? WHERE id = ?");
+            $stmt->execute([$newBalance, $userId]);
+
+            // Credit the agent
+            $agentId = (int)$tournament['agent_id'];
+            if ($agentId > 0) {
+                $stmt = $pdo->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
+                $stmt->execute([$entryFee, $agentId]);
+                $stmt = $pdo->prepare("INSERT INTO agent_transactions (agent_id, type, amount, reference_type, reference_id, description) VALUES (?, 'credit', ?, 'entry_fee', ?, 'Team entry fee')");
+                $stmt->execute([$agentId, $entryFee, $tournamentId]);
+            }
+        }
+
+        $stmt = $pdo->prepare("INSERT INTO tournament_participants (tournament_id, user_id, team_id, team_name, fee_paid, status) VALUES (?, ?, ?, ?, ?, 'confirmed')");
+        $teamStmt = $pdo->prepare("SELECT name FROM teams WHERE id = ?");
+        $teamStmt->execute([$teamId]);
+        $team = $teamStmt->fetch();
+        $stmt->execute([$tournamentId, $userId, $teamId, $team['name'] ?? 'Team', $entryFee > 0 ? 1 : 0]);
+
+        $pdo->commit();
+        return ['success' => true, 'message' => 'Team registered for tournament!'];
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        return ['success' => false, 'message' => 'Server error.'];
+    }
+}
+
+// ─── BKASH PAYMENT (DEMO) ─────────────────────────────
+
+function processBkashPayment(PDO $pdo, int $userId, float $amount, string $purpose = 'deposit', ?int $referenceId = null): array {
+    try {
+        $pdo->beginTransaction();
+        
+        // Get user balance with FOR UPDATE
+        $stmt = $pdo->prepare("SELECT balance, username FROM users WHERE id = ? FOR UPDATE");
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch();
+        
+        if (!$user) {
+            $pdo->rollBack();
+            return ['success' => false, 'message' => 'User not found.'];
+        }
+        
+        $currentBalance = (float)$user['balance'];
+        $newBalance = $currentBalance + $amount;
+        
+        // Update user balance
+        $stmt = $pdo->prepare("UPDATE users SET balance = ?, updated_at = NOW() WHERE id = ?");
+        $stmt->execute([$newBalance, $userId]);
+        
+        // Insert transaction record
+        $stmt = $pdo->prepare("INSERT INTO transactions (user_id, type, amount, balance_before, balance_after, description, reference_id, purpose) VALUES (?, 'deposit', ?, ?, ?, ?, ?, ?)");
+        $description = 'bKash payment of ৳' . $amount;
+        $stmt->execute([$userId, $amount, $currentBalance, $newBalance, $description, $referenceId, $purpose]);
+        
+        // Log the activity using parameterized query (no SQL injection)
+        $stmt = $pdo->prepare("SELECT id FROM activity_log WHERE user_id = ? AND action = 'payment_completed' AND reference_id = ? AND created_at > DATE_SUB(NOW(), INTERVAL 1 SECOND)");
+        $stmt->execute([$userId, $referenceId]);
+        if (!$stmt->fetch()) {
+            $stmt = $pdo->prepare("INSERT INTO activity_log (user_id, username, action, details, reference_id, ip_address) VALUES (?, ?, 'payment_completed', ?, ?, ?)");
+            $stmt->execute([$userId, $user['username'], 'bKash payment of ৳' . $amount, $referenceId, $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
+        }
+        
+        // Update bKash transaction status if reference ID is provided
+        if ($referenceId) {
+            $stmt = $pdo->prepare("UPDATE bkash_transactions SET status = 'completed', verified_at = NOW() WHERE id = ?");
+            $stmt->execute([$referenceId]);
+        }
+        
+        $pdo->commit();
+        
+        return [
+            'success' => true,
+            'message' => 'Payment of ৳' . number_format($amount, 2) . ' processed successfully.',
+            'new_balance' => $newBalance
+        ];
+        
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        return ['success' => false, 'message' => 'Payment processing failed: ' . $e->getMessage()];
+    }
+}
+
+function createTournamentByAgent(PDO $pdo, int $agentId, array $data): array {
+    try {
+        $pdo->beginTransaction();
+        $prizeMoney = (float)str_replace(',', '', $data['prize_money'] ?? '0');
+
+        // Deduct prize from agent's balance within the same transaction
+        $stmt = $pdo->prepare("SELECT balance FROM users WHERE id = ? AND role = 'agent' FOR UPDATE");
+        $stmt->execute([$agentId]);
+        $user = $stmt->fetch();
+        if (!$user) { $pdo->rollBack(); return ['success' => false, 'message' => 'Agent not found.']; }
+
+        $before = (float)$user['balance'];
+        if ($before < $prizeMoney) { $pdo->rollBack(); return ['success' => false, 'message' => 'Insufficient balance. Need ৳' . number_format($prizeMoney, 0) . ' but have ৳' . number_format($before, 0)]; }
+        $after = $before - $prizeMoney;
+        $stmt = $pdo->prepare("UPDATE users SET balance = ? WHERE id = ?");
+        $stmt->execute([$after, $agentId]);
+
+        $stmt = $pdo->prepare("INSERT INTO tournaments (title, description, prize_money, category, max_teams, game_icon, accent_color, starts_at, status, entry_fee, agent_id, prize_breakdown) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'upcoming', ?, ?, ?)");
+        $stmt->execute([
+            trim($data['title'] ?? ''),
+            trim($data['description'] ?? ''),
+            $data['prize_money'] ?? '',
+            trim($data['category'] ?? ''),
+            (int)($data['max_teams'] ?? 0),
+            trim($data['game_icon'] ?? 'fa-gamepad'),
+            trim($data['accent_color'] ?? '#7c3aed'),
+            trim($data['starts_at'] ?: null),
+            (float)($data['entry_fee'] ?? 0),
+            $agentId,
+            $data['prize_breakdown'] ?? null,
+        ]);
+        $tournamentId = (int)$pdo->lastInsertId();
+
+        $stmt = $pdo->prepare("INSERT INTO agent_transactions (agent_id, type, amount, balance_before, balance_after, reference_type, reference_id, description) VALUES (?, 'debit', ?, ?, ?, 'tournament_prize', ?, 'Prize pool for tournament')");
+        $stmt->execute([$agentId, $prizeMoney, $before, $after, $tournamentId]);
+
+        $pdo->commit();
+        return ['success' => true, 'message' => 'Tournament created! Prize of ৳' . number_format($prizeMoney, 0) . ' deducted from your balance.', 'tournament_id' => $tournamentId];
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        return ['success' => false, 'message' => 'Could not create tournament.'];
+    }
+}
+

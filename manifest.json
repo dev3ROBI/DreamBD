@@ -1,0 +1,29 @@
+{
+  "name": "DreamBD - Digital Entertainment Network",
+  "short_name": "DreamBD",
+  "description": "Premium social networking and gaming platform with modern design.",
+  "start_url": "index.php",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#2563eb",
+  "orientation": "portrait",
+  "scope": "/",
+  "categories": ["social", "games", "entertainment"],
+  "icons": [
+    {
+      "src": "assets/logo/logo.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "assets/logo/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "DreamBD Home"
+    }
+  ]
+}

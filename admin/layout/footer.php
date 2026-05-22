@@ -1,0 +1,145 @@
+    </div><!-- End Page Content -->
+
+    <!-- Footer -->
+    <footer class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 mt-auto">
+        <div class="px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="text-sm text-gray-500 dark:text-gray-400">
+                    DREAMBD Admin Panel v2.0
+                </div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">
+                    Connected to: <?php echo DatabaseConfig::DB_NAME; ?>@<?php echo DatabaseConfig::DB_HOST; ?>
+                </div>
+            </div>
+        </div>
+    </footer>
+</div><!-- End Main Content -->
+
+<script>
+// Wait for DOM to be ready
+document.addEventListener('DOMContentLoaded', function() {
+
+    // ============ Live Clock ============
+    function updateClock() {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('en-US', { hour12: false });
+        const dateStr = now.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
+        const clockEl = document.getElementById('liveClock');
+        const dateEl = document.getElementById('liveDate');
+        if (clockEl) clockEl.textContent = timeStr;
+        if (dateEl) dateEl.textContent = dateStr;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // ============ Sidebar Toggle ============
+    window.toggleSidebar = function() {
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.getElementById('mainContent');
+        const navbar = document.getElementById('topNavbar');
+        const toggleIcon = document.getElementById('sidebarToggleIcon');
+
+        if (!sidebar) return;
+
+        sidebar.classList.toggle('collapsed');
+        if (sidebar.classList.contains('collapsed')) {
+            if (mainContent) {
+                mainContent.classList.remove('ml-64');
+                mainContent.classList.add('ml-20');
+            }
+            if (navbar) {
+                navbar.classList.remove('left-64');
+                navbar.classList.add('left-20');
+            }
+            if (toggleIcon) {
+                toggleIcon.classList.remove('fa-chevron-left');
+                toggleIcon.classList.add('fa-chevron-right');
+            }
+        } else {
+            if (mainContent) {
+                mainContent.classList.add('ml-64');
+                mainContent.classList.remove('ml-20');
+            }
+            if (navbar) {
+                navbar.classList.add('left-64');
+                navbar.classList.remove('left-20');
+            }
+            if (toggleIcon) {
+                toggleIcon.classList.add('fa-chevron-left');
+                toggleIcon.classList.remove('fa-chevron-right');
+            }
+        }
+    };
+
+    // ============ Dark Mode Toggle ============
+    window.toggleDarkMode = function() {
+        const html = document.documentElement;
+        const icon = document.getElementById('darkModeIcon');
+
+        if (html.classList.contains('dark')) {
+            html.classList.remove('dark');
+            localStorage.setItem('dreambd-theme', 'light');
+            if (icon) {
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+            }
+        } else {
+            html.classList.add('dark');
+            localStorage.setItem('dreambd-theme', 'dark');
+            if (icon) {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            }
+        }
+    };
+
+    // ============ Initialize Dark Mode ============
+    (function initDarkMode() {
+        const html = document.documentElement;
+        const icon = document.getElementById('darkModeIcon');
+        const storedTheme = localStorage.getItem('dreambd-theme');
+
+        if (storedTheme === 'dark' || (!storedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            html.classList.add('dark');
+            if (icon) {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            }
+        }
+    })();
+
+    // ============ User Dropdown Toggle ============
+    window.toggleUserMenu = function(e) {
+        if (e) e.stopPropagation();
+        const dropdown = document.getElementById('userDropdown');
+        if (dropdown) {
+            dropdown.classList.toggle('hidden');
+        }
+    };
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        const dropdown = document.getElementById('userDropdown');
+        if (!dropdown) return;
+
+        // If click is outside dropdown and not on the trigger button
+        if (!dropdown.contains(e.target) && !e.target.closest('[onclick*="toggleUserMenu"]')) {
+            dropdown.classList.add('hidden');
+        }
+    });
+
+    // ============ Auto-hide Alerts ============
+    setTimeout(function() {
+        document.querySelectorAll('.fade-in').forEach(function(el) {
+            if (el.querySelector('.fa-check-circle') || el.querySelector('.fa-exclamation-circle')) {
+                el.style.transition = 'opacity 0.5s ease';
+                el.style.opacity = '0';
+                setTimeout(function() { el.remove(); }, 500);
+            }
+        });
+    }, 5000);
+
+});
+</script>
+</body>
+</html>

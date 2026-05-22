@@ -1,0 +1,33 @@
+# Admin folder - Access Control
+# Only allow authenticated admin/moderator users
+
+# Deny access to everyone by default
+Order Deny,Allow
+
+# Allow localhost (for testing)
+Allow from 127.0.0.1
+Allow from ::1
+
+# Deny all others (actual access control is done via PHP)
+Deny from all
+
+# Protect .htaccess file
+<Files .htaccess>
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+# Prevent directory listing
+Options -Indexes
+
+# Redirect all requests to manage-db.php if not directly accessed
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /Dream/admin/
+    
+    # Redirect to manage-db.php if trying to access folder root
+    RewriteRule ^$ manage-db.php [L]
+    
+    # Protect uploaded files if any
+    RewriteRule ^(.*\.sql)$ - [F,L]
+</IfModule>
