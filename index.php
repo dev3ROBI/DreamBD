@@ -81,9 +81,16 @@ if ($is_ajax && isset($_GET['ajax'])) {
 
 // Normal page load - NO ob_start() here
 $csrf_token = $security->generateCSRFToken();
+
+// Theme logic
+$theme = $_COOKIE['dreambd-theme'] ?? 'light';
+if (!in_array($theme, ['light', 'dark'])) {
+    $theme = 'light';
+}
+$themeAttr = htmlspecialchars($theme, ENT_QUOTES, 'UTF-8');
 ?>
 <!DOCTYPE html>
-<html lang="en" class="<?php echo $_COOKIE['dreambd-theme'] ?? 'light'; ?>" data-theme="<?php echo $_COOKIE['dreambd-theme'] ?? 'light'; ?>">
+<html lang="en" class="<?php echo $themeAttr; ?>" data-theme="<?php echo $themeAttr; ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">

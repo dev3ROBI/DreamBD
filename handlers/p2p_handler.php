@@ -61,6 +61,19 @@ try {
                 $sellerId = $offer['type'] === 'sell' ? (int)$offer['agent_id'] : $userId;
                 $buyerId = $offer['type'] === 'sell' ? $userId : (int)$offer['agent_id'];
 
+                // ESCROW: Deduct coins from seller immediately
+                $coinCol = $offer['coin_type'] . '_coins';
+                $stmt = $db->prepare("SELECT $coinCol FROM users WHERE id = ? FOR UPDATE");
+                $stmt->execute([$sellerId]);
+                $sellerRow = $stmt->fetch();
+                if (!$sellerRow || (int)$sellerRow[$coinCol] < $qty) {
+                    $db->rollBack();
+                    $response['message'] = 'Seller has insufficient ' . $offer['coin_type'] . ' coins.';
+                    break;
+                }
+                $stmt = $db->prepare("UPDATE users SET $coinCol = $coinCol - ? WHERE id = ?");
+                $stmt->execute([$qty, $sellerId]);
+
                 $stmt = $db->prepare("INSERT INTO p2p_trades (offer_id, seller_id, buyer_id, coin_type, quantity, total_price, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')");
                 $stmt->execute([$offerId, $sellerId, $buyerId, $offer['coin_type'], $qty, $totalPrice]);
                 $tradeId = $db->lastInsertId();
@@ -108,14 +121,7 @@ try {
                 $coinCol = $trade['coin_type'] . '_coins';
                 $qty = (int)$trade['quantity'];
 
-                // Seller has the coins - deduct from seller, give to buyer
-                $stmt = $db->prepare("SELECT $coinCol FROM users WHERE id = ? FOR UPDATE");
-                $stmt->execute([(int)$trade['seller_id']]);
-                $sellerRow = $stmt->fetch();
-                if (!$sellerRow || (int)$sellerRow[$coinCol] < $qty) { $db->rollBack(); $response['message'] = 'Insufficient coins to complete this trade.'; break; }
-
-                $stmt = $db->prepare("UPDATE users SET $coinCol = $coinCol - ? WHERE id = ?");
-                $stmt->execute([$qty, (int)$trade['seller_id']]);
+                // ESCROW: Coins were already deducted from seller. Now credit the buyer.
                 $stmt = $db->prepare("UPDATE users SET $coinCol = $coinCol + ? WHERE id = ?");
                 $stmt->execute([$qty, (int)$trade['buyer_id']]);
 
@@ -143,7 +149,12 @@ try {
                 if (!$trade) { $db->rollBack(); $response['message'] = 'Trade not found.'; break; }
                 $qty = (int)$trade['quantity'];
 
-                // Restore offer remaining (no refund needed, funds weren't held)
+                // ESCROW: Refund held coins to the seller
+                $coinCol = $trade['coin_type'] . '_coins';
+                $stmt = $db->prepare("UPDATE users SET $coinCol = $coinCol + ? WHERE id = ?");
+                $stmt->execute([$qty, (int)$trade['seller_id']]);
+
+                // Restore offer remaining
                 $stmt = $db->prepare("UPDATE p2p_offers SET remaining = remaining + ?, status = 'active' WHERE id = ?");
                 $stmt->execute([$qty, (int)$trade['offer_id']]);
 

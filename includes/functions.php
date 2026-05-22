@@ -1611,11 +1611,20 @@ function createAgentAccount(PDO $pdo, int $userId, float $fee): array {
         $stmt->execute([$userId]);
         $user = $stmt->fetch();
 
-        if (!$user) return ['success' => false, 'message' => 'User not found.'];
-        if ($user['role'] === 'agent') return ['success' => false, 'message' => 'Already an agent.'];
+        if (!$user) {
+            $pdo->rollBack();
+            return ['success' => false, 'message' => 'User not found.'];
+        }
+        if ($user['role'] === 'agent') {
+            $pdo->rollBack();
+            return ['success' => false, 'message' => 'Already an agent.'];
+        }
 
         $newBalance = (float)$user['balance'] - $fee;
-        if ($newBalance < 0) return ['success' => false, 'message' => 'Insufficient balance. Please add funds first.'];
+        if ($newBalance < 0) {
+            $pdo->rollBack();
+            return ['success' => false, 'message' => 'Insufficient balance. Please add funds first.'];
+        }
 
         $stmt = $pdo->prepare("UPDATE users SET role = 'agent', balance = ?, agent_verified_at = NOW() WHERE id = ?");
         $stmt->execute([$newBalance, $userId]);
@@ -1638,7 +1647,10 @@ function addAgentFunds(PDO $pdo, int $userId, float $amount, string $ref = 'manu
         $stmt = $pdo->prepare("SELECT balance FROM users WHERE id = ? FOR UPDATE");
         $stmt->execute([$userId]);
         $user = $stmt->fetch();
-        if (!$user) { $pdo->rollBack(); return ['success' => false, 'message' => 'User not found.']; }
+        if (!$user) { 
+            $pdo->rollBack(); 
+            return ['success' => false, 'message' => 'User not found.']; 
+        }
 
         $before = (float)$user['balance'];
         $after = $before + $amount;
@@ -1649,7 +1661,7 @@ function addAgentFunds(PDO $pdo, int $userId, float $amount, string $ref = 'manu
         $pdo->commit();
         return ['success' => true, 'message' => 'Funds added!', 'balance' => $after];
     } catch (Throwable $e) {
-        $pdo->rollBack();
+        if ($pdo->inTransaction()) $pdo->rollBack();
         return ['success' => false, 'message' => 'Server error.'];
     }
 }
@@ -1660,10 +1672,16 @@ function deductPrizeFromAgent(PDO $pdo, int $agentId, float $amount, int $tourna
         $stmt = $pdo->prepare("SELECT balance FROM users WHERE id = ? AND role = 'agent' FOR UPDATE");
         $stmt->execute([$agentId]);
         $user = $stmt->fetch();
-        if (!$user) { $pdo->rollBack(); return ['success' => false, 'message' => 'Agent not found.']; }
+        if (!$user) { 
+            $pdo->rollBack(); 
+            return ['success' => false, 'message' => 'Agent not found.']; 
+        }
 
         $before = (float)$user['balance'];
-        if ($before < $amount) return ['success' => false, 'message' => 'Insufficient balance. Need ৳' . number_format($amount, 0) . ' but have ৳' . number_format($before, 0)];
+        if ($before < $amount) {
+            $pdo->rollBack();
+            return ['success' => false, 'message' => 'Insufficient balance. Need ৳' . number_format($amount, 0) . ' but have ৳' . number_format($before, 0)];
+        }
 
         $after = $before - $amount;
         $stmt = $pdo->prepare("UPDATE users SET balance = ? WHERE id = ?");
@@ -1673,7 +1691,7 @@ function deductPrizeFromAgent(PDO $pdo, int $agentId, float $amount, int $tourna
         $pdo->commit();
         return ['success' => true, 'message' => 'Prize deducted.', 'balance' => $after];
     } catch (Throwable $e) {
-        $pdo->rollBack();
+        if ($pdo->inTransaction()) $pdo->rollBack();
         return ['success' => false, 'message' => 'Server error.'];
     }
 }
