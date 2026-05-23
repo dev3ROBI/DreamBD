@@ -114,7 +114,7 @@ $palette = ['#7c3aed','#2563eb','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4
         <div class="gp-profile-bar-actions">
             <?php if ($userRole === 'agent'): ?>
                 <button type="button" class="gp-btn gp-btn-sm gp-btn-primary" data-open-modal="bKashModal"><i class="fas fa-mobile-screen-button"></i> bKash</button>
-                <button type="button" class="gp-btn gp-btn-sm gp-btn-accent" data-open-modal="createTournamentModal"><i class="fas fa-trophy"></i> Create tournament</button>
+                <button type="button" class="gp-btn gp-btn-sm gp-btn-accent" data-open-modal="createTournamentModal"><i class="fas fa-trophy"></i> Add tournament</button>
             <?php elseif ($userRole === 'user'): ?>
                 <button type="button" class="gp-btn gp-btn-sm gp-btn-gradient" data-open-modal="becomeAgentModal"><i class="fas fa-crown"></i> Become an agent</button>
             <?php endif; ?>
@@ -196,6 +196,7 @@ $palette = ['#7c3aed','#2563eb','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4
                     $canRegister = in_array($status, ['upcoming', 'live']) && $viewerId;
                     $isFull = $maxTeams > 0 && $regd >= $maxTeams;
                     $isAgentOwner = $agentId > 0 && $agentId === (int)$viewerId;
+                    $canOpenRoom = $viewerId ? userCanAccessTournamentRoom($db, $tid, (int)$viewerId) : false;
                 ?>
                 <article class="gp-card" data-id="<?php echo $tid; ?>" data-status="<?php echo $status; ?>">
                     <div class="gp-card-accent" style="background:<?php echo $accent; ?>"></div>
@@ -231,6 +232,9 @@ $palette = ['#7c3aed','#2563eb','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4
                             <span class="gp-btn gp-btn-sm gp-btn-disabled">Closed</span>
                         <?php endif; ?>
                         <button class="gp-btn gp-btn-sm gp-btn-ghost gp-view-btn" data-id="<?php echo $tid; ?>"><i class="fas fa-eye"></i> View</button>
+                        <?php if ($canOpenRoom): ?>
+                            <a class="gp-btn gp-btn-sm gp-btn-outline" href="index.php?page=tournament-room&id=<?php echo $tid; ?>" data-no-ajax><i class="fas fa-door-open"></i> Room</a>
+                        <?php endif; ?>
                         <?php if ($isAgentOwner): ?>
                         <span class="gp-agent-badge"><i class="fas fa-crown"></i> Yours</span>
                         <?php endif; ?>
@@ -264,7 +268,10 @@ $palette = ['#7c3aed','#2563eb','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4
                             <strong><?php echo $rTitle; ?></strong>
                             <span><span class="gp-badge sm <?php echo $rBadge; ?>"><?php echo strtoupper($rStatus); ?></span></span>
                         </div>
-                        <button class="gp-btn gp-btn-xs gp-btn-ghost gp-unregister" data-id="<?php echo (int)$reg['tournament_id']; ?>"><i class="fas fa-xmark"></i> Leave</button>
+                        <div style="display:flex;gap:8px;align-items:center">
+                            <a class="gp-btn gp-btn-xs gp-btn-outline" href="index.php?page=tournament-room&id=<?php echo (int)$reg['tournament_id']; ?>" data-no-ajax><i class="fas fa-door-open"></i> Room</a>
+                            <button class="gp-btn gp-btn-xs gp-btn-ghost gp-unregister" data-id="<?php echo (int)$reg['tournament_id']; ?>"><i class="fas fa-xmark"></i> Leave</button>
+                        </div>
                     </div>
                     <?php endforeach; endif; ?>
                 </div>
@@ -301,7 +308,7 @@ $palette = ['#7c3aed','#2563eb','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4
                 <div class="gp-my-panel-header"><i class="fas fa-crown"></i> Agent dashboard <span class="gp-count">৳<?php echo number_format($userBalance, 0); ?></span></div>
                 <div class="gp-agent-quick">
                     <button class="gp-btn gp-btn-sm gp-btn-primary" data-open-modal="bKashModal"><i class="fas fa-mobile-screen-button"></i> bKash</button>
-                    <button class="gp-btn gp-btn-sm gp-btn-accent" data-open-modal="createTournamentModal"><i class="fas fa-trophy"></i> Create tournament</button>
+                    <button class="gp-btn gp-btn-sm gp-btn-accent" data-open-modal="createTournamentModal"><i class="fas fa-trophy"></i> Add tournament</button>
                     <button class="gp-btn gp-btn-sm gp-btn-outline" data-open-modal="agentHistoryModal"><i class="fas fa-clock-rotate-left"></i> History</button>
                 </div>
             </div>

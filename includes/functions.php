@@ -134,11 +134,7 @@ function ensureSocialTables(PDO $pdo) {
             INDEX idx_activity (last_activity)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ");
-    // Add missing columns or fix types for existing tables
-    try { $pdo->exec("ALTER TABLE user_sessions MODIFY last_activity INT UNSIGNED NOT NULL"); } catch (Exception $e) {}
-    try { $pdo->exec("ALTER TABLE user_sessions MODIFY expires_at DATETIME NOT NULL"); } catch (Exception $e) {}
-    try { $pdo->exec("ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"); } catch (Exception $e) {}
-    try { $pdo->exec("ALTER TABLE user_sessions ADD UNIQUE INDEX IF NOT EXISTS uniq_token (session_token)"); } catch (Exception $e) {}
+    ensureUserSessionsSchema($pdo);
 
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS rate_limits (
@@ -271,6 +267,7 @@ function ensureSocialTables(PDO $pdo) {
     try { $pdo->exec("ALTER TABLE post_reports ADD COLUMN resolved_by INT DEFAULT NULL AFTER admin_note"); } catch (PDOException $e) {}
     try { $pdo->exec("ALTER TABLE post_reports ADD COLUMN resolved_at TIMESTAMP NULL DEFAULT NULL AFTER resolved_by"); } catch (PDOException $e) {}
     try { $pdo->exec("ALTER TABLE post_reports ADD INDEX idx_status (status)"); } catch (PDOException $e) {}
+    ensureTournamentFeatureSchema($pdo);
 }
 
 function getFriendshipStatus(PDO $pdo, int $viewerId, int $otherUserId): ?string {
@@ -1502,13 +1499,348 @@ function getTournamentsWithCounts(PDO $pdo, ?string $statusFilter = null, int $l
 
 function getTournamentParticipants(PDO $pdo, int $tournamentId): array {
     $stmt = $pdo->prepare("
-        SELECT tp.*, u.full_name, u.username, u.avatar
+        SELECT tp.*, u.full_name, u.username, u.avatar, tm.role AS membership_role
         FROM tournament_participants tp
         LEFT JOIN users u ON u.id = tp.user_id
+        LEFT JOIN team_members tm ON tm.team_id = tp.team_id AND tm.user_id = tp.user_id
         WHERE tp.tournament_id = ? AND tp.status = 'confirmed'
         ORDER BY tp.created_at ASC
     ");
     $stmt->execute([$tournamentId]);
+    return $stmt->fetchAll();
+}
+
+function getTournamentByIdWithCounts(PDO $pdo, int $tournamentId): ?array {
+    $stmt = $pdo->prepare("
+        SELECT t.*,
+               u.full_name AS agent_name,
+               u.username AS agent_username,
+               (
+                   SELECT COUNT(*)
+                   FROM tournament_participants tp
+                   WHERE tp.tournament_id = t.id AND tp.status = 'confirmed'
+               ) AS registered_teams
+        FROM tournaments t
+        LEFT JOIN users u ON u.id = t.agent_id
+        WHERE t.id = ?
+        LIMIT 1
+    ");
+    $stmt->execute([$tournamentId]);
+    $tournament = $stmt->fetch();
+    return $tournament ?: null;
+}
+
+function userCanAccessTournamentRoom(PDO $pdo, int $tournamentId, int $userId): bool {
+    $tournament = getTournamentByIdWithCounts($pdo, $tournamentId);
+    if (!$tournament || $userId <= 0) {
+        return false;
+    }
+
+    if ((int) ($tournament['agent_id'] ?? 0) === $userId) {
+        return true;
+    }
+
+    $directStmt = $pdo->prepare("
+        SELECT 1
+        FROM tournament_participants
+        WHERE tournament_id = ? AND user_id = ? AND status = 'confirmed'
+        LIMIT 1
+    ");
+    $directStmt->execute([$tournamentId, $userId]);
+    if ($directStmt->fetchColumn()) {
+        return true;
+    }
+
+    $teamStmt = $pdo->prepare("
+        SELECT 1
+        FROM tournament_participants tp
+        INNER JOIN team_members tm ON tm.team_id = tp.team_id
+        WHERE tp.tournament_id = ?
+          AND tp.status = 'confirmed'
+          AND tm.user_id = ?
+        LIMIT 1
+    ");
+    $teamStmt->execute([$tournamentId, $userId]);
+    return (bool) $teamStmt->fetchColumn();
+}
+
+function getTournamentTeams(PDO $pdo, int $tournamentId): array {
+    $stmt = $pdo->prepare("
+        SELECT tp.id,
+               tp.tournament_id,
+               tp.user_id,
+               tp.team_id,
+               tp.team_name,
+               tp.status,
+               tp.created_at,
+               t.name AS linked_team_name,
+               captain.full_name AS captain_name,
+               captain.username AS captain_username,
+               (
+                   SELECT COUNT(*)
+                   FROM team_members tm_count
+                   WHERE tm_count.team_id = tp.team_id
+               ) AS member_count
+        FROM tournament_participants tp
+        LEFT JOIN teams t ON t.id = tp.team_id
+        LEFT JOIN users captain ON captain.id = tp.user_id
+        WHERE tp.tournament_id = ?
+          AND tp.status = 'confirmed'
+        ORDER BY tp.created_at ASC
+    ");
+    $stmt->execute([$tournamentId]);
+    return $stmt->fetchAll();
+}
+
+function getTournamentPlayerPool(PDO $pdo, int $tournamentId): array {
+    $stmt = $pdo->prepare("
+        SELECT DISTINCT
+               u.id AS user_id,
+               u.full_name,
+               u.username,
+               u.avatar,
+               tp.team_id,
+               COALESCE(t.name, tp.team_name, 'Solo player') AS team_name,
+               COALESCE(tm.role, 'solo') AS membership_role
+        FROM tournament_participants tp
+        INNER JOIN users u ON u.id = tp.user_id
+        LEFT JOIN teams t ON t.id = tp.team_id
+        LEFT JOIN team_members tm ON tm.team_id = tp.team_id AND tm.user_id = tp.user_id
+        WHERE tp.tournament_id = ?
+          AND tp.status = 'confirmed'
+
+        UNION
+
+        SELECT DISTINCT
+               u.id AS user_id,
+               u.full_name,
+               u.username,
+               u.avatar,
+               tp.team_id,
+               COALESCE(t.name, tp.team_name, 'Team member') AS team_name,
+               tm.role AS membership_role
+        FROM tournament_participants tp
+        INNER JOIN team_members tm ON tm.team_id = tp.team_id
+        INNER JOIN users u ON u.id = tm.user_id
+        LEFT JOIN teams t ON t.id = tp.team_id
+        WHERE tp.tournament_id = ?
+          AND tp.status = 'confirmed'
+          AND tp.team_id IS NOT NULL
+        ORDER BY team_name ASC, membership_role DESC, full_name ASC, username ASC
+    ");
+    $stmt->execute([$tournamentId, $tournamentId]);
+    return $stmt->fetchAll();
+}
+
+function getTournamentRoomMessages(PDO $pdo, int $tournamentId, int $limit = 80): array {
+    $limit = max(1, min(200, $limit));
+    $stmt = $pdo->prepare("
+        SELECT m.*,
+               u.full_name,
+               u.username,
+               u.avatar
+        FROM tournament_chat_messages m
+        INNER JOIN users u ON u.id = m.sender_id
+        WHERE m.tournament_id = ?
+        ORDER BY m.created_at DESC
+        LIMIT {$limit}
+    ");
+    $stmt->execute([$tournamentId]);
+    return array_reverse($stmt->fetchAll());
+}
+
+function createTournamentChatMessage(PDO $pdo, int $tournamentId, int $senderId, string $messageType, array $payload): array {
+    $messageType = in_array($messageType, ['text', 'room_card'], true) ? $messageType : 'text';
+    $body = trim((string) ($payload['message'] ?? ''));
+    $meta = [];
+
+    if ($messageType === 'room_card') {
+        $meta = [
+            'room_title' => trim((string) ($payload['room_title'] ?? '')),
+            'room_code' => trim((string) ($payload['room_code'] ?? '')),
+            'room_link' => trim((string) ($payload['room_link'] ?? '')),
+            'starts_at' => trim((string) ($payload['starts_at'] ?? '')),
+            'note' => trim((string) ($payload['note'] ?? '')),
+        ];
+        if ($meta['room_title'] === '' || ($meta['room_code'] === '' && $meta['room_link'] === '')) {
+            return ['success' => false, 'message' => 'Room title and invite details are required.'];
+        }
+        if ($body === '') {
+            $body = 'Room card shared.';
+        }
+    } elseif ($body === '') {
+        return ['success' => false, 'message' => 'Message cannot be empty.'];
+    }
+
+    $stmt = $pdo->prepare("
+        INSERT INTO tournament_chat_messages (tournament_id, sender_id, message_type, message, metadata_json)
+        VALUES (?, ?, ?, ?, ?)
+    ");
+    $stmt->execute([
+        $tournamentId,
+        $senderId,
+        $messageType,
+        $body,
+        $meta ? json_encode($meta, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : null,
+    ]);
+
+    return ['success' => true, 'message' => 'Message sent.'];
+}
+
+function getTournamentResultsBundle(PDO $pdo, int $tournamentId): array {
+    $stmt = $pdo->prepare("
+        SELECT tr.*,
+               u.full_name,
+               u.username,
+               u.avatar,
+               t.name AS linked_team_name
+        FROM tournament_results tr
+        LEFT JOIN users u ON u.id = tr.user_id
+        LEFT JOIN teams t ON t.id = tr.team_id
+        WHERE tr.tournament_id = ?
+        ORDER BY tr.result_scope ASC, tr.placement ASC, tr.id ASC
+    ");
+    $stmt->execute([$tournamentId]);
+    $rows = $stmt->fetchAll();
+
+    $bundle = ['teams' => [], 'players' => []];
+    foreach ($rows as $row) {
+        if (($row['result_scope'] ?? '') === 'team') {
+            $bundle['teams'][] = $row;
+        } else {
+            $bundle['players'][] = $row;
+        }
+    }
+    return $bundle;
+}
+
+function saveTournamentResults(PDO $pdo, int $tournamentId, int $agentId, array $teamResults, array $playerResults): array {
+    $tournament = getTournamentByIdWithCounts($pdo, $tournamentId);
+    if (!$tournament) {
+        return ['success' => false, 'message' => 'Tournament not found.'];
+    }
+    if ((int) ($tournament['agent_id'] ?? 0) !== $agentId) {
+        return ['success' => false, 'message' => 'Only the tournament agent can submit results.'];
+    }
+
+    $cleanTeamResults = [];
+    foreach ($teamResults as $row) {
+        $teamId = (int) ($row['team_id'] ?? 0);
+        $placement = max(1, (int) ($row['placement'] ?? 0));
+        if ($teamId <= 0) {
+            continue;
+        }
+        $cleanTeamResults[] = [
+            'team_id' => $teamId,
+            'placement' => $placement,
+            'score' => trim((string) ($row['score'] ?? '')),
+            'result_label' => trim((string) ($row['result_label'] ?? '')),
+            'notes' => trim((string) ($row['notes'] ?? '')),
+            'prize_amount' => (float) ($row['prize_amount'] ?? 0),
+        ];
+    }
+
+    $cleanPlayerResults = [];
+    foreach ($playerResults as $row) {
+        $userId = (int) ($row['user_id'] ?? 0);
+        $placement = max(1, (int) ($row['placement'] ?? 0));
+        if ($userId <= 0) {
+            continue;
+        }
+        $cleanPlayerResults[] = [
+            'user_id' => $userId,
+            'team_id' => (int) ($row['team_id'] ?? 0),
+            'placement' => $placement,
+            'score' => trim((string) ($row['score'] ?? '')),
+            'result_label' => trim((string) ($row['result_label'] ?? '')),
+            'notes' => trim((string) ($row['notes'] ?? '')),
+            'prize_amount' => (float) ($row['prize_amount'] ?? 0),
+        ];
+    }
+
+    if (!$cleanTeamResults && !$cleanPlayerResults) {
+        return ['success' => false, 'message' => 'Add at least one team or player result.'];
+    }
+
+    try {
+        $pdo->beginTransaction();
+        $pdo->prepare("DELETE FROM tournament_results WHERE tournament_id = ?")->execute([$tournamentId]);
+
+        $insertStmt = $pdo->prepare("
+            INSERT INTO tournament_results
+                (tournament_id, team_id, user_id, result_scope, placement, score, result_label, prize_amount, notes, submitted_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+
+        foreach ($cleanTeamResults as $teamResult) {
+            $insertStmt->execute([
+                $tournamentId,
+                $teamResult['team_id'],
+                null,
+                'team',
+                $teamResult['placement'],
+                $teamResult['score'],
+                $teamResult['result_label'],
+                $teamResult['prize_amount'],
+                $teamResult['notes'],
+                $agentId,
+            ]);
+        }
+
+        foreach ($cleanPlayerResults as $playerResult) {
+            $insertStmt->execute([
+                $tournamentId,
+                $playerResult['team_id'] > 0 ? $playerResult['team_id'] : null,
+                $playerResult['user_id'],
+                'player',
+                $playerResult['placement'],
+                $playerResult['score'],
+                $playerResult['result_label'],
+                $playerResult['prize_amount'],
+                $playerResult['notes'],
+                $agentId,
+            ]);
+        }
+
+        $pdo->prepare("UPDATE tournaments SET status = 'completed' WHERE id = ?")->execute([$tournamentId]);
+        foreach ($cleanPlayerResults as $playerResult) {
+            createNotification(
+                $pdo,
+                $playerResult['user_id'],
+                $agentId,
+                'tournament_result',
+                'Your tournament result for "' . ($tournament['title'] ?? 'Tournament') . '" has been published.',
+                $tournamentId
+            );
+        }
+
+        $pdo->commit();
+        return ['success' => true, 'message' => 'Tournament results submitted successfully.'];
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        return ['success' => false, 'message' => 'Could not save tournament results.'];
+    }
+}
+
+function getUserTournamentResults(PDO $pdo, int $userId, int $limit = 8): array {
+    $limit = max(1, min(50, $limit));
+    $stmt = $pdo->prepare("
+        SELECT tr.*,
+               tour.title AS tournament_title,
+               tour.category,
+               tour.game_icon,
+               tour.accent_color,
+               teams.name AS linked_team_name
+        FROM tournament_results tr
+        INNER JOIN tournaments tour ON tour.id = tr.tournament_id
+        LEFT JOIN teams ON teams.id = tr.team_id
+        WHERE tr.user_id = ?
+        ORDER BY tr.created_at DESC
+        LIMIT {$limit}
+    ");
+    $stmt->execute([$userId]);
     return $stmt->fetchAll();
 }
 

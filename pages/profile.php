@@ -36,6 +36,10 @@ try {
     } catch (Throwable $e) {}
 
     $suggestedFriends = $profileId === $viewerId ? getSuggestedFriends($db, $viewerId, 12) : [];
+    $recentTournamentResults = [];
+    try {
+        $recentTournamentResults = getUserTournamentResults($db, $profileId, 6);
+    } catch (Throwable $e) {}
     $preferences = !empty($profileUser['preferences']) ? json_decode($profileUser['preferences'], true) : [];
     $friendshipStatus = getFriendshipStatus($db, $viewerId, $profileId);
     $isOwnProfile = $profileId === $viewerId;
@@ -66,6 +70,7 @@ $csrfToken = $security->generateCSRFToken();
 $displayName = $profileUser['full_name'] ?: $profileUser['username'];
 $isOnline = !empty($profileUser['is_online']);
 $presenceLabel = $isOnline ? 'Active' : 'Offline';
+$currentSessionToken = session_id();
 $joinedDate = $profileUser['registered_at'] ?? $profileUser['created_at'] ?? 'now';
 $aboutHighlights = [
     [
@@ -443,6 +448,21 @@ function renderProfileActionButtons($isOwnProfile, $friendshipStatus, $profileId
                             <div class="snapshot-item"><span>Sessions</span><strong><?php echo (int) $profileUser['session_count']; ?></strong></div>
                         </div>
                     </div>
+                    <?php if ($recentTournamentResults): ?>
+                    <div class="profile-card mobile-only-profile-card">
+                        <div class="card-heading"><h3>Tournament Results</h3><span class="card-count"><?php echo count($recentTournamentResults); ?></span></div>
+                        <div class="stack-list">
+                            <?php foreach ($recentTournamentResults as $result): ?>
+                            <a class="person-row" href="index.php?page=tournament-room&id=<?php echo (int) ($result['tournament_id'] ?? 0); ?>" data-no-ajax>
+                                <div class="person-copy">
+                                    <strong>#<?php echo (int) ($result['placement'] ?? 0); ?> <?php echo htmlspecialchars($result['tournament_title'] ?? 'Tournament'); ?></strong>
+                                    <span><?php echo htmlspecialchars($result['result_label'] ?: (($result['linked_team_name'] ?? '') ?: 'Player result')); ?><?php if (!empty($result['score'])): ?>, score <?php echo htmlspecialchars($result['score']); ?><?php endif; ?></span>
+                                </div>
+                            </a>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    <?php endif; ?>
                     <?php if ($friends): ?>
                     <div class="profile-card mobile-only-profile-card">
                         <div class="card-heading"><h3>Friend Circle</h3><span class="card-count"><?php echo count($friends); ?></span></div>
@@ -571,6 +591,21 @@ function renderProfileActionButtons($isOwnProfile, $friendshipStatus, $profileId
                     <div class="snapshot-item"><span>Sessions</span><strong><?php echo (int) $profileUser['session_count']; ?></strong></div>
                 </div>
             </div>
+            <?php if ($recentTournamentResults): ?>
+            <div class="profile-card">
+                <div class="card-heading"><h3>Tournament Results</h3><span class="card-count"><?php echo count($recentTournamentResults); ?></span></div>
+                <div class="stack-list">
+                    <?php foreach ($recentTournamentResults as $result): ?>
+                    <a class="person-row" href="index.php?page=tournament-room&id=<?php echo (int) ($result['tournament_id'] ?? 0); ?>" data-no-ajax>
+                        <div class="person-copy">
+                            <strong>#<?php echo (int) ($result['placement'] ?? 0); ?> <?php echo htmlspecialchars($result['tournament_title'] ?? 'Tournament'); ?></strong>
+                            <span><?php echo htmlspecialchars($result['result_label'] ?: (($result['linked_team_name'] ?? '') ?: 'Player result')); ?><?php if (!empty($result['score'])): ?>, score <?php echo htmlspecialchars($result['score']); ?><?php endif; ?></span>
+                        </div>
+                    </a>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
             <?php if ($friends): ?>
             <div class="profile-card">
                 <div class="card-heading"><h3>Friend Circle</h3><span class="card-count"><?php echo count($friends); ?></span></div>
@@ -689,7 +724,7 @@ function renderProfileActionButtons($isOwnProfile, $friendshipStatus, $profileId
                     <div class="settings-surface-header"><h3><i class="fas fa-desktop text-cyan-500 mr-1"></i> Active sessions</h3><p>Where your account is signed in</p></div>
                     <?php if ($activeSessions): ?>
                         <?php foreach ($activeSessions as $session): ?>
-                        <?php $isCurrentSession = hash_equals(session_id(), (string) ($session['session_token'] ?? '')); ?>
+                        <?php $isCurrentSession = hash_equals($currentSessionToken, (string) ($session['session_token'] ?? '')); ?>
                         <div class="session-item" data-session-item="<?php echo htmlspecialchars($session['id'] ?? ''); ?>">
                             <i class="fas fa-<?php echo strpos($session['user_agent'] ?? '', 'Mobile') !== false ? 'mobile' : 'desktop'; ?>"></i>
                             <div class="session-info">

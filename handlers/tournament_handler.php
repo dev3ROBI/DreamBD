@@ -228,6 +228,76 @@ try {
             break;
 
         // ─── SUBMIT PAYMENT (admin approval) ───
+        case 'update_tournament_status':
+            if (!$userId) { $response['message'] = 'Please log in.'; break; }
+            $tournamentId = (int)($req['tournament_id'] ?? 0);
+            $status = trim((string)($req['status'] ?? ''));
+            if (!in_array($status, ['upcoming', 'live', 'completed', 'cancelled'], true)) { $response['message'] = 'Invalid status.'; break; }
+            $tournament = getTournamentByIdWithCounts($db, $tournamentId);
+            if (!$tournament) { $response['message'] = 'Tournament not found.'; break; }
+            if ((int)($tournament['agent_id'] ?? 0) !== (int)$userId || ($_SESSION['role'] ?? '') !== 'agent') { $response['message'] = 'Only the tournament agent can update status.'; break; }
+            $stmt = $db->prepare("UPDATE tournaments SET status = ? WHERE id = ?");
+            $stmt->execute([$status, $tournamentId]);
+            $response = ['success' => true, 'message' => 'Tournament status updated.', 'status' => $status];
+            break;
+
+        case 'get_tournament_room':
+            $tournamentId = (int)($req['tournament_id'] ?? 0);
+            if (!$userId) { $response['message'] = 'Please log in.'; break; }
+            if (!$tournamentId || !userCanAccessTournamentRoom($db, $tournamentId, (int)$userId)) { $response['message'] = 'You do not have access to this tournament room.'; break; }
+            $response = [
+                'success' => true,
+                'tournament' => getTournamentByIdWithCounts($db, $tournamentId),
+                'participants' => getTournamentParticipants($db, $tournamentId),
+                'teams' => getTournamentTeams($db, $tournamentId),
+                'player_pool' => getTournamentPlayerPool($db, $tournamentId),
+                'messages' => getTournamentRoomMessages($db, $tournamentId),
+                'results' => getTournamentResultsBundle($db, $tournamentId),
+            ];
+            break;
+
+        case 'get_tournament_chat':
+            $tournamentId = (int)($req['tournament_id'] ?? 0);
+            if (!$userId) { $response['message'] = 'Please log in.'; break; }
+            if (!$tournamentId || !userCanAccessTournamentRoom($db, $tournamentId, (int)$userId)) { $response['message'] = 'You do not have access to this tournament room.'; break; }
+            $response = ['success' => true, 'messages' => getTournamentRoomMessages($db, $tournamentId)];
+            break;
+
+        case 'send_tournament_chat':
+            $tournamentId = (int)($req['tournament_id'] ?? 0);
+            if (!$userId) { $response['message'] = 'Please log in.'; break; }
+            $tournament = getTournamentByIdWithCounts($db, $tournamentId);
+            if (!$tournament || !userCanAccessTournamentRoom($db, $tournamentId, (int)$userId)) { $response['message'] = 'You do not have access to this tournament room.'; break; }
+            $messageType = trim((string)($req['message_type'] ?? 'text'));
+            $isAgentOwner = (int)($tournament['agent_id'] ?? 0) === (int)$userId && ($_SESSION['role'] ?? '') === 'agent';
+            if ($messageType === 'room_card' && !$isAgentOwner) { $response['message'] = 'Only the tournament agent can share room cards.'; break; }
+            $result = createTournamentChatMessage($db, $tournamentId, (int)$userId, $messageType, $req);
+            $response = array_merge($response, $result);
+            if ($response['success']) {
+                $response['messages'] = getTournamentRoomMessages($db, $tournamentId);
+            }
+            break;
+
+        case 'submit_tournament_results':
+            $tournamentId = (int)($req['tournament_id'] ?? 0);
+            if (!$userId || ($_SESSION['role'] ?? '') !== 'agent') { $response['message'] = 'Only agents can submit results.'; break; }
+            $teamResults = $req['team_results'] ?? [];
+            $playerResults = $req['player_results'] ?? [];
+            if (is_string($teamResults)) {
+                $decoded = json_decode($teamResults, true);
+                $teamResults = is_array($decoded) ? $decoded : [];
+            }
+            if (is_string($playerResults)) {
+                $decoded = json_decode($playerResults, true);
+                $playerResults = is_array($decoded) ? $decoded : [];
+            }
+            $result = saveTournamentResults($db, $tournamentId, (int)$userId, is_array($teamResults) ? $teamResults : [], is_array($playerResults) ? $playerResults : []);
+            $response = array_merge($response, $result);
+            if ($response['success']) {
+                $response['results'] = getTournamentResultsBundle($db, $tournamentId);
+            }
+            break;
+
         case 'submit_payment':
             if (!$userId) { $response['message'] = 'Please log in.'; break; }
             $method = trim($req['method'] ?? 'bkash');

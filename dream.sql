@@ -393,6 +393,54 @@ CREATE TABLE IF NOT EXISTS `tournament_participants` (
   KEY `idx_user` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS `tournament_matches` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `tournament_id` int unsigned NOT NULL,
+  `round_name` varchar(80) DEFAULT NULL,
+  `team_a_id` int unsigned DEFAULT NULL,
+  `team_b_id` int unsigned DEFAULT NULL,
+  `score_a` varchar(40) DEFAULT NULL,
+  `score_b` varchar(40) DEFAULT NULL,
+  `winner_team_id` int unsigned DEFAULT NULL,
+  `status` varchar(30) NOT NULL DEFAULT 'scheduled',
+  `scheduled_at` datetime DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_tournament` (`tournament_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `tournament_chat_messages` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `tournament_id` int unsigned NOT NULL,
+  `sender_id` int unsigned NOT NULL,
+  `message_type` enum('text','room_card') NOT NULL DEFAULT 'text',
+  `message` text NOT NULL,
+  `metadata_json` longtext DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_tournament` (`tournament_id`),
+  KEY `idx_sender` (`sender_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `tournament_results` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `tournament_id` int unsigned NOT NULL,
+  `team_id` int unsigned DEFAULT NULL,
+  `user_id` int unsigned DEFAULT NULL,
+  `result_scope` enum('team','player') NOT NULL DEFAULT 'player',
+  `placement` int unsigned NOT NULL DEFAULT 1,
+  `score` varchar(80) DEFAULT NULL,
+  `result_label` varchar(120) DEFAULT NULL,
+  `prize_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `notes` text DEFAULT NULL,
+  `submitted_by` int unsigned DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_tournament` (`tournament_id`),
+  KEY `idx_user` (`user_id`),
+  KEY `idx_team` (`team_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS `teams` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(120) NOT NULL,

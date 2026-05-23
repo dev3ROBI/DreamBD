@@ -15,7 +15,7 @@ $isLoggedIn = $auth->isLoggedIn();
 $user_name = $isLoggedIn ? ($_SESSION['full_name'] ?? $_SESSION['username'] ?? null) : null;
 
 $page = $_GET['page'] ?? 'home';
-$allowed_pages = ['home', 'community', 'products', 'tournaments', 'how-it-works', 'cart', 'login', 'register', 'rules', 'faq', 'profile', 'messages', 'notifications', 'search', 'agent-dashboard', 'balance', 'p2p', 'admin'];
+$allowed_pages = ['home', 'community', 'products', 'tournaments', 'tournament-room', 'how-it-works', 'cart', 'login', 'register', 'rules', 'faq', 'profile', 'messages', 'notifications', 'search', 'agent-dashboard', 'balance', 'p2p', 'admin'];
 $page = in_array($page, $allowed_pages) ? $page : 'home';
 
 $is_ajax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && 
@@ -33,7 +33,7 @@ if ($isLoggedIn && ($page === 'login' || $page === 'register')) {
 }
 
 // Check if user is not logged in and trying to access protected page
-if (!$isLoggedIn && in_array($page, ['profile', 'messages', 'notifications'], true)) {
+if (!$isLoggedIn && in_array($page, ['profile', 'messages', 'notifications', 'tournament-room'], true)) {
     if ($is_ajax) {
         echo json_encode(['redirect' => 'index.php?page=login', 'status' => 'redirect']);
         exit;

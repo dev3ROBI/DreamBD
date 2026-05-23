@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🌟 DreamBD
+#  DreamBD
 
 ### **Tournament | Social | E-commerce** — All in One Platform
 

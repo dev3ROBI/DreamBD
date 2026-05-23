@@ -92,6 +92,155 @@ class Database {
     public function getConnection() { return $this->connection; }
 }
 
+function dream_column_exists(PDO $db, string $table, string $column): bool {
+    try {
+        $stmt = $db->prepare("
+            SELECT COUNT(*)
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = ?
+              AND COLUMN_NAME = ?
+        ");
+        $stmt->execute([$table, $column]);
+        return (int) $stmt->fetchColumn() > 0;
+    } catch (Throwable $e) {
+        return false;
+    }
+}
+
+function dream_column_type(PDO $db, string $table, string $column): ?string {
+    try {
+        $stmt = $db->prepare("
+            SELECT COLUMN_TYPE
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = ?
+              AND COLUMN_NAME = ?
+            LIMIT 1
+        ");
+        $stmt->execute([$table, $column]);
+        $value = $stmt->fetchColumn();
+        return $value !== false ? strtolower((string) $value) : null;
+    } catch (Throwable $e) {
+        return null;
+    }
+}
+
+function ensureUserSessionsSchema(PDO $db): void {
+    $hasSessionToken = dream_column_exists($db, 'user_sessions', 'session_token');
+    $idType = dream_column_type($db, 'user_sessions', 'id');
+
+    if (!$hasSessionToken || ($idType !== null && strpos($idType, 'int') !== 0)) {
+        $legacyTable = 'user_sessions_legacy_' . date('YmdHis');
+        $sourceToken = $hasSessionToken ? 'session_token' : 'id';
+
+        $db->exec("
+            CREATE TABLE IF NOT EXISTS user_sessions_migrated (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                user_id INT UNSIGNED NOT NULL,
+                session_token VARCHAR(128) NOT NULL,
+                payload LONGTEXT NULL,
+                user_agent TEXT NULL,
+                ip_address VARCHAR(45) NULL,
+                last_activity INT UNSIGNED NOT NULL,
+                expires_at DATETIME NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_token (session_token),
+                INDEX idx_user (user_id),
+                INDEX idx_activity (last_activity),
+                INDEX idx_expires (expires_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ");
+
+        $db->exec("
+            INSERT IGNORE INTO user_sessions_migrated
+                (user_id, session_token, payload, user_agent, ip_address, last_activity, expires_at, created_at)
+            SELECT
+                user_id,
+                CAST({$sourceToken} AS CHAR(128)),
+                payload,
+                user_agent,
+                ip_address,
+                last_activity,
+                expires_at,
+                COALESCE(created_at, CURRENT_TIMESTAMP)
+            FROM user_sessions
+        ");
+
+        $db->exec("RENAME TABLE user_sessions TO {$legacyTable}, user_sessions_migrated TO user_sessions");
+    }
+
+    $migrations = [
+        "ALTER TABLE user_sessions MODIFY id INT UNSIGNED NOT NULL AUTO_INCREMENT",
+        "ALTER TABLE user_sessions MODIFY user_id INT UNSIGNED NOT NULL",
+        "ALTER TABLE user_sessions MODIFY session_token VARCHAR(128) NOT NULL",
+        "ALTER TABLE user_sessions MODIFY last_activity INT UNSIGNED NOT NULL",
+        "ALTER TABLE user_sessions MODIFY expires_at DATETIME NOT NULL",
+        "ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS payload LONGTEXT NULL AFTER session_token",
+        "ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS user_agent TEXT NULL AFTER payload",
+        "ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS ip_address VARCHAR(45) NULL AFTER user_agent",
+        "ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP AFTER expires_at",
+        "ALTER TABLE user_sessions ADD UNIQUE INDEX IF NOT EXISTS uniq_token (session_token)",
+        "ALTER TABLE user_sessions ADD INDEX IF NOT EXISTS idx_user (user_id)",
+        "ALTER TABLE user_sessions ADD INDEX IF NOT EXISTS idx_activity (last_activity)",
+        "ALTER TABLE user_sessions ADD INDEX IF NOT EXISTS idx_expires (expires_at)"
+    ];
+
+    foreach ($migrations as $sql) {
+        try {
+            $db->exec($sql);
+        } catch (Throwable $e) {
+        }
+    }
+}
+
+function ensureTournamentFeatureSchema(PDO $db): void {
+    $queries = [
+        "ALTER TABLE tournament_participants ADD COLUMN IF NOT EXISTS team_id INT UNSIGNED NULL AFTER user_id",
+        "ALTER TABLE tournament_participants ADD COLUMN IF NOT EXISTS fee_paid TINYINT(1) NOT NULL DEFAULT 0 AFTER team_name",
+        "ALTER TABLE tournament_participants MODIFY team_name VARCHAR(120) NULL",
+        "CREATE TABLE IF NOT EXISTS tournament_chat_messages (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            tournament_id INT UNSIGNED NOT NULL,
+            sender_id INT UNSIGNED NOT NULL,
+            message_type ENUM('text','room_card','system') NOT NULL DEFAULT 'text',
+            message TEXT NULL,
+            room_code VARCHAR(120) NULL,
+            room_password VARCHAR(120) NULL,
+            room_link VARCHAR(255) NULL,
+            invite_note TEXT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_tournament_chat (tournament_id, created_at),
+            INDEX idx_sender_chat (sender_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+        "CREATE TABLE IF NOT EXISTS tournament_results (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            tournament_id INT UNSIGNED NOT NULL,
+            team_id INT UNSIGNED NULL,
+            user_id INT UNSIGNED NULL,
+            placement INT NULL,
+            points INT NULL,
+            kills INT NULL,
+            score DECIMAL(10,2) NULL,
+            result_note TEXT NULL,
+            submitted_by INT UNSIGNED NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_tournament_team (tournament_id, team_id),
+            UNIQUE KEY uniq_tournament_player (tournament_id, user_id),
+            INDEX idx_tournament_result (tournament_id),
+            INDEX idx_user_result (user_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    ];
+
+    foreach ($queries as $sql) {
+        try {
+            $db->exec($sql);
+        } catch (Throwable $e) {
+        }
+    }
+}
+
 // Global connection testing and auto-schema
 try {
     $db = Database::getInstance()->getConnection();
@@ -134,14 +283,15 @@ try {
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(30) AFTER full_name",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT AFTER phone",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login DATETIME AFTER status",
-            "ALTER TABLE slider_content ADD COLUMN IF NOT EXISTS slider_type ENUM('features','tournament','leaderboard','ads') DEFAULT 'features' AFTER badge",
-            "ALTER TABLE user_sessions MODIFY last_activity INT UNSIGNED NOT NULL",
-            "ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS expires_at DATETIME NOT NULL AFTER last_activity"
+            "ALTER TABLE slider_content ADD COLUMN IF NOT EXISTS slider_type ENUM('features','tournament','leaderboard','ads') DEFAULT 'features' AFTER badge"
         ];
         foreach ($migrations as $sql) {
             try { $db->exec($sql); } catch (PDOException $e) {}
         }
     }
+
+    ensureUserSessionsSchema($db);
+    ensureTournamentFeatureSchema($db);
 } catch (Exception $e) {
     error_log("Config Error: " . $e->getMessage());
 }
