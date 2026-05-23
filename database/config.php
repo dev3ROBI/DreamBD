@@ -23,6 +23,15 @@ function loadEnv($path) {
 // Load environment variables if .env exists
 loadEnv(__DIR__ . '/../.env');
 
+if (!function_exists('dream_asset')) {
+    function dream_asset(string $path): string {
+        $normalized = ltrim($path, '/');
+        $file = __DIR__ . '/../' . $normalized;
+        $version = is_file($file) ? (string) filemtime($file) : '1';
+        return htmlspecialchars($normalized . '?v=' . $version, ENT_QUOTES, 'UTF-8');
+    }
+}
+
 class DatabaseConfig {
     // Database Configuration
     public static function getHost() { return getenv('DB_HOST') ?: 'localhost'; }
@@ -34,7 +43,7 @@ class DatabaseConfig {
     // Security Configuration
     const MAX_LOGIN_ATTEMPTS = 5;
     const LOCKOUT_TIME = 900; // 15 minutes
-    const SESSION_TIMEOUT = 1800; // 30 minutes
+    const SESSION_TIMEOUT = 86400; // 24 hours
     
     // JWT Configuration
     public static function getJwtSecret() { 

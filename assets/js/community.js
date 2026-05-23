@@ -4,7 +4,7 @@
     // 1. Global Event Delegation (Attached only once to document)
     if (!window.communityGlobalListenerAttached) {
         window.communityGlobalListenerAttached = true;
-        console.log('Community Global Listener Attached');
+        
 
         document.addEventListener('click', async (e) => {
             // A. Reaction Picker Buttons
@@ -46,7 +46,7 @@
                 }
 
                 if (action === 'share') {
-                    console.log('Share action clicked');
+                    
                     // Implement share count increment or native share here if needed
                     return;
                 }
@@ -129,7 +129,7 @@
 
     // 2. Initialization Function (Runs on every page load/AJAX)
     window.initCommunity = () => {
-        console.log('Community Page Logic Initializing...');
+        
         const pageEl = document.querySelector('[data-community-page]') || document.querySelector('[data-profile-page]') || document.querySelector('[data-home-page]');
         if (pageEl) window.__communityViewerId = pageEl.dataset.viewerId;
         loadCommunityContacts();
@@ -755,7 +755,7 @@ async function submitReaction(postId, reaction) {
                 btn.innerHTML = `<i class="far fa-thumbs-up"></i> Like`;
             }
         }
-    } catch (err) { console.error('Reaction error:', err); }
+    } catch (err) {}
 }
 
 function getEmoji(reaction) {
@@ -783,11 +783,11 @@ async function loadCommunityContacts() {
         } else {
             contactList.innerHTML = '<div style="padding:10px; color:var(--comm-text-secondary); font-size:14px">No contacts to show</div>';
         }
-    } catch (err) { console.error('Contacts error:', err); }
+    } catch (err) {}
 }
 
 function openPostModal(postId) {
-    console.log('openPostModal for:', postId);
+    
     const existing = document.getElementById('postDetailOverlay');
     if (existing) existing.remove();
 
@@ -869,7 +869,7 @@ function openPostModal(postId) {
             }
         })
         .catch(err => {
-            console.error('Modal fetch error:', err);
+            
             document.getElementById('postDetailContent').innerHTML = '<div style="padding:40px; text-align:center">Error loading post.</div>';
         });
 }
@@ -1018,7 +1018,7 @@ async function submitComment(postId, parentId = 0) {
             sendBtn.disabled = false;
         }
     } catch (err) { 
-        console.error('Comment error:', err);
+        
         input.value = text; // Restore text
         sendBtn.disabled = false;
     }
@@ -1061,7 +1061,7 @@ async function reactComment(commentId) {
                 countWrap.style.display = 'none';
             }
         }
-    } catch (err) { console.error('Comment reaction error:', err); }
+    } catch (err) {}
 }
 
 function focusReply(commentId, username) {

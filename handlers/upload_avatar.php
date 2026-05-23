@@ -1,12 +1,11 @@
 <?php
 // upload_avatar.php
+require_once __DIR__ . '/../includes/session.php';
 require_once __DIR__ . '/../includes/auth_functions.php';
 require_once __DIR__ . '/../includes/security.php';
 
 // Start session
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+dream_start_session();
 
 // Set JSON header
 header('Content-Type: application/json');

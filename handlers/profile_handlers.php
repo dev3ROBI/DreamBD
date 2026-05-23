@@ -2,9 +2,8 @@
 // profile_handlers.php
 error_reporting(0);
 ini_set('display_errors', 0);
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once __DIR__ . '/../includes/session.php';
+dream_start_session();
 if (ob_get_level() === 0) ob_start();
 
 require_once __DIR__ . '/../database/config.php';
@@ -373,7 +372,11 @@ function handleDeleteSession($db, $user_id, $data) {
         exit;
     }
 
-    if (hash_equals(session_id(), $sessionId)) {
+    $currentStmt = $db->prepare("SELECT id FROM user_sessions WHERE user_id = ? AND session_token = ? LIMIT 1");
+    $currentStmt->execute([$user_id, session_id()]);
+    $currentSessionId = (string) ($currentStmt->fetchColumn() ?: '');
+
+    if ($currentSessionId !== '' && hash_equals($currentSessionId, $sessionId)) {
         echo json_encode(['success' => false, 'message' => 'Use logout to end your current session']);
         exit;
     }
@@ -1076,11 +1079,11 @@ function handleReportMessage($db, $userId, $data) {
 function handleHeartbeat($db, $userId) {
     try {
         $token = session_id();
-        // Update both last_activity (int) and expires_at (datetime) using MySQL functions for consistency
-        $stmt = $db->prepare("UPDATE user_sessions SET last_activity = UNIX_TIMESTAMP(), expires_at = DATE_ADD(NOW(), INTERVAL 2 HOUR) WHERE user_id = ? AND session_token = ?");
+        $db->prepare("DELETE FROM user_sessions WHERE user_id = ? AND expires_at <= NOW()")->execute([$userId]);
+        $stmt = $db->prepare("UPDATE user_sessions SET last_activity = UNIX_TIMESTAMP(), expires_at = DATE_ADD(NOW(), INTERVAL 24 HOUR) WHERE user_id = ? AND session_token = ?");
         $stmt->execute([$userId, $token]);
         if ($stmt->rowCount() === 0) {
-            $stmt = $db->prepare("INSERT IGNORE INTO user_sessions (session_token, user_id, last_activity, expires_at) VALUES (?, ?, UNIX_TIMESTAMP(), DATE_ADD(NOW(), INTERVAL 2 HOUR))");
+            $stmt = $db->prepare("INSERT IGNORE INTO user_sessions (session_token, user_id, last_activity, expires_at) VALUES (?, ?, UNIX_TIMESTAMP(), DATE_ADD(NOW(), INTERVAL 24 HOUR))");
             $stmt->execute([$token, $userId]);
         }
         

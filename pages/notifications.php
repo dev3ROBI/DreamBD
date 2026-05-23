@@ -346,4 +346,4 @@ $notificationsCsrfToken = $security->generateCSRFToken();
 .notif-btn-ghost:hover { background: #e4e6eb; color: #1c1e21; }
 .dark .notif-btn-ghost:hover { background: rgba(51,65,85,0.6); color: #e2e8f0; }
 </style>
-<script src="assets/js/social-pages.js?v=<?php echo time(); ?>" defer></script>
+<script src="<?php echo dream_asset('assets/js/social-pages.js'); ?>" defer></script>

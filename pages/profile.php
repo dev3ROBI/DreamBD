@@ -41,6 +41,7 @@ try {
     $isOwnProfile = $profileId === $viewerId;
 
     try {
+        $db->prepare("DELETE FROM user_sessions WHERE user_id = ? AND expires_at <= NOW()")->execute([$viewerId]);
         $sessionsStmt = $db->prepare("SELECT * FROM user_sessions WHERE user_id = ? AND expires_at > NOW() ORDER BY last_activity DESC LIMIT 12");
         $sessionsStmt->execute([$viewerId]);
         $activeSessions = $sessionsStmt->fetchAll();
@@ -688,7 +689,7 @@ function renderProfileActionButtons($isOwnProfile, $friendshipStatus, $profileId
                     <div class="settings-surface-header"><h3><i class="fas fa-desktop text-cyan-500 mr-1"></i> Active sessions</h3><p>Where your account is signed in</p></div>
                     <?php if ($activeSessions): ?>
                         <?php foreach ($activeSessions as $session): ?>
-                        <?php $isCurrentSession = hash_equals(session_id(), (string) ($session['id'] ?? '')); ?>
+                        <?php $isCurrentSession = hash_equals(session_id(), (string) ($session['session_token'] ?? '')); ?>
                         <div class="session-item" data-session-item="<?php echo htmlspecialchars($session['id'] ?? ''); ?>">
                             <i class="fas fa-<?php echo strpos($session['user_agent'] ?? '', 'Mobile') !== false ? 'mobile' : 'desktop'; ?>"></i>
                             <div class="session-info">
@@ -843,4 +844,4 @@ function renderProfileActionButtons($isOwnProfile, $friendshipStatus, $profileId
 
 <?php include __DIR__ . '/../includes/post-modals.php'; ?>
 
-<script src="assets/js/community.js?v=<?php echo time(); ?>" defer></script>
+<script src="<?php echo dream_asset('assets/js/community.js'); ?>" defer></script>

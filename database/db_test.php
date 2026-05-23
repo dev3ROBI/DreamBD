@@ -10,7 +10,7 @@ class DatabaseConfig {
     // Security Configuration
     const MAX_LOGIN_ATTEMPTS = 5;
     const LOCKOUT_TIME = 900; // 15 minutes in seconds
-    const SESSION_TIMEOUT = 1800; // 30 minutes
+    const SESSION_TIMEOUT = 86400; // 24 hours
     const REMEMBER_ME_EXPIRE = 2592000; // 30 days
     
     // Password Requirements

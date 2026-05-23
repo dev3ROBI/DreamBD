@@ -10,7 +10,7 @@ class AuthHandler {
         if (this.isInitialized) return;
         this.isInitialized = true;
         
-        console.log('AuthHandler: Initializing...');
+        
         
         // Handle all auth form submissions
         document.addEventListener('submit', (e) => {
@@ -30,11 +30,11 @@ class AuthHandler {
         // Initialize page-specific enhancements
         this.initPageEnhancements();
         
-        console.log('AuthHandler: Initialized');
+        
     }
 
     init() {
-        console.log('AuthHandler: Initializing...');
+        
         
         // Handle all auth form submissions
         document.addEventListener('submit', (e) => {
@@ -54,7 +54,7 @@ class AuthHandler {
         // Initialize page-specific enhancements
         this.initPageEnhancements();
         
-        console.log('AuthHandler: Initialized');
+        
     }
     
     initPageEnhancements() {
@@ -448,8 +448,8 @@ class AuthHandler {
             try {
                 result = await response.json();
             } catch (e) {
-                console.error('Failed to parse JSON response:', e);
-                console.error('Response text:', await response.text());
+                
+                
                 this.showAlert(form, 'Server error. Please try again.', 'error');
                 return;
             }
@@ -481,9 +481,9 @@ class AuthHandler {
             }
             
         } catch (error) {
-            console.error('Auth form submission error:', error);
-            console.error('Form action:', formAction);
-            console.error('Response status:', response?.status);
+            
+            
+            
             
             // Show error message
             this.showAlert(form, 'Network error. Please try again. Check console for details.', 'error');

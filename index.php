@@ -1,8 +1,7 @@
 ﻿<?php
 // index.php
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once __DIR__ . '/includes/session.php';
+dream_start_session();
 
 require_once __DIR__ . '/database/config.php';
 require_once __DIR__ . '/includes/auth_functions.php';
@@ -112,13 +111,13 @@ $themeAttr = htmlspecialchars($theme, ENT_QUOTES, 'UTF-8');
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="assets/css/style.css">
-    <link rel="stylesheet" href="assets/css/navbar.css">
-    <link rel="stylesheet" href="assets/css/home.css">
-    <link rel="stylesheet" href="assets/css/profile.css?v=<?php echo time(); ?>">
-    <link rel="stylesheet" href="assets/css/social-pages.css?v=<?php echo time(); ?>">
-    <link rel="stylesheet" href="assets/css/animations.css">
-    <link rel="stylesheet" href="assets/css/community.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="<?php echo dream_asset('assets/css/style.css'); ?>">
+    <link rel="stylesheet" href="<?php echo dream_asset('assets/css/navbar.css'); ?>">
+    <link rel="stylesheet" href="<?php echo dream_asset('assets/css/home.css'); ?>">
+    <link rel="stylesheet" href="<?php echo dream_asset('assets/css/profile.css'); ?>">
+    <link rel="stylesheet" href="<?php echo dream_asset('assets/css/social-pages.css'); ?>">
+    <link rel="stylesheet" href="<?php echo dream_asset('assets/css/animations.css'); ?>">
+    <link rel="stylesheet" href="<?php echo dream_asset('assets/css/community.css'); ?>">
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300" id="body" data-csrf-token="<?php echo htmlspecialchars($csrf_token); ?>">
     
@@ -372,26 +371,15 @@ $themeAttr = htmlspecialchars($theme, ENT_QUOTES, 'UTF-8');
         <div class="site-dialog-panel logout-dialog-panel">
             <div class="site-dialog-header">
                 <div>
-                    <span class="site-dialog-kicker">Secure sign out</span>
-                    <h2 id="logoutConfirmTitle"><i class="fas fa-right-from-bracket"></i> Log out of DreamBD?</h2>
-                    <p class="site-dialog-subtitle">We will safely end this session on your current device and keep your account ready when you return.</p>
+                    <h2 id="logoutConfirmTitle"><i class="fas fa-right-from-bracket"></i> Log out?</h2>
                 </div>
                 <button type="button" class="site-dialog-close" data-close-site-dialog aria-label="Close logout dialog">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <div class="site-dialog-copy logout-dialog-copy">
-                <div class="logout-copy-lead">
-                    <strong>Your session will close only on this device.</strong>
-                    <span>You can sign back in any time with your usual account details.</span>
-                </div>
-                <div class="logout-safety-points">
-                    <div class="logout-safety-point"><i class="fas fa-mobile-screen-button"></i><span>Shared phone or browser? Logging out keeps your account safer.</span></div>
-                    <div class="logout-safety-point"><i class="fas fa-bell-slash"></i><span>You will stop receiving live account access from this session until you sign back in.</span></div>
-                </div>
-            </div>
+            <div class="site-dialog-copy logout-dialog-copy">Are you sure you want to log out of this device?</div>
             <div class="site-dialog-actions">
-                <button type="button" class="btn btn-outline" data-close-site-dialog>Stay signed in</button>
+                <button type="button" class="btn btn-outline" data-close-site-dialog>Cancel</button>
                 <a href="logout.php" class="btn btn-primary logout-confirm-btn" data-no-ajax>
                     <i class="fas fa-sign-out-alt"></i> Log out
                 </a>
@@ -444,14 +432,14 @@ $themeAttr = htmlspecialchars($theme, ENT_QUOTES, 'UTF-8');
     </div>
     
     <!-- JavaScript Files -->
-    <script src="assets/js/main.js?v=<?php echo time(); ?>"></script>
-    <script src="assets/js/navbar.js?v=<?php echo time(); ?>"></script>
-    <script src="assets/js/ajax.js?v=<?php echo time(); ?>"></script>
-    <script src="assets/js/auth-handler.js?v=<?php echo time(); ?>"></script>
-    <script src="assets/js/home.js?v=<?php echo time(); ?>"></script>
-    <script src="assets/js/profile.js?v=<?php echo time(); ?>"></script>
-    <script src="assets/js/social-pages.js?v=<?php echo time(); ?>"></script>
-    <script src="assets/js/social-feed.js?v=<?php echo time(); ?>"></script>
+    <script src="<?php echo dream_asset('assets/js/main.js'); ?>" defer></script>
+    <script src="<?php echo dream_asset('assets/js/navbar.js'); ?>" defer></script>
+    <script src="<?php echo dream_asset('assets/js/ajax.js'); ?>" defer></script>
+    <script src="<?php echo dream_asset('assets/js/auth-handler.js'); ?>" defer></script>
+    <script src="<?php echo dream_asset('assets/js/home.js'); ?>" defer></script>
+    <script src="<?php echo dream_asset('assets/js/profile.js'); ?>" defer></script>
+    <script src="<?php echo dream_asset('assets/js/social-pages.js'); ?>" defer></script>
+    <script src="<?php echo dream_asset('assets/js/social-feed.js'); ?>" defer></script>
     
     <script>
         // Initialize app when DOM is ready

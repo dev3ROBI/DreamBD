@@ -2589,3 +2589,111 @@ body.dialog-open {
 [data-theme="dark"] .logout-safety-point span {
     color: #fecaca;
 }
+
+/* Classic compact logout dialog */
+.logout-dialog-panel {
+    width: min(420px, calc(100vw - 32px)) !important;
+    max-height: none;
+    overflow: hidden;
+    border-radius: 10px !important;
+    background: #fff !important;
+    border: 1px solid #d1d5db !important;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.2) !important;
+}
+
+.logout-dialog-panel::before,
+.logout-dialog-panel .site-dialog-copy::before {
+    display: none !important;
+}
+
+.logout-dialog-panel .site-dialog-header {
+    padding: 18px 20px 12px !important;
+    background: #fff !important;
+    border-bottom: 1px solid #e5e7eb !important;
+}
+
+.logout-dialog-panel .site-dialog-header h2 {
+    margin: 0;
+    color: #111827;
+    font-size: 1.15rem;
+    letter-spacing: 0;
+}
+
+.logout-dialog-panel .site-dialog-header h2 i {
+    width: auto;
+    height: auto;
+    margin-right: 8px;
+    color: #dc2626;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+.logout-dialog-panel .site-dialog-close {
+    width: 34px;
+    height: 34px;
+    background: transparent;
+    box-shadow: none;
+}
+
+.logout-dialog-panel .site-dialog-copy {
+    display: block !important;
+    margin: 0 !important;
+    padding: 18px 20px !important;
+    color: #4b5563;
+    font-weight: 500;
+    line-height: 1.55;
+    background: #fff !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+}
+
+.logout-dialog-panel .site-dialog-actions {
+    display: flex;
+    justify-content: flex-end !important;
+    gap: 10px;
+    padding: 14px 20px 18px !important;
+    background: #f9fafb;
+    border-top: 1px solid #e5e7eb;
+}
+
+.logout-dialog-panel .site-dialog-actions > * {
+    flex: 0 0 auto !important;
+}
+
+.logout-dialog-panel .btn {
+    min-height: 38px;
+    border-radius: 8px;
+    padding: 0.55rem 0.95rem;
+}
+
+.logout-confirm-btn {
+    background: #dc2626 !important;
+    box-shadow: none !important;
+}
+
+[data-theme="dark"] .logout-dialog-panel {
+    background: #111827 !important;
+    border-color: #374151 !important;
+}
+
+[data-theme="dark"] .logout-dialog-panel .site-dialog-header,
+[data-theme="dark"] .logout-dialog-panel .site-dialog-copy {
+    background: #111827 !important;
+}
+
+[data-theme="dark"] .logout-dialog-panel .site-dialog-header {
+    border-bottom-color: #374151 !important;
+}
+
+[data-theme="dark"] .logout-dialog-panel .site-dialog-header h2 {
+    color: #f9fafb;
+}
+
+[data-theme="dark"] .logout-dialog-panel .site-dialog-copy {
+    color: #d1d5db;
+}
+
+[data-theme="dark"] .logout-dialog-panel .site-dialog-actions {
+    background: #0f172a;
+    border-top-color: #374151;
+}

@@ -1,5 +1,6 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) session_start();
+require_once __DIR__ . '/../includes/session.php';
+dream_start_session();
 require_once __DIR__ . '/../database/config.php';
 require_once __DIR__ . '/../includes/security.php';
 require_once __DIR__ . '/../includes/functions.php';

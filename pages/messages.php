@@ -366,4 +366,4 @@ function safeTrimWidth($str, $max, $suffix = '...') {
     </div>
 </div>
 </div>
-<script src="assets/js/social-pages.js?v=<?php echo time(); ?>" defer></script>
+<script src="<?php echo dream_asset('assets/js/social-pages.js'); ?>" defer></script>

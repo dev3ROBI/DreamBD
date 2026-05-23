@@ -18,7 +18,7 @@ class HomePage {
             this.initPostMenus();
             this.isInitialized = true;
             document.dispatchEvent(new CustomEvent('homePageReady'));
-        } catch (e) { console.error('HomePage.init error:', e); }
+        } catch (e) {}
     }
 
     waitForDOM() {

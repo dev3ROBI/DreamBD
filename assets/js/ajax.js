@@ -107,7 +107,7 @@ class AjaxNavigation {
             this.isNavigating = true;
             await this.navigateTo(task.page, task.href, task.pushState, task.id);
         } catch (error) {
-            console.error('Navigation error:', error);
+            
             // Remove failed task from queue
             this.navigationQueue = this.navigationQueue.filter(t => t.id !== task.id);
         } finally {
@@ -140,16 +140,16 @@ class AjaxNavigation {
     setupErrorHandling() {
         // Network error handling
         window.addEventListener('offline', () => {
-            console.warn('You are offline. Please check your connection.');
+            
         });
 
         window.addEventListener('online', () => {
-            console.log('Back online!');
+            
         });
 
         // Error boundary for unhandled errors
         window.addEventListener('error', (e) => {
-            console.error('Global error:', e.error);
+            
         });
     }
 
@@ -207,7 +207,7 @@ class AjaxNavigation {
             this.trackNavigation(page, 'success');
             
         } catch (error) {
-            console.error('Navigation error:', error);
+            
             
             // Track failed navigation
             this.trackNavigation(page, 'error', error.message);
@@ -257,7 +257,7 @@ class AjaxNavigation {
                     newScr.textContent = oldScr.textContent || '';
                     if (oldScr.src) newScr.src = oldScr.src;
                     oldScr.parentNode.replaceChild(newScr, oldScr);
-                } catch(e) { console.warn('Script exec:', e); }
+                } catch (e) {}
             });
         }, 0);
         
@@ -397,9 +397,7 @@ class AjaxNavigation {
                 if (window[scriptName] && typeof window[scriptName] === 'function') {
                     window[scriptName]();
                 }
-            } catch (error) {
-                console.warn('Failed to initialize page script:', error);
-            }
+            } catch (error) {}
         });
         
         // Initialize forms with AJAX support
@@ -445,9 +443,7 @@ class AjaxNavigation {
                         form.reset();
                     }
                 }
-            } catch (error) {
-                console.error('Form submission error:', error);
-            }
+            } catch (error) {}
         });
     }
 
@@ -490,7 +486,7 @@ class AjaxNavigation {
         
         // Log to console in development
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            console.log(`Navigation: ${page} - ${status}`, navigationData);
+            
         }
         
         // Send to analytics if available
@@ -515,7 +511,7 @@ class AjaxNavigation {
             setInterval(() => {
                 const memory = performance.memory;
                 if (memory.usedJSHeapSize > 500000000) { // 500MB
-                    console.warn('High memory usage detected:', memory);
+                    
                 }
             }, 30000); // Check every 30 seconds
         }
@@ -527,7 +523,7 @@ class AjaxNavigation {
             const navEntries = performance.getEntriesByType('navigation');
             if (navEntries.length > 0) {
                 const nav = navEntries[0];
-                console.log(`Page load performance: ${Math.round(nav.domContentLoadedEventEnd - nav.startTime)}ms`);
+                
             }
         }
     }
@@ -597,7 +593,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Add to global error handler
         window.addEventListener('error', (e) => {
             if (window.AjaxNavigation && window.AjaxNavigation.isPageLoading()) {
-                console.error('Navigation error caught:', e.error);
+                
             }
         });
         
@@ -609,7 +605,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const now = Date.now();
                 
                 if (now - lastActive > 300000) { // 5 minutes
-                    console.log('Page was inactive for 5+ minutes');
+                    
                     // Optionally refresh data or update content
                 }
                 
@@ -620,7 +616,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Store initial active time
         sessionStorage.setItem('last_active', Date.now().toString());
         
-        console.log('AjaxNavigation initialized');
+        
     }
 });
 

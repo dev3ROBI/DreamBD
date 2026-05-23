@@ -77,7 +77,7 @@ $counts = [
 ];
 $counts['all'] = $counts['pending'] + $counts['resolved'] + $counts['dismissed'];
 ?>
-<link rel="stylesheet" href="assets/css/admin.css?v=<?= time() ?>">
+<link rel="stylesheet" href="<?php echo dream_asset('assets/css/admin.css'); ?>">
 <div class="admin-page" data-admin-page data-csrf-token="<?= htmlspecialchars($adminCsrfToken) ?>">
     <div class="admin-container">
         <!-- Header -->

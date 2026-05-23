@@ -12,7 +12,7 @@ class DreamBDApp {
     async init() {
         if (this.isInitialized) return;
         
-        console.log('DreamBDApp: Starting initialization...');
+        
         
         // Get current page from URL
         const urlParams = new URLSearchParams(window.location.search);
@@ -21,7 +21,7 @@ class DreamBDApp {
         // Wait for core systems to be ready
         await this.waitForCoreSystems();
         
-        console.log('DreamBDApp: Core systems ready');
+        
         
         // Initialize core components
         await this.initCoreComponents();
@@ -32,7 +32,7 @@ class DreamBDApp {
         // Mark as initialized
         this.isInitialized = true;
         
-        console.log('DreamBDApp: Initialization complete');
+        
         
         // Dispatch app ready event
         this.dispatchEvent('appReady', { 
@@ -62,9 +62,7 @@ class DreamBDApp {
                 this.initAnimations(),
                 this.initEventListeners()
             ]);
-        } catch (error) {
-            console.error('Error initializing core components:', error);
-        }
+        } catch (error) {}
     }
 
     async initPageComponents() {
@@ -81,9 +79,7 @@ class DreamBDApp {
         if (initScript && typeof initScript === 'function') {
             try {
                 await initScript();
-            } catch (error) {
-                console.warn(`Error initializing ${this.currentPage} page:`, error);
-            }
+            } catch (error) {}
         }
     }
 
@@ -697,9 +693,7 @@ class DreamBDApp {
                     });
                 }
             }
-        } catch (error) {
-            console.error('Form submission error:', error);
-        }
+        } catch (error) {}
     }
 
     // Enhanced Cart Management
@@ -951,7 +945,7 @@ class DreamBDApp {
     }
     
     handlePageChange(pageData) {
-        console.log(`Page changed to: ${pageData.page}`);
+        
         
         // Close mobile menu if open
         if (this.isMobileMenuOpen && this.components.mobileMenu?.close) {
@@ -976,7 +970,7 @@ class DreamBDApp {
     }
     
     onAppReady() {
-        console.log('Application is ready');
+        
         
         // Add loaded class to body for CSS transitions
         document.body.classList.add('app-loaded');
@@ -1022,9 +1016,9 @@ class DreamBDApp {
     
     handleOnlineStatus(isOnline) {
         if (isOnline) {
-            console.log('Back online!');
+            
         } else {
-            console.warn('You are offline. Some features may not work.');
+            
         }
         
         this.dispatchEvent('networkStatusChange', { online: isOnline });
@@ -1059,12 +1053,7 @@ class DreamBDApp {
                 const navTiming = performance.timing;
                 
                 if (paintMetrics.length > 0) {
-                    console.log('Performance Metrics:', {
-                        firstPaint: paintMetrics[0].startTime,
-                        firstContentfulPaint: paintMetrics[1]?.startTime,
-                        domContentLoaded: navTiming.domContentLoadedEventEnd - navTiming.navigationStart,
-                        fullLoad: navTiming.loadEventEnd - navTiming.navigationStart
-                    });
+                    
                 }
             }, 1000);
         }
@@ -1074,7 +1063,7 @@ class DreamBDApp {
             setInterval(() => {
                 const memory = performance.memory;
                 if (memory.usedJSHeapSize > 500000000) { // 500MB
-                    console.warn('High memory usage detected:', memory);
+                    
                 }
             }, 60000); // Check every minute
         }
@@ -1083,7 +1072,7 @@ class DreamBDApp {
     // Page-specific initializers
     initHomePage() {
         // Home page specific initialization
-        console.log('Initializing home page');
+        
         
         // Initialize hero slider if exists
         const heroSlider = document.querySelector('.hero-slider');
@@ -1097,7 +1086,7 @@ class DreamBDApp {
     
     initProfilePage() {
         // Profile page specific initialization
-        console.log('Initializing profile page');
+        
         
         // Initialize profile tabs
         this.initProfileTabs();
@@ -1105,7 +1094,7 @@ class DreamBDApp {
     
     initProductsPage() {
         // Products page specific initialization
-        console.log('Initializing products page');
+        
         
         // Initialize product filters
         this.initProductFilters();
@@ -1115,7 +1104,7 @@ class DreamBDApp {
     }
     
     initTournamentsPage() {
-        console.log('Initializing gaming platform');
+        
         const inits = [
             'initGPParticles', 'initGPCards', 'initGPCountdowns', 'initGPTabs',
             'initGPSearch', 'initGPModals', 'initGPForms', 'initGPUnregister',
@@ -1125,9 +1114,7 @@ class DreamBDApp {
         inits.forEach(name => {
             try {
                 this[name]();
-            } catch (e) {
-                console.warn(`GP init "${name}" failed:`, e);
-            }
+            } catch (e) {}
         });
     }
 
@@ -1800,38 +1787,38 @@ class DreamBDApp {
     }
 
     initCartPage() {
-        console.log('Initializing cart page');
+        
         this.initCartPageFunctionality();
     }
 
     initHeroSlider(slider) {
-        console.log('Initializing hero slider');
+        
     }
 
     initFeaturedProducts() {
-        console.log('Initializing featured products');
+        
     }
 
     initProfileTabs() {
-        console.log('Initializing profile tabs');
+        
     }
 
     initProductFilters() {
-        console.log('Initializing product filters');
+        
     }
 
     initProductGrid() {
-        console.log('Initializing product grid');
+        
     }
 
     initCartPageFunctionality() {
-        console.log('Initializing cart page functionality');
+        
     }
 }
 
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOMContentLoaded: Initializing DreamBDApp');
+    
     
     // Check if app should be initialized
     const disableApp = document.documentElement.hasAttribute('data-no-app');
@@ -1845,9 +1832,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (window.DreamBD && !window.appInitialized) {
                 window.DreamBD.init().then(() => {
                     window.appInitialized = true;
-                    console.log('DreamBD Application initialized successfully');
+                    
                 }).catch(error => {
-                    console.error('Failed to initialize DreamBDApp:', error);
+                    
                 });
             }
         }, 100);
@@ -1882,21 +1869,11 @@ window.getCart = function() {
 if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     window.debugApp = function() {
         if (window.DreamBD) {
-            console.log('App Debug:', {
-                currentPage: window.DreamBD.currentPage,
-                isInitialized: window.DreamBD.isInitialized,
-                components: window.DreamBD.components,
-                cart: window.DreamBD.components?.cart
-            });
+            
         }
         
         if (window.AjaxNavigation) {
-            console.log('Navigation Debug:', {
-                currentPage: window.AjaxNavigation.getCurrentPage(),
-                isNavigating: window.AjaxNavigation.isNavigating,
-                queue: window.AjaxNavigation.navigationQueue,
-                history: window.AjaxNavigation.getNavigationHistory()
-            });
+            
         }
     };
 }

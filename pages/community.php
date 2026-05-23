@@ -53,7 +53,7 @@ if ($viewerId) {
 }
 ?>
 
-<script src="assets/js/community.js?v=<?php echo time(); ?>" defer></script>
+<script src="<?php echo dream_asset('assets/js/community.js'); ?>" defer></script>
 <div class="community-page" data-community-page data-csrf-token="<?php echo htmlspecialchars($communityCsrfToken); ?>" data-viewer-id="<?= (int)($viewerId ?? 0) ?>">
     <section class="community-layout">
         <!-- Sidebar Left -->
@@ -296,5 +296,4 @@ if ($viewerId) {
 
     </section>
 </div>
-
 

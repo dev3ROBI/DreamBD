@@ -5969,6 +5969,54 @@ html {
     background: #0f172a;
 }
 
+/* Theme-aware active states */
+.profile-nav .nav-item.active,
+.profile-settings-nav .nav-item.active {
+    background: #111827 !important;
+    color: #ffffff !important;
+    box-shadow: 0 10px 24px rgba(17, 24, 39, 0.16) !important;
+}
+
+.profile-nav .nav-item.active .nav-badge,
+.profile-settings-nav .nav-item.active .nav-badge {
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+}
+
+.profile-presence-pill.is-online,
+.session-current-badge {
+    background: #dcfce7;
+    color: #14532d;
+}
+
+.profile-presence-pill.is-offline {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+[data-theme="dark"] .profile-nav .nav-item.active,
+[data-theme="dark"] .profile-settings-nav .nav-item.active,
+.dark .profile-nav .nav-item.active,
+.dark .profile-settings-nav .nav-item.active {
+    background: #f8fafc !important;
+    color: #0f172a !important;
+    box-shadow: 0 10px 26px rgba(248, 250, 252, 0.1) !important;
+}
+
+[data-theme="dark"] .profile-presence-pill.is-online,
+.dark .profile-presence-pill.is-online,
+[data-theme="dark"] .session-current-badge,
+.dark .session-current-badge {
+    background: rgba(34, 197, 94, 0.18);
+    color: #86efac;
+}
+
+[data-theme="dark"] .profile-presence-pill.is-offline,
+.dark .profile-presence-pill.is-offline {
+    background: rgba(148, 163, 184, 0.16);
+    color: #cbd5e1;
+}
+
 @media (max-width: 991px) {
     #avatarUploadDialog .avatar-crop-frame {
         height: clamp(280px, 42vh, 360px);

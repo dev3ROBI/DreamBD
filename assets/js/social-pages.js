@@ -402,7 +402,7 @@ if (typeof window.SocialPages === 'undefined') {
         try {
             const friendData = this.root?.dataset.friends;
             if (friendData) this.friendCache = JSON.parse(friendData) || [];
-        } catch(e) {}
+        } catch (e) {}
         this.populateActiveNow();
         this.loadFriends().then(() => {
             this.populateActiveNow();
@@ -596,7 +596,7 @@ if (typeof window.SocialPages === 'undefined') {
                     app.classList.remove('msg-theme-purple', 'msg-theme-green', 'msg-theme-orange', 'msg-theme-pink');
                     const color = btn.dataset.color;
                     if (color !== 'blue') app.classList.add('msg-theme-' + color);
-                    try { localStorage.setItem('dreambd-msg-accent', color); } catch(err) {}
+                    try { localStorage.setItem('dreambd-msg-accent', color); } catch (err) {}
                 }
             };
         });
@@ -609,7 +609,7 @@ if (typeof window.SocialPages === 'undefined') {
                 dropdown.querySelector(`.theme-color-btn[data-color="${saved}"]`)?.classList.add('active');
                 dropdown.querySelector('.theme-color-blue')?.classList.remove('active');
             }
-        } catch(e) {}
+        } catch (e) {}
     }
 
     /* ============ CONVERSATION SEARCH ============ */
@@ -1263,7 +1263,7 @@ if (typeof window.SocialPages === 'undefined') {
         if (!card) return;
         const url = card.dataset.notificationUrl || '#';
         if (card.dataset.isRead === '0') {
-            try { await this.markNotification(card.dataset.notificationId, this.notificationsRoot?.dataset.csrfToken); } catch(e) {}
+            try { await this.markNotification(card.dataset.notificationId, this.notificationsRoot?.dataset.csrfToken); } catch (e) {}
         }
         if (url === '#') return;
         

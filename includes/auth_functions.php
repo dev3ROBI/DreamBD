@@ -1,6 +1,7 @@
 <?php
 // includes/auth_functions.php
 include_once __DIR__ . '/security.php';
+include_once __DIR__ . '/session.php';
 
 class Auth {
     private $db;
@@ -312,9 +313,10 @@ class Auth {
         }
 
         try {
+            $this->db->prepare("DELETE FROM user_sessions WHERE user_id = ? AND expires_at <= NOW()")->execute([$user_id]);
             $stmt = $this->db->prepare("
                 INSERT INTO user_sessions (session_token, user_id, payload, user_agent, ip_address, last_activity, expires_at)
-                VALUES (?, ?, ?, ?, ?, UNIX_TIMESTAMP(), DATE_ADD(NOW(), INTERVAL 2 HOUR))
+                VALUES (?, ?, ?, ?, ?, UNIX_TIMESTAMP(), DATE_ADD(NOW(), INTERVAL 24 HOUR))
                 ON DUPLICATE KEY UPDATE
                     session_token = VALUES(session_token),
                     user_id = VALUES(user_id),
@@ -322,7 +324,7 @@ class Auth {
                     user_agent = VALUES(user_agent),
                     ip_address = VALUES(ip_address),
                     last_activity = UNIX_TIMESTAMP(),
-                    expires_at = DATE_ADD(NOW(), INTERVAL 2 HOUR)
+                    expires_at = DATE_ADD(NOW(), INTERVAL 24 HOUR)
             ");
             $stmt->execute([
                 session_id(),
@@ -372,6 +374,7 @@ class Auth {
                 $this->logout();
                 return false;
             }
+            $this->persistCurrentSession((int) ($_SESSION['user_id'] ?? 0));
             return true;
         }
         
@@ -408,6 +411,23 @@ class Auth {
     }
     
     public function logout() {
+        $sessionToken = session_id();
+        $userId = (int) ($_SESSION['user_id'] ?? 0);
+
+        if ($sessionToken !== '' && $userId > 0) {
+            try {
+                $tokens = [$sessionToken];
+                if (!empty($_COOKIE['remember_token'])) {
+                    $tokens[] = hash('sha256', $_COOKIE['remember_token']);
+                }
+                $placeholders = implode(',', array_fill(0, count($tokens), '?'));
+                $stmt = $this->db->prepare("DELETE FROM user_sessions WHERE user_id = ? AND session_token IN ({$placeholders})");
+                $stmt->execute(array_merge([$userId], $tokens));
+            } catch (PDOException $e) {
+                error_log("Logout session cleanup error: " . $e->getMessage());
+            }
+        }
+
         // Clear session
         session_unset();
         session_destroy();
@@ -422,7 +442,7 @@ class Auth {
         }
         
         // Start fresh session
-        session_start();
+        dream_start_session();
     }
     
     private function generateUUID() {

@@ -768,6 +768,6 @@ try {
 
 <?php include __DIR__ . '/../includes/post-modals.php'; ?>
 
-<link rel="stylesheet" href="assets/css/home.css?v=<?php echo time(); ?>">
-<script src="assets/js/community.js?v=<?php echo time(); ?>" defer></script>
-<script src="assets/js/home.js?v=<?php echo time(); ?>" defer></script>
+<link rel="stylesheet" href="<?php echo dream_asset('assets/css/home.css'); ?>">
+<script src="<?php echo dream_asset('assets/js/community.js'); ?>" defer></script>
+<script src="<?php echo dream_asset('assets/js/home.js'); ?>" defer></script>

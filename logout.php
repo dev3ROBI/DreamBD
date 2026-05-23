@@ -2,9 +2,8 @@
 // logout.php - With AJAX support
 ob_start();
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once __DIR__ . '/includes/session.php';
+dream_start_session();
 
 // Check if it's an AJAX request
 $is_ajax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && 
@@ -12,6 +11,7 @@ $is_ajax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
 
 // Perform logout
 $user_id = $_SESSION['user_id'] ?? null;
+$session_token = session_id();
 $username = $_SESSION['username'] ?? 'Unknown';
 
 // Log logout event
@@ -31,6 +31,16 @@ if ($user_id) {
             $_SERVER['HTTP_USER_AGENT'] ?? null,
             json_encode(['logout_time' => date('Y-m-d H:i:s')])
         ]);
+
+        if ($session_token !== '') {
+            $tokens = [$session_token];
+            if (!empty($_COOKIE['remember_token'])) {
+                $tokens[] = hash('sha256', $_COOKIE['remember_token']);
+            }
+            $placeholders = implode(',', array_fill(0, count($tokens), '?'));
+            $stmt = $db->prepare("DELETE FROM user_sessions WHERE user_id = ? AND session_token IN ({$placeholders})");
+            $stmt->execute(array_merge([$user_id], $tokens));
+        }
     } catch (Exception $e) {
         error_log("Logout logging error: " . $e->getMessage());
     }

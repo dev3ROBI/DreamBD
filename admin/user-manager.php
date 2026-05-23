@@ -1,10 +1,11 @@
 <?php
 require_once __DIR__ . '/../database/config.php';
+require_once __DIR__ . '/../includes/session.php';
 require_once __DIR__ . '/../includes/security.php';
 // AJAX endpoint for saving user
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_user'])) {
     header('Content-Type: application/json');
-    session_start();
+    dream_start_session();
     if (empty($_SESSION['user_id']) || empty($_SESSION['role']) || !in_array($_SESSION['role'], ['admin','moderator','super_admin'])) {
         echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
         exit;
@@ -42,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_user'])) {
 // AJAX endpoint for changing user role
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_role'])) {
     header('Content-Type: application/json');
-    session_start();
+    dream_start_session();
     if (empty($_SESSION['user_id']) || empty($_SESSION['role']) || !in_array($_SESSION['role'], ['admin','moderator','super_admin'])) {
         echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
         exit;

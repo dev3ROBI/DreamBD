@@ -812,7 +812,7 @@ $palette = ['#7c3aed','#2563eb','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4
     function fb(form, r) { var el = form.querySelector('.gp-feedback'); if (!el) return; el.className = 'gp-feedback'; el.classList.add(r.success ? 'success' : 'error'); el.textContent = r.message || 'Done.'; }
     function toast(msg, type) { type = type || 'success'; var t = document.createElement('div'); t.className = 'gp-toast ' + type; t.innerHTML = '<i class="fas ' + (type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle') + '"></i><span>' + escHtml(msg) + '</span>'; document.body.appendChild(t); setTimeout(function() { t.style.opacity = '0'; t.style.transform = 'translateY(20px)'; t.style.transition = 'all .3s'; setTimeout(function() { t.remove(); }, 300); }, 3000); }
 
-    function safe(name, fn) { try { fn(); } catch (e) { console.warn('GP: ' + name, e); } }
+    function safe(name, fn) { try { fn(); } catch (e) {} }
 
     var csrfToken = (document.getElementById('tournamentsPage') || {}).getAttribute('data-csrf') || '';
 
@@ -1302,4 +1302,3 @@ $palette = ['#7c3aed','#2563eb','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4
     });
 })();
 </script>
-

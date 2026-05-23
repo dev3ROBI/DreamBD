@@ -1,7 +1,8 @@
 <?php
 // admin/layout/header.php - Enhanced Admin Header & Sidebar
 // Include this at the top of every admin page
-session_start();
+require_once __DIR__ . '/../../includes/session.php';
+dream_start_session();
 require_once __DIR__ . '/../../database/config.php';
 require_once __DIR__ . '/../../includes/auth_functions.php';
 require_once __DIR__ . '/../../includes/security.php';

@@ -1,11 +1,10 @@
 <?php
 require_once __DIR__ . '/../database/config.php';
+require_once __DIR__ . '/../includes/session.php';
 require_once __DIR__ . '/../includes/auth_functions.php';
 
 // Start session
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+dream_start_session();
 
 $auth = new Auth();
 $security = new Security();
