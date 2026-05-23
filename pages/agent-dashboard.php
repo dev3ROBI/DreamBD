@@ -26,7 +26,6 @@ $stmt = $db->prepare("SELECT * FROM tournaments WHERE agent_id = ? ORDER BY COAL
 $stmt->execute([$viewerId]);
 $myTournaments = $stmt->fetchAll();
 ?>
-
 <div class="gp-page">
     <section class="gp-hero" style="margin-top:1.5rem">
         <div class="gp-hero-bg"></div>
@@ -47,6 +46,7 @@ $myTournaments = $stmt->fetchAll();
         <a href="index.php?page=tournaments" class="gp-btn gp-btn-primary" data-page="tournaments"><i class="fas fa-arrow-left"></i> Back to tournaments</a>
         <button type="button" class="gp-btn gp-btn-accent" onclick="document.querySelector('[data-open-modal=\'bKashModal\']')?.click()"><i class="fas fa-plus"></i> Add funds</button>
         <button type="button" class="gp-btn gp-btn-gradient" onclick="document.querySelector('[data-open-modal=\'createTournamentModal\']')?.click()"><i class="fas fa-trophy"></i> Create tournament</button>
+        <a href="index.php?page=agent_submit_results" class="gp-btn gp-btn-primary"><i class="fas fa-check-double"></i> Submit results</a>
     </div>
 
     <div class="gp-my-grid" style="margin-bottom:2rem">

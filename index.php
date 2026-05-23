@@ -520,21 +520,24 @@ $themeAttr = htmlspecialchars($theme, ENT_QUOTES, 'UTF-8');
                 const total = results.counts?.all || 0;
 
                 searchSuggestionsMeta.textContent = total > 0
-                    ? `${total} quick matches for "${queryText}"`
-                    : `No quick matches for "${queryText}"`;
+                    ? `${total} match${total !== 1 ? 'es' : ''} for "${queryText}"`
+                    : `No results for "${queryText}"`;
 
                 let html = '';
 
                 if (users.length) {
-                    html += '<div class="dream-search-section"><span class="dream-search-section-title">People</span>';
+                    html += '<div class="dream-search-section"><span class="dream-search-section-title"><i class="fas fa-user"></i> People</span>';
                     users.forEach((user) => {
                         const name = (user.full_name || user.username || 'User').replace(/"/g, '&quot;');
-                        const note = (user.location || user.bio || 'Member of DreamBD').replace(/"/g, '&quot;');
+                        const note = (user.location || user.bio || '').replace(/"/g, '&quot;');
                         const avatar = (user.avatar || 'default.png').replace(/"/g, '&quot;');
+                        const role = user.role || '';
+                        const roleBadge = role === 'agent' ? '<span class="sr-badge"><i class="fas fa-crown"></i></span>' : '';
+                        const onlineDot = '<span class="sr-online"></span>';
                         html += `
                             <a href="index.php?page=profile&user=${Number(user.id)}" class="dream-search-suggestion" data-no-ajax>
-                                <img src="assets/avatars/${avatar}" alt="${name}" onerror="this.src='assets/avatars/default.png'">
-                                <span class="sr-body"><strong>${name}</strong><span>${note}</span></span>
+                                <span class="sr-avatar-wrap">${onlineDot}<img src="assets/avatars/${avatar}" alt="${name}" onerror="this.src='assets/avatars/default.png'"></span>
+                                <span class="sr-body"><strong>${name} ${roleBadge}</strong><span class="sr-note">${note}</span></span>
                             </a>
                         `;
                     });
@@ -542,14 +545,14 @@ $themeAttr = htmlspecialchars($theme, ENT_QUOTES, 'UTF-8');
                 }
 
                 if (posts.length) {
-                    html += '<div class="dream-search-section"><span class="dream-search-section-title">Posts</span>';
+                    html += '<div class="dream-search-section"><span class="dream-search-section-title"><i class="fas fa-file-lines"></i> Posts</span>';
                     posts.forEach((post) => {
                         const name = (post.full_name || post.username || 'Member').replace(/"/g, '&quot;');
                         const excerpt = (post.content_excerpt || '').replace(/"/g, '&quot;');
                         html += `
                             <a href="index.php?page=community&post=${Number(post.id)}#post-${Number(post.id)}" class="dream-search-suggestion" data-no-ajax>
                                 <span class="dream-search-suggestion-icon"><i class="fas fa-file-lines"></i></span>
-                                <span class="sr-body"><strong>${name}</strong><span>${excerpt}</span></span>
+                                <span class="sr-body"><strong>${name}</strong><span class="sr-note">${excerpt}</span></span>
                             </a>
                         `;
                     });
@@ -565,14 +568,15 @@ $themeAttr = htmlspecialchars($theme, ENT_QUOTES, 'UTF-8');
                     `;
                 }
 
-                html += `
-                    <a href="index.php?page=search&q=${encodeURIComponent(queryText)}" class="dream-search-all-results" data-no-ajax>
-                        <span>Open full search results</span>
-                        <i class="fas fa-arrow-right"></i>
-                    </a>
-                `;
-
                 searchSuggestionsBody.innerHTML = html;
+
+                const foot = document.getElementById('navSearchSuggestionsFoot');
+                if (foot) {
+                    foot.classList.remove('hidden');
+                    const link = foot.querySelector('.dream-search-all-results');
+                    if (link) link.href = `index.php?page=search&q=${encodeURIComponent(queryText)}`;
+                }
+
                 searchSuggestions.classList.remove('hidden');
             };
 
@@ -588,6 +592,9 @@ $themeAttr = htmlspecialchars($theme, ENT_QUOTES, 'UTF-8');
 
             const fetchSearchSuggestions = (queryText) => {
                 if (!searchSuggestionsBody || !searchSuggestionsMeta) return;
+
+                const foot = document.getElementById('navSearchSuggestionsFoot');
+                if (foot) foot.classList.add('hidden');
 
                 if (searchAbortController) {
                     searchAbortController.abort();
@@ -657,111 +664,67 @@ $themeAttr = htmlspecialchars($theme, ENT_QUOTES, 'UTF-8');
 
             // Hide suggestions when clicking outside search area
             document.addEventListener('click', (event) => {
-                if (!event.target.closest('#searchBar') && !event.target.closest('#navSearchSuggestions') && !event.target.closest('#mobileSearchPanel')) {
+                if (!event.target.closest('#searchBar') && !event.target.closest('#navSearchSuggestions')) {
                     hideSearchSuggestions();
                 }
             });
 
             // ============ MOBILE SEARCH ============
             const mobileSearchToggle = document.getElementById('mobileSearchToggle');
-            const mobileSearchPanel = document.getElementById('mobileSearchPanel');
-            const closeMobileSearch = document.getElementById('closeMobileSearch');
-            const mobileSearchInput = document.getElementById('mobileSearchInput');
-            const mobileSearchSuggestions = document.getElementById('mobileSearchSuggestions');
-            const mobileSearchSuggestionsBody = document.getElementById('mobileSearchSuggestionsBody');
-            const mobileSearchSuggestionsMeta = document.getElementById('mobileSearchSuggestionsMeta');
+            const searchBackBtn = document.getElementById('searchBackBtn');
+            const navbar = document.getElementById('mainNav');
+            const desktopSearchInput = document.getElementById('searchInput');
+            const desktopSearchSuggestions = document.getElementById('navSearchSuggestions');
 
-            const hideMobileSearch = () => {
-                if (mobileSearchPanel) {
-                    mobileSearchPanel.classList.add('hidden');
-                    mobileSearchSuggestions?.classList.add('hidden');
+            const enterMobileSearch = () => {
+                if (!navbar) return;
+                navbar.classList.add('is-mobile-searching');
+                if (desktopSearchInput) {
+                    desktopSearchInput.value = '';
+                    desktopSearchInput.focus();
                 }
+                if (desktopSearchSuggestions) desktopSearchSuggestions.classList.add('hidden');
+                document.documentElement.style.setProperty('--navbar-actual-height', navbar.offsetHeight + 'px');
             };
 
-            if (mobileSearchToggle && mobileSearchPanel) {
-                mobileSearchToggle.addEventListener('click', () => {
-                    mobileSearchPanel.classList.toggle('hidden');
-                    if (!mobileSearchPanel.classList.contains('hidden')) {
-                        setTimeout(() => mobileSearchInput?.focus(), 100);
-                    }
-                });
+            const exitMobileSearch = () => {
+                if (!navbar) return;
+                navbar.classList.remove('is-mobile-searching');
+                if (desktopSearchInput) desktopSearchInput.value = '';
+                if (desktopSearchSuggestions) desktopSearchSuggestions.classList.add('hidden');
+                document.documentElement.style.removeProperty('--navbar-actual-height');
+            };
+
+            if (mobileSearchToggle) {
+                mobileSearchToggle.addEventListener('click', enterMobileSearch);
             }
-
-            if (closeMobileSearch) {
-                closeMobileSearch.addEventListener('click', hideMobileSearch);
-            }
-
-            // Mobile search input
-            if (mobileSearchInput) {
-                mobileSearchInput.addEventListener('input', () => {
-                    const queryText = mobileSearchInput.value.trim();
-                    clearTimeout(searchDebounceTimer);
-                    if (queryText.length < 2) {
-                        if (mobileSearchSuggestions) {
-                            mobileSearchSuggestions.classList.add('hidden');
-                        }
-                        return;
-                    }
-                    searchDebounceTimer = setTimeout(() => {
-                        if (mobileSearchSuggestionsBody && mobileSearchSuggestionsMeta) {
-                            if (searchAbortController) searchAbortController.abort();
-                            searchAbortController = new AbortController();
-                            mobileSearchSuggestionsMeta.textContent = 'Searching...';
-                            mobileSearchSuggestionsBody.innerHTML = '<div class="dream-search-empty"><i class="fas fa-spinner fa-spin"></i><span>Loading...</span></div>';
-                            mobileSearchSuggestions?.classList.remove('hidden');
-
-                            fetch(`index.php?ajax=nav_search&q=${encodeURIComponent(queryText)}`, {
-                                headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                                credentials: 'same-origin',
-                                signal: searchAbortController.signal
-                            })
-                                .then(r => r.json())
-                                .then(results => {
-                                    if (!mobileSearchSuggestionsBody || !mobileSearchSuggestionsMeta) return;
-                                    const users = results.users || [];
-                                    const posts = results.posts || [];
-                                    const total = results.counts?.all || 0;
-                                    mobileSearchSuggestionsMeta.textContent = total > 0 ? `${total} matches for "${queryText}"` : `No matches for "${queryText}"`;
-                                    let h = '';
-                                    if (users.length) {
-                                        h += '<div class="dream-search-section"><span class="dream-search-section-title">People</span>';
-                                        users.forEach(u => {
-                                            const n = (u.full_name || u.username || 'User').replace(/"/g, '&quot;');
-                                            const nt = (u.location || u.bio || 'Member').replace(/"/g, '&quot;');
-                                            const a = (u.avatar || 'default.png').replace(/"/g, '&quot;');
-                                            h += `<a href="index.php?page=profile&user=${Number(u.id)}" class="dream-search-suggestion" data-no-ajax><img src="assets/avatars/${a}" alt="${n}" onerror="this.src='assets/avatars/default.png'"><span class="sr-body"><strong>${n}</strong><span>${nt}</span></span></a>`;
-                                        });
-                                        h += '</div>';
-                                    }
-                                    if (posts.length) {
-                                        h += '<div class="dream-search-section"><span class="dream-search-section-title">Posts</span>';
-                                        posts.forEach(p => {
-                                            const n = (p.full_name || p.username || 'Member').replace(/"/g, '&quot;');
-                                            const e = (p.content_excerpt || '').replace(/"/g, '&quot;');
-                                            h += `<a href="index.php?page=community&post=${Number(p.id)}#post-${Number(p.id)}" class="dream-search-suggestion" data-no-ajax><span class="dream-search-suggestion-icon"><i class="fas fa-file-lines"></i></span><span class="sr-body"><strong>${n}</strong><span>${e}</span></span></a>`;
-                                        });
-                                        h += '</div>';
-                                    }
-                                    if (!h) h = '<div class="dream-search-empty"><i class="fas fa-magnifying-glass"></i><span>Try a different keyword.</span></div>';
-                                    h += `<a href="index.php?page=search&q=${encodeURIComponent(queryText)}" class="dream-search-all-results" data-no-ajax><span>Open full search results</span><i class="fas fa-arrow-right"></i></a>`;
-                                    mobileSearchSuggestionsBody.innerHTML = h;
-                                    mobileSearchSuggestions?.classList.remove('hidden');
-                                })
-                                .catch(err => {
-                                    if (err.name === 'AbortError') return;
-                                });
-                        }
-                    }, 220);
-                });
+            if (searchBackBtn) {
+                searchBackBtn.addEventListener('click', exitMobileSearch);
             }
 
             // Close mobile search on Escape
             document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && mobileSearchPanel && !mobileSearchPanel.classList.contains('hidden')) {
-                    hideMobileSearch();
+                if (e.key === 'Escape' && navbar?.classList.contains('is-mobile-searching')) {
+                    exitMobileSearch();
                 }
             });
-            
+
+            // Close on overlay tap (suggestions body click closes too)
+            document.addEventListener('click', (e) => {
+                if (navbar?.classList.contains('is-mobile-searching') &&
+                    !e.target.closest('.dream-navbar-shell') &&
+                    !e.target.closest('.dream-search-suggestions')) {
+                    exitMobileSearch();
+                }
+            });
+
+            // Update navbar height on resize while searching
+            window.addEventListener('resize', () => {
+                if (navbar?.classList.contains('is-mobile-searching')) {
+                    document.documentElement.style.setProperty('--navbar-actual-height', navbar.offsetHeight + 'px');
+                }
+            });
+
             // Mobile menu toggle
             const mobileMenuToggle = document.getElementById('mobileMenuToggle');
             const mobileMenu = document.getElementById('mobileMenu');

@@ -31,72 +31,178 @@ $title = htmlspecialchars($tournament['title'] ?? 'Tournament');
 ?>
 
 <style>
-.tr-shell { max-width: 1280px; margin: 0 auto; padding: 24px 16px 48px; color: var(--text-primary, #0f172a); }
-.tr-hero, .tr-panel { background: rgba(255,255,255,0.92); border: 1px solid rgba(148,163,184,0.22); border-radius: 18px; box-shadow: 0 18px 40px rgba(15,23,42,0.08); }
-.dark .tr-hero, .dark .tr-panel, [data-theme="dark"] .tr-hero, [data-theme="dark"] .tr-panel { background: rgba(15,23,42,0.92); border-color: rgba(71,85,105,0.45); box-shadow: none; color: #e2e8f0; }
-.tr-hero { padding: 24px; margin-bottom: 20px; position: relative; overflow: hidden; }
-.tr-hero::before { content: ""; position: absolute; inset: 0 0 auto; height: 5px; background: <?php echo $accent; ?>; }
-.tr-kicker { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: rgba(124,58,237,0.1); color: #6d28d9; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
-.tr-title-row { display: flex; align-items: start; justify-content: space-between; gap: 16px; margin-top: 16px; flex-wrap: wrap; }
-.tr-title-row h1 { margin: 0; font-size: clamp(28px, 4vw, 40px); line-height: 1.05; }
-.tr-meta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; color: #475569; font-size: 14px; }
+:root {
+  --tr-accent: <?php echo $accent; ?>;
+  --tr-accent-rgb: <?php echo implode(',', sscanf($accent, '#%02x%02x%02x') ?: [124, 58, 237]); ?>;
+  --tr-radius: 16px;
+  --tr-glass: rgba(255,255,255,0.85);
+  --tr-glass-border: rgba(148,163,184,0.18);
+  --tr-bg-soft: rgba(148,163,184,0.07);
+}
+.dark, [data-theme="dark"] {
+  --tr-glass: rgba(15,23,42,0.88);
+  --tr-glass-border: rgba(71,85,105,0.35);
+  --tr-bg-soft: rgba(30,41,59,0.6);
+}
+
+.tr-shell { max-width: 1280px; margin: 0 auto; padding: 20px 16px 40px; color: var(--text-primary, #0f172a); }
+
+/* -- Back link */
+.tr-back { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 16px; padding: 8px 16px 8px 12px; border-radius: 999px; background: var(--tr-bg-soft); color: inherit; text-decoration: none; font-size: 13px; font-weight: 600; transition: all .2s; }
+.tr-back:hover { background: rgba(148,163,184,0.15); transform: translateX(-3px); }
+
+/* -- Hero */
+.tr-hero { position: relative; padding: 28px 28px 24px; margin-bottom: 24px; border-radius: var(--tr-radius); background: var(--tr-glass); border: 1px solid var(--tr-glass-border); box-shadow: 0 4px 24px rgba(0,0,0,0.04); overflow: hidden; }
+.tr-hero::before { content: ""; position: absolute; inset: 0 0 auto; height: 4px; background: linear-gradient(90deg, var(--tr-accent), color-mix(in srgb, var(--tr-accent) 60%, #fff)); }
+.tr-hero-accent-bg { position: absolute; top: -60%; right: -10%; width: 300px; height: 300px; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--tr-accent) 12%, transparent), transparent 70%); pointer-events: none; }
+.tr-kicker { display: inline-flex; align-items: center; gap: 6px; padding: 4px 14px; border-radius: 999px; background: color-mix(in srgb, var(--tr-accent) 12%, transparent); color: var(--tr-accent); font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; position: relative; z-index: 1; }
+.tr-title-row { display: flex; align-items: start; justify-content: space-between; gap: 16px; margin-top: 14px; flex-wrap: wrap; position: relative; z-index: 1; }
+.tr-title-row h1 { margin: 0; font-size: clamp(24px, 3.6vw, 38px); font-weight: 800; line-height: 1.08; letter-spacing: -.02em; }
+.tr-meta { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: 10px; color: #64748b; font-size: 13px; }
 .dark .tr-meta, [data-theme="dark"] .tr-meta { color: #94a3b8; }
-.tr-badge { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 999px; font-weight: 700; background: rgba(15,23,42,0.06); }
+.tr-meta span { display: inline-flex; align-items: center; gap: 6px; }
+.tr-meta i { width: 14px; text-align: center; font-size: 12px; }
+.tr-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 16px; border-radius: 999px; font-size: 12px; font-weight: 800; letter-spacing: .04em; white-space: nowrap; }
 .tr-badge.live { background: rgba(239,68,68,0.12); color: #b91c1c; }
+.tr-badge.live::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #b91c1c; animation: tr-pulse 1.5s ease-in-out infinite; }
 .tr-badge.upcoming { background: rgba(37,99,235,0.12); color: #1d4ed8; }
 .tr-badge.completed { background: rgba(16,185,129,0.14); color: #047857; }
-.tr-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px; }
-.tr-stack { display: grid; gap: 20px; }
-.tr-panel { padding: 18px; }
-.tr-panel h2, .tr-panel h3 { margin: 0 0 14px; font-size: 18px; }
-.tr-copy { color: #475569; line-height: 1.6; }
-.dark .tr-copy, [data-theme="dark"] .tr-copy { color: #94a3b8; }
-.tr-actions { display: flex; flex-wrap: wrap; gap: 10px; }
-.tr-btn { border: 0; border-radius: 12px; padding: 10px 14px; font: inherit; font-weight: 600; cursor: pointer; background: #e2e8f0; color: #0f172a; }
-.tr-btn.primary { background: <?php echo $accent; ?>; color: #fff; }
-.tr-btn.ghost { background: transparent; border: 1px solid rgba(148,163,184,0.4); }
+@keyframes tr-pulse { 0%,100% { opacity:1; } 50% { opacity:.3; } }
+
+/* -- Status buttons row */
+.tr-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.tr-hero-actions { margin-top: 18px; position: relative; z-index: 1; }
+
+/* -- Buttons */
+.tr-btn { display: inline-flex; align-items: center; gap: 6px; border: 0; border-radius: 10px; padding: 9px 16px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: all .15s; }
+.tr-btn:active { transform: scale(.96); }
+.tr-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.tr-btn.primary { background: var(--tr-accent); color: #fff; box-shadow: 0 2px 10px color-mix(in srgb, var(--tr-accent) 30%, transparent); }
+.tr-btn.primary:hover { filter: brightness(1.1); box-shadow: 0 4px 16px color-mix(in srgb, var(--tr-accent) 40%, transparent); }
+.tr-btn.ghost { background: var(--tr-bg-soft); backdrop-filter: blur(4px); color: inherit; }
+.tr-btn.ghost:hover { background: rgba(148,163,184,0.15); }
 .tr-btn.success { background: #16a34a; color: #fff; }
+.tr-btn.success:hover { filter: brightness(1.1); }
 .tr-btn.warn { background: #f59e0b; color: #111827; }
-.tr-btn:disabled { opacity: .6; cursor: not-allowed; }
-.tr-list { display: grid; gap: 10px; }
-.tr-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 14px; background: rgba(148,163,184,0.08); }
-.dark .tr-item, [data-theme="dark"] .tr-item { background: rgba(30,41,59,0.7); }
-.tr-item strong, .tr-chat-author { display: block; }
-.tr-item span, .tr-chat-time { color: #64748b; font-size: 13px; }
-.dark .tr-item span, .dark .tr-chat-time, [data-theme="dark"] .tr-item span, [data-theme="dark"] .tr-chat-time { color: #94a3b8; }
-.tr-chat-feed { display: grid; gap: 12px; max-height: 460px; overflow-y: auto; padding-right: 4px; }
-.tr-chat-card { padding: 14px; border-radius: 14px; background: rgba(148,163,184,0.08); }
-.tr-chat-card.room-card { border-left: 4px solid <?php echo $accent; ?>; }
-.dark .tr-chat-card, [data-theme="dark"] .tr-chat-card { background: rgba(30,41,59,0.72); }
-.tr-room-card-meta { display: grid; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(148,163,184,0.2); }
+.tr-btn.danger { background: #dc2626; color: #fff; }
+.tr-btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
+.tr-btn-icon { width: 36px; height: 36px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; }
+
+/* -- Grid layout */
+.tr-grid { display: grid; grid-template-columns: 1.3fr 0.7fr; gap: 24px; align-items: start; }
+.tr-stack { display: grid; gap: 24px; }
+
+/* -- Panels */
+.tr-panel { border-radius: var(--tr-radius); background: var(--tr-glass); border: 1px solid var(--tr-glass-border); box-shadow: 0 2px 12px rgba(0,0,0,0.03); }
+.tr-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px 0; flex-wrap: wrap; }
+.tr-panel-header h2 { margin: 0; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.tr-panel-body { padding: 14px 20px 20px; }
+.tr-panel-divider { height: 1px; background: var(--tr-glass-border); margin: 0 20px; }
+
+/* -- Chat feed */
+.tr-chat-feed { display: flex; flex-direction: column; gap: 10px; max-height: 480px; overflow-y: auto; padding-right: 6px; scroll-behavior: smooth; }
+.tr-chat-feed::-webkit-scrollbar { width: 4px; }
+.tr-chat-feed::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.3); border-radius: 4px; }
+.tr-chat-feed::-webkit-scrollbar-track { background: transparent; }
+
+.tr-chat-card { display: flex; gap: 10px; max-width: 88%; }
+.tr-chat-card.is-self { align-self: flex-end; flex-direction: row-reverse; }
+.tr-chat-avatar { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; object-fit: cover; background: #e2e8f0; margin-top: 4px; }
+.tr-chat-bubble { padding: 10px 14px; border-radius: 14px; background: var(--tr-bg-soft); min-width: 0; }
+.tr-chat-card.is-self .tr-chat-bubble { background: color-mix(in srgb, var(--tr-accent) 14%, transparent); border-bottom-right-radius: 4px; }
+.tr-chat-card:not(.is-self) .tr-chat-bubble { border-bottom-left-radius: 4px; }
+.tr-chat-bubble strong { display: block; font-size: 13px; color: var(--tr-accent); }
+.tr-chat-bubble .tr-text { margin: 4px 0 0; font-size: 14px; line-height: 1.5; word-break: break-word; }
+.tr-chat-bubble .tr-time { display: block; margin-top: 4px; font-size: 11px; color: #94a3b8; }
+.tr-chat-card.is-self .tr-chat-bubble .tr-time { text-align: right; }
+
+/* -- Room card embed */
+.tr-room-card-embed { margin-top: 8px; padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.04); border: 1px solid rgba(148,163,184,0.15); }
+.dark .tr-room-card-embed, [data-theme="dark"] .tr-room-card-embed { background: rgba(0,0,0,0.15); border-color: rgba(71,85,105,0.4); }
+.tr-room-card-embed .rc-title { font-weight: 700; font-size: 14px; margin-bottom: 6px; }
+.tr-room-card-embed .rc-row { font-size: 12px; color: #64748b; display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.dark .tr-room-card-embed .rc-row { color: #94a3b8; }
+.tr-room-card-embed .rc-link { color: var(--tr-accent); font-weight: 600; text-decoration: none; }
+.tr-room-card-embed .rc-link:hover { text-decoration: underline; }
+
+/* -- Chat input bar */
+.tr-chat-input-area { border-top: 1px solid var(--tr-glass-border); padding: 12px 20px 16px; }
+.tr-chat-input-row { display: flex; gap: 8px; align-items: flex-end; }
+.tr-chat-input-row textarea { flex: 1; border-radius: 12px; border: 1px solid var(--tr-glass-border); padding: 10px 14px; font: inherit; font-size: 14px; background: rgba(148,163,184,0.06); color: inherit; resize: none; min-height: 40px; max-height: 120px; }
+.tr-chat-input-row textarea:focus { outline: none; border-color: var(--tr-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tr-accent) 15%, transparent); }
+.tr-chat-send-btn { width: 40px; height: 40px; border-radius: 12px; border: 0; background: var(--tr-accent); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .15s; flex-shrink: 0; }
+.tr-chat-send-btn:hover { filter: brightness(1.1); transform: scale(1.05); }
+.tr-chat-send-btn:active { transform: scale(.95); }
+.tr-chat-send-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+/* -- Team/results list items */
+.tr-list { display: grid; gap: 8px; }
+.tr-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-radius: 12px; background: var(--tr-bg-soft); transition: all .15s; }
+.tr-item:hover { background: rgba(148,163,184,0.12); }
+.tr-item strong { display: block; font-size: 14px; }
+.tr-item span { color: #64748b; font-size: 12px; }
+.dark .tr-item span, [data-theme="dark"] .tr-item span { color: #94a3b8; }
+
+/* -- Results board */
+.tr-results-board { display: grid; gap: 8px; }
+.tr-result-card { padding: 12px 16px; border-radius: 12px; background: var(--tr-bg-soft); display: flex; align-items: baseline; gap: 8px; }
+.tr-result-card .tr-placement { font-weight: 800; font-size: 15px; color: var(--tr-accent); min-width: 32px; }
+.tr-result-card .tr-player-name { font-weight: 600; font-size: 14px; }
+.tr-result-card .tr-detail { font-size: 12px; color: #64748b; margin-left: auto; text-align: right; white-space: nowrap; }
+.dark .tr-result-card .tr-detail { color: #94a3b8; }
+
+/* -- Result form rows */
+.tr-results-grid { display: grid; gap: 10px; }
+.tr-result-row { display: grid; grid-template-columns: 1.2fr repeat(6, minmax(70px, 1fr)); gap: 6px; align-items: center; padding: 10px 14px; border-radius: 12px; background: var(--tr-bg-soft); }
+.tr-result-name strong { font-size: 13px; }
+.tr-result-name small { display: block; font-size: 11px; color: #64748b; }
+.tr-result-row input, .tr-result-row select { width: 100%; border-radius: 8px; border: 1px solid var(--tr-glass-border); padding: 6px 8px; font: inherit; font-size: 12px; background: rgba(148,163,184,0.06); color: inherit; }
+.tr-result-row input:focus { outline: none; border-color: var(--tr-accent); }
+
+/* -- Forms */
 .tr-form { display: grid; gap: 12px; }
-.tr-field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.tr-form input, .tr-form textarea, .tr-form select { width: 100%; border-radius: 12px; border: 1px solid rgba(148,163,184,0.35); padding: 11px 12px; font: inherit; background: #fff; color: #0f172a; }
-.dark .tr-form input, .dark .tr-form textarea, .dark .tr-form select, [data-theme="dark"] .tr-form input, [data-theme="dark"] .tr-form textarea, [data-theme="dark"] .tr-form select { background: #0f172a; color: #e2e8f0; border-color: rgba(71,85,105,0.7); }
-.tr-form textarea { min-height: 100px; resize: vertical; }
-.tr-results-grid { display: grid; gap: 12px; }
-.tr-result-row { display: grid; grid-template-columns: 1.2fr 90px 120px 140px 1fr; gap: 10px; align-items: center; padding: 12px; border-radius: 14px; background: rgba(148,163,184,0.08); }
-.dark .tr-result-row, [data-theme="dark"] .tr-result-row { background: rgba(30,41,59,0.72); }
-.tr-result-name small { display: block; color: #64748b; }
-.tr-note { font-size: 13px; color: #64748b; }
-.dark .tr-note, [data-theme="dark"] .tr-note { color: #94a3b8; }
-.tr-results-board { display: grid; gap: 10px; }
-.tr-result-card { padding: 12px 14px; border-radius: 14px; background: rgba(148,163,184,0.08); }
-.tr-result-card strong { display: block; margin-bottom: 4px; }
-.tr-back { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 14px; color: inherit; text-decoration: none; }
-.tr-feedback { min-height: 20px; font-size: 14px; }
+.tr-field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.tr-form input, .tr-form textarea, .tr-form select { width: 100%; border-radius: 10px; border: 1px solid var(--tr-glass-border); padding: 10px 12px; font: inherit; font-size: 13px; background: rgba(148,163,184,0.06); color: inherit; }
+.tr-form input:focus, .tr-form textarea:focus, .tr-form select:focus { outline: none; border-color: var(--tr-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tr-accent) 12%, transparent); }
+.tr-form textarea { min-height: 80px; resize: vertical; }
+.tr-form label { font-size: 13px; font-weight: 600; }
+
+/* -- Feedback */
+.tr-feedback { font-size: 13px; min-height: 20px; display: flex; align-items: center; gap: 6px; }
 .tr-feedback.success { color: #15803d; }
 .tr-feedback.error { color: #dc2626; }
-@media (max-width: 980px) {
+
+/* -- Empty state */
+.tr-empty { text-align: center; padding: 24px 16px; color: #94a3b8; }
+.tr-empty i { font-size: 28px; margin-bottom: 8px; opacity: .4; display: block; }
+.tr-empty p { margin: 0; font-size: 13px; }
+
+/* -- Responsive */
+@media (max-width: 820px) {
   .tr-grid { grid-template-columns: 1fr; }
-  .tr-field-grid, .tr-result-row { grid-template-columns: 1fr; }
+  .tr-panel-body { padding: 12px 16px 16px; }
+  .tr-panel-header { padding: 14px 16px 0; }
+  .tr-chat-input-area { padding: 10px 16px 12px; }
+  .tr-result-row { grid-template-columns: 1fr 1fr 1fr; }
+  .tr-result-row .tr-result-name { grid-column: 1 / -1; }
+  .tr-meta { gap: 6px 12px; font-size: 12px; }
+  .tr-hero { padding: 20px 16px; }
+  .tr-chat-card { max-width: 95%; }
+}
+@media (max-width: 480px) {
+  .tr-shell { padding: 12px 10px 80px; }
+  .tr-chat-feed { max-height: 60vh; }
+  .tr-result-row { grid-template-columns: 1fr 1fr; }
+  .tr-title-row h1 { font-size: 20px; }
 }
 </style>
 
-<div class="tr-shell" data-tournament-room data-tournament-id="<?php echo $tournamentId; ?>" data-csrf-token="<?php echo htmlspecialchars($csrfToken); ?>">
+<div class="tr-shell" data-tournament-room data-tournament-id="<?php echo $tournamentId; ?>" data-csrf-token="<?php echo htmlspecialchars($csrfToken); ?>" data-viewer-id="<?php echo $viewerId; ?>">
     <a class="tr-back" href="index.php?page=tournaments" data-no-ajax><i class="fas fa-arrow-left"></i><span>Back to tournaments</span></a>
 
+    <!-- ===== Hero ===== -->
     <section class="tr-hero">
+        <div class="tr-hero-accent-bg"></div>
         <span class="tr-kicker"><i class="fas fa-door-open"></i> Tournament room</span>
         <div class="tr-title-row">
             <div>
@@ -105,181 +211,221 @@ $title = htmlspecialchars($tournament['title'] ?? 'Tournament');
                     <span><i class="fas fa-calendar-days"></i> <?php echo !empty($tournament['starts_at']) ? date('M j, Y g:i A', strtotime($tournament['starts_at'])) : 'Start time TBD'; ?></span>
                     <span><i class="fas fa-users"></i> <?php echo (int) ($tournament['registered_teams'] ?? 0); ?> joined</span>
                     <span><i class="fas fa-tag"></i> <?php echo htmlspecialchars($tournament['category'] ?? 'General'); ?></span>
-                    <span><i class="fas fa-trophy"></i> Prize <?php echo htmlspecialchars((string) ($tournament['prize_money'] ?? '0')); ?></span>
+                    <span><i class="fas fa-trophy"></i> Prize ৳<?php echo htmlspecialchars((string) ($tournament['prize_money'] ?? '0')); ?></span>
                 </div>
                 <?php if (!empty($tournament['description'])): ?>
-                    <p class="tr-copy" style="margin-top:14px"><?php echo htmlspecialchars($tournament['description']); ?></p>
+                    <p style="margin-top:12px;font-size:14px;line-height:1.6;color:#64748b"><?php echo htmlspecialchars($tournament['description']); ?></p>
                 <?php endif; ?>
             </div>
             <span class="tr-badge <?php echo htmlspecialchars($status); ?>"><i class="fas fa-signal"></i> <?php echo strtoupper($status); ?></span>
         </div>
         <?php if ($isAgentOwner): ?>
-            <div class="tr-actions" style="margin-top:18px">
-                <button class="tr-btn ghost" data-status-action="upcoming">Set upcoming</button>
-                <button class="tr-btn warn" data-status-action="live">Make live</button>
-                <button class="tr-btn success" data-status-action="completed">Complete</button>
+            <div class="tr-actions tr-hero-actions">
+                <button class="tr-btn tr-btn-sm ghost" data-status-action="upcoming"><i class="fas fa-pause"></i> Upcoming</button>
+                <button class="tr-btn tr-btn-sm warn" data-status-action="live"><i class="fas fa-broadcast-tower"></i> Live</button>
+                <button class="tr-btn tr-btn-sm success" data-status-action="completed"><i class="fas fa-check-circle"></i> Complete</button>
             </div>
         <?php endif; ?>
     </section>
 
+    <!-- ===== Grid ===== -->
     <div class="tr-grid">
+        <!-- Left column -->
         <div class="tr-stack">
+
+            <!-- Chat panel -->
             <section class="tr-panel">
-                <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap">
+                <div class="tr-panel-header">
                     <h2><i class="fas fa-comments"></i> Room chat</h2>
-                    <button class="tr-btn ghost" type="button" data-refresh-chat>Refresh</button>
+                    <button class="tr-btn tr-btn-sm ghost" type="button" data-refresh-chat><i class="fas fa-rotate"></i> Refresh</button>
                 </div>
-                <div class="tr-chat-feed" id="trChatFeed">
-                    <?php if (!$messages): ?>
-                        <div class="tr-chat-card"><span class="tr-chat-time">No messages yet. This is where invites and room updates will appear.</span></div>
-                    <?php endif; ?>
-                    <?php foreach ($messages as $message): ?>
-                        <?php $meta = !empty($message['metadata_json']) ? json_decode($message['metadata_json'], true) : []; ?>
-                        <article class="tr-chat-card <?php echo ($message['message_type'] ?? '') === 'room_card' ? 'room-card' : ''; ?>">
-                            <strong class="tr-chat-author"><?php echo htmlspecialchars($message['full_name'] ?: $message['username']); ?></strong>
-                            <span class="tr-chat-time"><?php echo date('M j, g:i A', strtotime($message['created_at'] ?? 'now')); ?></span>
-                            <p class="tr-copy" style="margin:10px 0 0"><?php echo nl2br(htmlspecialchars($message['message'] ?? '')); ?></p>
-                            <?php if (($message['message_type'] ?? '') === 'room_card' && is_array($meta)): ?>
-                                <div class="tr-room-card-meta">
-                                    <?php if (!empty($meta['room_title'])): ?><div><strong><?php echo htmlspecialchars($meta['room_title']); ?></strong></div><?php endif; ?>
-                                    <?php if (!empty($meta['room_code'])): ?><div>Room code: <?php echo htmlspecialchars($meta['room_code']); ?></div><?php endif; ?>
-                                    <?php if (!empty($meta['room_link'])): ?><div><a href="<?php echo htmlspecialchars($meta['room_link']); ?>" target="_blank" rel="noopener">Open invite</a></div><?php endif; ?>
-                                    <?php if (!empty($meta['starts_at'])): ?><div>Room opens: <?php echo htmlspecialchars($meta['starts_at']); ?></div><?php endif; ?>
-                                    <?php if (!empty($meta['note'])): ?><div><?php echo htmlspecialchars($meta['note']); ?></div><?php endif; ?>
+                <div class="tr-panel-body" style="padding-bottom:0">
+                    <div class="tr-chat-feed" id="trChatFeed">
+                        <?php if (!$messages): ?>
+                            <div class="tr-empty"><i class="fas fa-comment-dots"></i><p>No messages yet. Invites and updates will appear here.</p></div>
+                        <?php endif; ?>
+                        <?php foreach ($messages as $message):
+                            $meta = !empty($message['metadata_json']) ? json_decode($message['metadata_json'], true) : [];
+                            $isSelf = (int)($message['sender_id'] ?? 0) === $viewerId;
+                            $avatar = htmlspecialchars($message['avatar'] ?? 'default.png');
+                        ?>
+                            <article class="tr-chat-card<?php echo $isSelf ? ' is-self' : ''; ?>">
+                                <?php if (!$isSelf): ?>
+                                <img src="assets/avatars/<?php echo $avatar; ?>" alt="" class="tr-chat-avatar" onerror="this.src='assets/avatars/default.png'">
+                                <?php endif; ?>
+                                <div class="tr-chat-bubble">
+                                    <strong><?php echo htmlspecialchars($message['full_name'] ?: $message['username']); ?></strong>
+                                    <div class="tr-text"><?php echo nl2br(htmlspecialchars($message['message'] ?? '')); ?></div>
+                                    <?php if (($message['message_type'] ?? '') === 'room_card' && is_array($meta)): ?>
+                                    <div class="tr-room-card-embed">
+                                        <?php if (!empty($meta['room_title'])): ?><div class="rc-title"><?php echo htmlspecialchars($meta['room_title']); ?></div><?php endif; ?>
+                                        <?php if (!empty($meta['room_code'])): ?><div class="rc-row"><i class="fas fa-key"></i> Room: <strong><?php echo htmlspecialchars($meta['room_code']); ?></strong></div><?php endif; ?>
+                                        <?php if (!empty($meta['room_link'])): ?><div class="rc-row"><i class="fas fa-link"></i> <a href="<?php echo htmlspecialchars($meta['room_link']); ?>" target="_blank" rel="noopener" class="rc-link">Open invite</a></div><?php endif; ?>
+                                        <?php if (!empty($meta['starts_at'])): ?><div class="rc-row"><i class="fas fa-clock"></i> <?php echo htmlspecialchars($meta['starts_at']); ?></div><?php endif; ?>
+                                        <?php if (!empty($meta['note'])): ?><div class="rc-row"><i class="fas fa-sticky-note"></i> <?php echo htmlspecialchars($meta['note']); ?></div><?php endif; ?>
+                                    </div>
+                                    <?php endif; ?>
+                                    <span class="tr-time"><?php echo date('M j, g:i A', strtotime($message['created_at'] ?? 'now')); ?></span>
                                 </div>
-                            <?php endif; ?>
-                        </article>
-                    <?php endforeach; ?>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
-                <form class="tr-form" id="trTextChatForm" style="margin-top:14px">
-                    <input type="hidden" name="message_type" value="text">
-                    <textarea name="message" placeholder="Share a tournament update or message the joined teams..." required></textarea>
-                    <div class="tr-actions">
-                        <button class="tr-btn primary" type="submit">Send message</button>
-                        <div class="tr-feedback" id="trChatFeedback"></div>
-                    </div>
-                </form>
+                <div class="tr-chat-input-area">
+                    <form class="tr-chat-input-row" id="trTextChatForm">
+                        <input type="hidden" name="message_type" value="text">
+                        <textarea name="message" placeholder="Type a message..." required rows="1" id="trChatInput"></textarea>
+                        <button class="tr-chat-send-btn" type="submit" title="Send"><i class="fas fa-paper-plane"></i></button>
+                    </form>
+                    <div class="tr-feedback" id="trChatFeedback" style="margin-top:6px;min-height:0"></div>
+                </div>
             </section>
 
+            <!-- Agent-only panels -->
             <?php if ($isAgentOwner): ?>
+
+            <!-- Room card -->
             <section class="tr-panel">
-                <h2><i class="fas fa-id-card-clip"></i> Share room card</h2>
-                <form class="tr-form" id="trRoomCardForm">
-                    <input type="hidden" name="message_type" value="room_card">
-                    <div class="tr-field-grid">
-                        <input type="text" name="room_title" placeholder="Room title" required>
-                        <input type="text" name="room_code" placeholder="Room code / ID">
-                    </div>
-                    <div class="tr-field-grid">
-                        <input type="url" name="room_link" placeholder="Invite link">
-                        <input type="text" name="starts_at" placeholder="Open time or round note">
-                    </div>
-                    <textarea name="note" placeholder="Quick note for players"></textarea>
-                    <textarea name="message" placeholder="Optional message shown above the room card"></textarea>
-                    <div class="tr-actions">
-                        <button class="tr-btn primary" type="submit">Share room card</button>
-                        <div class="tr-feedback" id="trRoomCardFeedback"></div>
-                    </div>
-                </form>
+                <div class="tr-panel-header">
+                    <h2><i class="fas fa-id-card-clip"></i> Share room card</h2>
+                </div>
+                <div class="tr-panel-body">
+                    <p style="font-size:13px;color:#64748b;margin:0 0 12px">Send an invite card with room details to all participants.</p>
+                    <form class="tr-form" id="trRoomCardForm">
+                        <input type="hidden" name="message_type" value="room_card">
+                        <div class="tr-field-grid">
+                            <input type="text" name="room_title" placeholder="Room title" required>
+                            <input type="text" name="room_code" placeholder="Room code / ID">
+                        </div>
+                        <div class="tr-field-grid">
+                            <input type="url" name="room_link" placeholder="Invite link">
+                            <input type="text" name="starts_at" placeholder="Open time / note">
+                        </div>
+                        <input type="text" name="note" placeholder="Quick note for players">
+                        <textarea name="message" placeholder="Optional message above the card" rows="2"></textarea>
+                        <div class="tr-actions">
+                            <button class="tr-btn primary" type="submit"><i class="fas fa-paper-plane"></i> Share card</button>
+                            <div class="tr-feedback" id="trRoomCardFeedback"></div>
+                        </div>
+                    </form>
+                </div>
             </section>
 
+            <!-- Submit results -->
             <section class="tr-panel">
-                <h2><i class="fas fa-medal"></i> Submit final results</h2>
-                <p class="tr-note">When you publish results, the tournament moves to completed and each listed player gets the result on their profile.</p>
-
-                <form class="tr-form" id="trResultsForm">
-                    <div class="tr-results-grid">
-                        <h3>Team results</h3>
-                        <?php if ($teams): ?>
-                            <?php foreach ($teams as $team): ?>
+                <div class="tr-panel-header">
+                    <h2><i class="fas fa-medal"></i> Submit final results</h2>
+                </div>
+                <div class="tr-panel-body">
+                    <p style="font-size:13px;color:#64748b;margin:0 0 14px">Publishing results moves the tournament to <strong>completed</strong> and awards points/prizes to players.</p>
+                    <form class="tr-form" id="trResultsForm">
+                        <h3 style="font-size:14px;font-weight:700;margin:0">Teams</h3>
+                        <div class="tr-results-grid">
+                            <?php if ($teams): ?>
+                                <?php foreach ($teams as $team): ?>
                                 <div class="tr-result-row team-row">
                                     <div class="tr-result-name">
                                         <strong><?php echo htmlspecialchars($team['linked_team_name'] ?: $team['team_name'] ?: 'Team'); ?></strong>
-                                        <small>Captain: <?php echo htmlspecialchars($team['captain_name'] ?: $team['captain_username'] ?: 'Unknown'); ?></small>
+                                        <small>by <?php echo htmlspecialchars($team['captain_name'] ?: $team['captain_username'] ?: '?'); ?></small>
                                     </div>
                                     <input type="hidden" name="team_id" value="<?php echo (int) ($team['team_id'] ?? 0); ?>">
-                                    <input type="number" name="placement" min="1" placeholder="Place">
-                                    <input type="number" name="points_earned" min="0" placeholder="Points" title="Points earned">
+                                    <input type="number" name="placement" min="1" placeholder="#">
+                                    <input type="number" name="points_earned" min="0" placeholder="Pts">
                                     <input type="text" name="score" placeholder="Score">
-                                    <input type="text" name="result_label" placeholder="Winner / Runner-up">
-                                    <input type="number" name="prize_amount" min="0" step="0.01" placeholder="Prize ৳" title="Prize amount">
+                                    <input type="text" name="result_label" placeholder="Label">
+                                    <input type="number" name="prize_amount" min="0" step="0.01" placeholder="Prize">
                                     <input type="text" name="notes" placeholder="Notes">
                                 </div>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <p class="tr-note">No registered teams yet.</p>
-                        <?php endif; ?>
-                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <p class="tr-empty" style="padding:12px">No registered teams yet.</p>
+                            <?php endif; ?>
+                        </div>
 
-                    <div class="tr-results-grid">
-                        <h3>Player results</h3>
-                        <?php if ($playerPool): ?>
-                            <?php foreach ($playerPool as $participant): ?>
+                        <div class="tr-panel-divider"></div>
+
+                        <h3 style="font-size:14px;font-weight:700;margin:0">Players</h3>
+                        <div class="tr-results-grid">
+                            <?php if ($playerPool): ?>
+                                <?php foreach ($playerPool as $participant): ?>
                                 <div class="tr-result-row player-row">
                                     <div class="tr-result-name">
                                         <strong><?php echo htmlspecialchars($participant['full_name'] ?: $participant['username'] ?: 'Player'); ?></strong>
-                                        <small><?php echo htmlspecialchars($participant['team_name'] ?: 'Solo player'); ?></small>
+                                        <small><?php echo htmlspecialchars($participant['team_name'] ?: 'Solo'); ?></small>
                                     </div>
                                     <input type="hidden" name="user_id" value="<?php echo (int) ($participant['user_id'] ?? 0); ?>">
                                     <input type="hidden" name="team_id" value="<?php echo (int) ($participant['team_id'] ?? 0); ?>">
-                                    <input type="number" name="placement" min="1" placeholder="Place">
-                                    <input type="number" name="points_earned" min="0" placeholder="Points" title="Points earned">
-                                    <input type="text" name="score" placeholder="Score / kills">
-                                    <input type="text" name="result_label" placeholder="MVP / Finalist">
-                                    <input type="number" name="prize_amount" min="0" step="0.01" placeholder="Prize ৳" title="Prize amount">
+                                    <input type="number" name="placement" min="1" placeholder="#">
+                                    <input type="number" name="points_earned" min="0" placeholder="Pts">
+                                    <input type="text" name="score" placeholder="Score">
+                                    <input type="text" name="result_label" placeholder="Label">
+                                    <input type="number" name="prize_amount" min="0" step="0.01" placeholder="Prize">
                                     <input type="text" name="notes" placeholder="Notes">
                                 </div>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <p class="tr-note">No participants yet.</p>
-                        <?php endif; ?>
-                    </div>
-                    <div class="tr-actions">
-                        <button class="tr-btn success" type="submit">Publish results</button>
-                        <div class="tr-feedback" id="trResultsFeedback"></div>
-                    </div>
-                </form>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <p class="tr-empty" style="padding:12px">No participants yet.</p>
+                            <?php endif; ?>
+                        </div>
+                        <div class="tr-actions" style="margin-top:4px">
+                            <button class="tr-btn success" type="submit"><i class="fas fa-cloud-upload-alt"></i> Publish results</button>
+                            <div class="tr-feedback" id="trResultsFeedback"></div>
+                        </div>
+                    </form>
+                </div>
             </section>
             <?php endif; ?>
         </div>
 
+        <!-- Right sidebar -->
         <div class="tr-stack">
             <section class="tr-panel">
-                <h2><i class="fas fa-users"></i> Joined teams</h2>
-                <div class="tr-list">
-                    <?php if (!$teams): ?>
-                        <div class="tr-item"><div><strong>No teams yet</strong><span>Registrations will appear here.</span></div></div>
-                    <?php endif; ?>
-                    <?php foreach ($teams as $team): ?>
-                        <div class="tr-item">
-                            <div>
-                                <strong><?php echo htmlspecialchars($team['linked_team_name'] ?: $team['team_name'] ?: 'Team'); ?></strong>
-                                <span><?php echo (int) ($team['member_count'] ?? 0); ?> members<?php if (!empty($team['captain_name']) || !empty($team['captain_username'])): ?>, captain <?php echo htmlspecialchars($team['captain_name'] ?: $team['captain_username']); ?><?php endif; ?></span>
+                <div class="tr-panel-header">
+                    <h2><i class="fas fa-users"></i> Teams</h2>
+                    <span class="tr-badge" style="font-size:11px;padding:3px 10px;background:var(--tr-bg-soft)"><?php echo count($teams); ?></span>
+                </div>
+                <div class="tr-panel-body">
+                    <div class="tr-list">
+                        <?php if (!$teams): ?>
+                            <div class="tr-empty"><i class="fas fa-users-slash"></i><p>No teams registered yet.</p></div>
+                        <?php endif; ?>
+                        <?php foreach ($teams as $team): ?>
+                            <div class="tr-item">
+                                <div>
+                                    <strong><?php echo htmlspecialchars($team['linked_team_name'] ?: $team['team_name'] ?: 'Team'); ?></strong>
+                                    <span><?php echo (int) ($team['member_count'] ?? 0); ?> members &middot; <?php echo htmlspecialchars($team['captain_name'] ?: $team['captain_username'] ?: '?'); ?></span>
+                                </div>
+                                <span class="tr-badge" style="font-size:10px;padding:3px 10px;background:color-mix(in srgb, var(--tr-accent) 10%, transparent);color:var(--tr-accent)"><?php echo htmlspecialchars(strtoupper($team['status'] ?? 'ok')); ?></span>
                             </div>
-                            <span class="tr-badge"><?php echo htmlspecialchars(strtoupper($team['status'] ?? 'confirmed')); ?></span>
-                        </div>
-                    <?php endforeach; ?>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
             </section>
 
             <section class="tr-panel">
-                <h2><i class="fas fa-ranking-star"></i> Published results</h2>
-                <div class="tr-results-board" id="trResultsBoard">
-                    <?php if (!$results['teams'] && !$results['players']): ?>
-                        <div class="tr-result-card"><strong>No results yet</strong><span class="tr-note">Final standings will appear here once the agent publishes them.</span></div>
-                    <?php endif; ?>
-                    <?php foreach ($results['teams'] as $result): ?>
-                        <div class="tr-result-card">
-                            <strong>#<?php echo (int) ($result['placement'] ?? 0); ?> <?php echo htmlspecialchars($result['linked_team_name'] ?: 'Team'); ?></strong>
-                            <span class="tr-note"><?php echo htmlspecialchars($result['result_label'] ?: 'Team result'); ?><?php if (!empty($result['score'])): ?>, score <?php echo htmlspecialchars($result['score']); ?><?php endif; ?><?php if (!empty($result['points_earned'])): ?>, <?php echo (int) $result['points_earned']; ?> pts<?php endif; ?><?php if (!empty($result['prize_amount'])): ?>, ৳<?php echo htmlspecialchars($result['prize_amount']); ?><?php endif; ?></span>
-                        </div>
-                    <?php endforeach; ?>
-                    <?php foreach ($results['players'] as $result): ?>
-                        <div class="tr-result-card">
-                            <strong>#<?php echo (int) ($result['placement'] ?? 0); ?> <?php echo htmlspecialchars($result['full_name'] ?: $result['username'] ?: 'Player'); ?></strong>
-                            <span class="tr-note"><?php echo htmlspecialchars($result['result_label'] ?: 'Player result'); ?><?php if (!empty($result['score'])): ?>, score <?php echo htmlspecialchars($result['score']); ?><?php endif; ?><?php if (!empty($result['points_earned'])): ?>, <?php echo (int) $result['points_earned']; ?> pts<?php endif; ?><?php if (!empty($result['prize_amount'])): ?>, ৳<?php echo htmlspecialchars($result['prize_amount']); ?><?php endif; ?></span>
-                        </div>
-                    <?php endforeach; ?>
+                <div class="tr-panel-header">
+                    <h2><i class="fas fa-ranking-star"></i> Results</h2>
+                </div>
+                <div class="tr-panel-body">
+                    <div class="tr-results-board" id="trResultsBoard">
+                        <?php if (!$results['teams'] && !$results['players']): ?>
+                            <div class="tr-empty"><i class="fas fa-hourglass-half"></i><p>Results appear here once published.</p></div>
+                        <?php endif; ?>
+                        <?php foreach ($results['teams'] as $result): ?>
+                            <div class="tr-result-card">
+                                <span class="tr-placement">#<?php echo (int) ($result['placement'] ?? 0); ?></span>
+                                <span class="tr-player-name"><?php echo htmlspecialchars($result['linked_team_name'] ?: 'Team'); ?></span>
+                                <span class="tr-detail"><?php if (!empty($result['points_earned'])): ?><?php echo (int) $result['points_earned']; ?> pts<?php endif; ?><?php if (!empty($result['prize_amount']) && (float)$result['prize_amount'] > 0): ?>, ৳<?php echo htmlspecialchars($result['prize_amount']); ?><?php endif; ?></span>
+                            </div>
+                        <?php endforeach; ?>
+                        <?php foreach ($results['players'] as $result): ?>
+                            <div class="tr-result-card">
+                                <span class="tr-placement">#<?php echo (int) ($result['placement'] ?? 0); ?></span>
+                                <span class="tr-player-name"><?php echo htmlspecialchars($result['full_name'] ?: $result['username'] ?: 'Player'); ?></span>
+                                <span class="tr-detail"><?php if (!empty($result['points_earned'])): ?><?php echo (int) $result['points_earned']; ?> pts<?php endif; ?><?php if (!empty($result['prize_amount']) && (float)$result['prize_amount'] > 0): ?>, ৳<?php echo htmlspecialchars($result['prize_amount']); ?><?php endif; ?></span>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
             </section>
         </div>
@@ -293,12 +439,26 @@ $title = htmlspecialchars($tournament['title'] ?? 'Tournament');
 
     var tournamentId = root.getAttribute('data-tournament-id');
     var csrfToken = root.getAttribute('data-csrf-token');
+    var viewerId = parseInt(root.getAttribute('data-viewer-id') || '0', 10);
+    var chatInput = document.getElementById('trChatInput');
+
+    // Auto-resize chat input
+    if (chatInput) {
+        chatInput.addEventListener('input', function () {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+    }
 
     function setFeedback(id, message, ok) {
         var node = document.getElementById(id);
         if (!node) { return; }
         node.textContent = message || '';
         node.className = 'tr-feedback' + (message ? (ok ? ' success' : ' error') : '');
+        if (message) {
+            clearTimeout(node._hideTimer);
+            node._hideTimer = setTimeout(function () { node.textContent = ''; node.className = 'tr-feedback'; }, 4000);
+        }
     }
 
     function api(payload) {
@@ -314,30 +474,34 @@ $title = htmlspecialchars($tournament['title'] ?? 'Tournament');
         var feed = document.getElementById('trChatFeed');
         if (!feed) { return; }
         if (!Array.isArray(messages) || !messages.length) {
-            feed.innerHTML = '<div class="tr-chat-card"><span class="tr-chat-time">No messages yet. This is where invites and room updates will appear.</span></div>';
+            feed.innerHTML = '<div class="tr-empty"><i class="fas fa-comment-dots"></i><p>No messages yet.</p></div>';
             return;
         }
         feed.innerHTML = messages.map(function (message) {
+            var isSelf = parseInt(message.sender_id || '0', 10) === viewerId;
+            var avatar = message.avatar || 'default.png';
             var meta = {};
             if (message.metadata_json) {
                 try { meta = JSON.parse(message.metadata_json); } catch (e) { meta = {}; }
             }
             var roomMeta = '';
             if (message.message_type === 'room_card') {
-                roomMeta += '<div class="tr-room-card-meta">';
-                if (meta.room_title) { roomMeta += '<div><strong>' + escapeHtml(meta.room_title) + '</strong></div>'; }
-                if (meta.room_code) { roomMeta += '<div>Room code: ' + escapeHtml(meta.room_code) + '</div>'; }
-                if (meta.room_link) { roomMeta += '<div><a href="' + escapeAttr(meta.room_link) + '" target="_blank" rel="noopener">Open invite</a></div>'; }
-                if (meta.starts_at) { roomMeta += '<div>Room opens: ' + escapeHtml(meta.starts_at) + '</div>'; }
-                if (meta.note) { roomMeta += '<div>' + escapeHtml(meta.note) + '</div>'; }
+                roomMeta += '<div class="tr-room-card-embed">';
+                if (meta.room_title) { roomMeta += '<div class="rc-title">' + escapeHtml(meta.room_title) + '</div>'; }
+                if (meta.room_code) { roomMeta += '<div class="rc-row"><i class="fas fa-key"></i> Room: <strong>' + escapeHtml(meta.room_code) + '</strong></div>'; }
+                if (meta.room_link) { roomMeta += '<div class="rc-row"><i class="fas fa-link"></i> <a href="' + escapeAttr(meta.room_link) + '" target="_blank" rel="noopener" class="rc-link">Open invite</a></div>'; }
+                if (meta.starts_at) { roomMeta += '<div class="rc-row"><i class="fas fa-clock"></i> ' + escapeHtml(meta.starts_at) + '</div>'; }
+                if (meta.note) { roomMeta += '<div class="rc-row"><i class="fas fa-sticky-note"></i> ' + escapeHtml(meta.note) + '</div>'; }
                 roomMeta += '</div>';
             }
-            return '<article class="tr-chat-card ' + (message.message_type === 'room_card' ? 'room-card' : '') + '">' +
-                '<strong class="tr-chat-author">' + escapeHtml(message.full_name || message.username || 'User') + '</strong>' +
-                '<span class="tr-chat-time">' + escapeHtml(formatDate(message.created_at)) + '</span>' +
-                '<p class="tr-copy" style="margin:10px 0 0">' + nl2br(escapeHtml(message.message || '')) + '</p>' +
+            return '<article class="tr-chat-card' + (isSelf ? ' is-self' : '') + '">' +
+                (isSelf ? '' : '<img src="assets/avatars/' + escapeAttr(avatar) + '" alt="" class="tr-chat-avatar" onerror="this.src=\'assets/avatars/default.png\'">') +
+                '<div class="tr-chat-bubble">' +
+                '<strong>' + escapeHtml(message.full_name || message.username || 'User') + '</strong>' +
+                '<div class="tr-text">' + nl2br(escapeHtml(message.message || '')) + '</div>' +
                 roomMeta +
-                '</article>';
+                '<span class="tr-time">' + escapeHtml(formatDate(message.created_at)) + '</span>' +
+                '</div></article>';
         }).join('');
         feed.scrollTop = feed.scrollHeight;
     }
@@ -347,35 +511,36 @@ $title = htmlspecialchars($tournament['title'] ?? 'Tournament');
         if (!board) { return; }
         var cards = [];
         (results.teams || []).forEach(function (result) {
-            var pts = result.points_earned ? ', ' + escapeHtml(String(result.points_earned)) + ' pts' : '';
-            var prize = result.prize_amount && parseFloat(result.prize_amount) > 0 ? ', ৳' + escapeHtml(String(result.prize_amount)) : '';
-            cards.push('<div class="tr-result-card"><strong>#' + escapeHtml(String(result.placement || '0')) + ' ' + escapeHtml(result.linked_team_name || 'Team') + '</strong><span class="tr-note">' + escapeHtml(result.result_label || 'Team result') + (result.score ? ', score ' + escapeHtml(result.score) : '') + pts + prize + '</span></div>');
+            var detail = (result.points_earned ? escapeHtml(String(result.points_earned)) + ' pts' : '') +
+                (result.prize_amount && parseFloat(result.prize_amount) > 0 ? ', ৳' + escapeHtml(String(result.prize_amount)) : '');
+            cards.push('<div class="tr-result-card"><span class="tr-placement">#' + escapeHtml(String(result.placement || '0')) + '</span><span class="tr-player-name">' + escapeHtml(result.linked_team_name || 'Team') + '</span>' + (detail ? '<span class="tr-detail">' + detail + '</span>' : '') + '</div>');
         });
         (results.players || []).forEach(function (result) {
-            var pts = result.points_earned ? ', ' + escapeHtml(String(result.points_earned)) + ' pts' : '';
-            var prize = result.prize_amount && parseFloat(result.prize_amount) > 0 ? ', ৳' + escapeHtml(String(result.prize_amount)) : '';
-            cards.push('<div class="tr-result-card"><strong>#' + escapeHtml(String(result.placement || '0')) + ' ' + escapeHtml(result.full_name || result.username || 'Player') + '</strong><span class="tr-note">' + escapeHtml(result.result_label || 'Player result') + (result.score ? ', score ' + escapeHtml(result.score) : '') + pts + prize + '</span></div>');
+            var detail = (result.points_earned ? escapeHtml(String(result.points_earned)) + ' pts' : '') +
+                (result.prize_amount && parseFloat(result.prize_amount) > 0 ? ', ৳' + escapeHtml(String(result.prize_amount)) : '');
+            cards.push('<div class="tr-result-card"><span class="tr-placement">#' + escapeHtml(String(result.placement || '0')) + '</span><span class="tr-player-name">' + escapeHtml(result.full_name || result.username || 'Player') + '</span>' + (detail ? '<span class="tr-detail">' + detail + '</span>' : '') + '</div>');
         });
-        board.innerHTML = cards.length ? cards.join('') : '<div class="tr-result-card"><strong>No results yet</strong><span class="tr-note">Final standings will appear here once the agent publishes them.</span></div>';
+        board.innerHTML = cards.length ? cards.join('') : '<div class="tr-empty"><i class="fas fa-hourglass-half"></i><p>Results appear here once published.</p></div>';
     }
 
     function collectRows(selector, includeUser) {
         return Array.prototype.map.call(document.querySelectorAll(selector), function (row) {
             var payload = {
-                team_id: row.querySelector('input[name="team_id"]') ? row.querySelector('input[name="team_id"]').value : '',
-                placement: row.querySelector('input[name="placement"]').value,
-                points_earned: row.querySelector('input[name="points_earned"]') ? row.querySelector('input[name="points_earned"]').value : '0',
-                score: row.querySelector('input[name="score"]').value,
-                result_label: row.querySelector('input[name="result_label"]').value,
-                prize_amount: row.querySelector('input[name="prize_amount"]') ? row.querySelector('input[name="prize_amount"]').value : '0',
-                notes: row.querySelector('input[name="notes"]').value
+                team_id: (row.querySelector('input[name="team_id"]') || {}).value || '',
+                placement: (row.querySelector('input[name="placement"]') || {}).value || '',
+                points_earned: (row.querySelector('input[name="points_earned"]') || {}).value || '0',
+                score: (row.querySelector('input[name="score"]') || {}).value || '',
+                result_label: (row.querySelector('input[name="result_label"]') || {}).value || '',
+                prize_amount: (row.querySelector('input[name="prize_amount"]') || {}).value || '0',
+                notes: (row.querySelector('input[name="notes"]') || {}).value || ''
             };
-            if (includeUser && row.querySelector('input[name="user_id"]')) {
-                payload.user_id = row.querySelector('input[name="user_id"]').value;
+            if (includeUser) {
+                var uid = row.querySelector('input[name="user_id"]');
+                if (uid) { payload.user_id = uid.value; }
             }
             return payload;
         }).filter(function (row) {
-            return row.placement || row.score || row.result_label || row.notes;
+            return row.placement || row.score || row.result_label;
         });
     }
 
@@ -390,16 +555,24 @@ $title = htmlspecialchars($tournament['title'] ?? 'Tournament');
     }
 
     function nl2br(value) {
-        return value.replace(/\n/g, '<br>');
+        return (value || '').replace(/\n/g, '<br>');
     }
 
     function formatDate(value) {
         if (!value) { return 'Just now'; }
         var date = new Date(value.replace(' ', 'T'));
         if (Number.isNaN(date.getTime())) { return value; }
+        var now = new Date();
+        var diffMs = now - date;
+        var diffMin = Math.floor(diffMs / 60000);
+        if (diffMin < 1) { return 'Just now'; }
+        if (diffMin < 60) { return diffMin + 'm ago'; }
+        var diffHr = Math.floor(diffMin / 60);
+        if (diffHr < 24) { return diffHr + 'h ago'; }
         return date.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
     }
 
+    // Status buttons
     Array.prototype.forEach.call(document.querySelectorAll('[data-status-action]'), function (button) {
         button.addEventListener('click', function () {
             button.disabled = true;
@@ -410,31 +583,39 @@ $title = htmlspecialchars($tournament['title'] ?? 'Tournament');
                     button.disabled = false;
                 })
                 .catch(function () {
-                    setFeedback('trChatFeedback', 'Could not update status.', false);
+                    setFeedback('trChatFeedback', 'Request failed.', false);
                     button.disabled = false;
                 });
         });
     });
 
+    // Chat form
     var textChatForm = document.getElementById('trTextChatForm');
     if (textChatForm) {
         textChatForm.addEventListener('submit', function (event) {
             event.preventDefault();
             var formData = Object.fromEntries(new FormData(textChatForm));
+            if (!formData.message || !formData.message.trim()) { return; }
             formData.action = 'send_tournament_chat';
             formData.tournament_id = tournamentId;
+            var btn = textChatForm.querySelector('.tr-chat-send-btn');
+            btn.disabled = true;
             api(formData).then(function (result) {
                 setFeedback('trChatFeedback', result.message || '', !!result.success);
                 if (result.success) {
                     textChatForm.reset();
+                    if (chatInput) { chatInput.style.height = 'auto'; }
                     renderMessages(result.messages || []);
                 }
+                btn.disabled = false;
             }).catch(function () {
                 setFeedback('trChatFeedback', 'Could not send message.', false);
+                btn.disabled = false;
             });
         });
     }
 
+    // Room card form
     var roomCardForm = document.getElementById('trRoomCardForm');
     if (roomCardForm) {
         roomCardForm.addEventListener('submit', function (event) {
@@ -442,22 +623,29 @@ $title = htmlspecialchars($tournament['title'] ?? 'Tournament');
             var formData = Object.fromEntries(new FormData(roomCardForm));
             formData.action = 'send_tournament_chat';
             formData.tournament_id = tournamentId;
+            var btn = roomCardForm.querySelector('.tr-btn.primary');
+            btn.disabled = true;
             api(formData).then(function (result) {
                 setFeedback('trRoomCardFeedback', result.message || '', !!result.success);
                 if (result.success) {
                     roomCardForm.reset();
                     renderMessages(result.messages || []);
                 }
+                btn.disabled = false;
             }).catch(function () {
                 setFeedback('trRoomCardFeedback', 'Could not share room card.', false);
+                btn.disabled = false;
             });
         });
     }
 
+    // Results form
     var resultsForm = document.getElementById('trResultsForm');
     if (resultsForm) {
         resultsForm.addEventListener('submit', function (event) {
             event.preventDefault();
+            var btn = resultsForm.querySelector('.tr-btn.success');
+            btn.disabled = true;
             api({
                 action: 'submit_tournament_results',
                 tournament_id: tournamentId,
@@ -468,19 +656,20 @@ $title = htmlspecialchars($tournament['title'] ?? 'Tournament');
                 if (result.success) {
                     renderResults(result.results || { teams: [], players: [] });
                 }
+                btn.disabled = false;
             }).catch(function () {
                 setFeedback('trResultsFeedback', 'Could not submit results.', false);
+                btn.disabled = false;
             });
         });
     }
 
+    // Refresh
     var refreshButton = document.querySelector('[data-refresh-chat]');
     if (refreshButton) {
         refreshButton.addEventListener('click', function () {
             api({ action: 'get_tournament_chat', tournament_id: tournamentId }).then(function (result) {
-                if (result.success) {
-                    renderMessages(result.messages || []);
-                }
+                if (result.success) { renderMessages(result.messages || []); }
             });
         });
     }

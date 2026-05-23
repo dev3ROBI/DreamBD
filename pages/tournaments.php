@@ -64,6 +64,178 @@ $gameIcons = ['fa-gamepad','fa-crosshairs','fa-chess','fa-dice','fa-joystick','f
 $palette = ['#7c3aed','#2563eb','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4','#f97316','#64748b'];
 ?>
 
+<style>
+/* ===== Hero stat cards - centered, deep colors ===== */
+.gp-hero-stats { gap: 14px; }
+.gp-stat-card { padding: 24px 16px; border-radius: 18px; background: rgba(255,255,255,0.88); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.6); box-shadow: 0 4px 20px rgba(0,0,0,0.05); transition: all .3s cubic-bezier(.34,1.56,.64,1); position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.dark .gp-stat-card, [data-theme="dark"] .gp-stat-card { background: rgba(15,23,42,0.85); border-color: rgba(71,85,105,0.4); }
+.gp-stat-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.1); }
+.gp-stat-card .gp-stat-icon { font-size: 28px; width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; border-radius: 16px; margin-bottom: 12px; position: relative; }
+.gp-stat-card .gp-stat-icon i { position: relative; z-index: 1; }
+.gp-stat-card:nth-child(1) .gp-stat-icon { background: linear-gradient(135deg,#5b21b6,#7c3aed); color:#fff; box-shadow: 0 6px 20px rgba(91,33,182,.4); }
+.gp-stat-card:nth-child(2) .gp-stat-icon { background: linear-gradient(135deg,#d97706,#f59e0b); color:#fff; box-shadow: 0 6px 20px rgba(217,119,6,.4); }
+.gp-stat-card:nth-child(3) .gp-stat-icon { background: linear-gradient(135deg,#dc2626,#ef4444); color:#fff; box-shadow: 0 6px 20px rgba(220,38,38,.4); }
+.gp-stat-card:nth-child(4) .gp-stat-icon { background: linear-gradient(135deg,#059669,#10b981); color:#fff; box-shadow: 0 6px 20px rgba(5,150,105,.4); }
+.gp-stat-card .gp-stat-value { font-size: 28px; font-weight: 800; line-height: 1.1; color: #0f172a; display: block; }
+.dark .gp-stat-card .gp-stat-value { color: #f1f5f9; }
+.gp-stat-card .gp-stat-label { font-size: 13px; color: #64748b; font-weight: 500; display: block; margin-top: 4px; }
+.dark .gp-stat-card .gp-stat-label { color: #94a3b8; }
+
+/* ===== Profile bar - beautiful glass design ===== */
+.gp-profile-bar { display: flex; align-items: center; gap: 14px; padding: 14px 20px; margin: 0 0 18px; border-radius: 18px; background: rgba(255,255,255,0.88); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.6); box-shadow: 0 4px 20px rgba(0,0,0,0.04); }
+.dark .gp-profile-bar, [data-theme="dark"] .gp-profile-bar { background: rgba(15,23,42,0.85); border-color: rgba(71,85,105,0.4); }
+.gp-profile-bar-avatar { width: 48px; height: 48px; border-radius: 50%; overflow: hidden; flex-shrink: 0; border: 2px solid rgba(124,58,237,0.2); box-shadow: 0 2px 8px rgba(124,58,237,0.15); }
+.gp-profile-bar-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.gp-profile-bar-info { flex: 1; min-width: 0; }
+.gp-profile-bar-info strong { display: block; font-size: 15px; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dark .gp-profile-bar-info strong { color: #f1f5f9; }
+.gp-profile-bar-balance { display: flex; align-items: center; gap: 6px; margin-left: 8px; padding: 6px 14px; border-radius: 12px; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.15); white-space: nowrap; }
+.gp-profile-bar-balance .gp-balance-label { font-size: 11px; color: #64748b; }
+.gp-profile-bar-balance .gp-balance-value { font-size: 16px; font-weight: 800; color: #059669; }
+.gp-profile-bar-actions { display: flex; align-items: center; gap: 8px; }
+.gp-profile-bar-actions .gp-btn { font-size: 12px; padding: 7px 14px; border-radius: 10px; }
+
+/* ===== Better filter tabs ===== */
+.gp-tabs { display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.gp-tabs::-webkit-scrollbar { display: none; }
+.gp-tab { border-radius: 10px; font-weight: 600; transition: all .2s; padding: 8px 18px; font-size: 13px; background: rgba(148,163,184,0.08); color: #64748b; border: 1px solid transparent; cursor: pointer; flex-shrink: 0; white-space: nowrap; }
+.gp-tab:hover { background: rgba(124,58,237,0.1); color: #7c3aed; border-color: rgba(124,58,237,0.15); }
+.gp-tab.active { background: #7c3aed; color: #fff; border-color: #7c3aed; box-shadow: 0 2px 10px rgba(124,58,237,.3); }
+
+/* ===== Section header ===== */
+.gp-section-header h2 { font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 8px; color: #0f172a; flex-shrink: 0; }
+.dark .gp-section-header h2 { color: #f1f5f9; }
+.gp-section-header h2 i { font-size: 18px; color: #7c3aed; }
+
+/* ===== Search bar with clear button ===== */
+.gp-search { position: relative; width: 280px; flex-shrink: 0; border-radius: 14px; border: 1.5px solid rgba(148,163,184,0.2); background: rgba(255,255,255,0.7); backdrop-filter: blur(6px); transition: border-color .2s, box-shadow .2s, background .2s; }
+.gp-search:focus-within { border-color: #7c3aed; box-shadow: 0 0 0 4px rgba(124,58,237,0.12); background: rgba(255,255,255,0.9); }
+.gp-search .gp-search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 15px; color: #94a3b8; pointer-events: none; transition: color .2s; }
+.gp-search:focus-within .gp-search-icon { color: #7c3aed; }
+.gp-search-input { width: 100%; padding: 11px 46px 11px 44px; border: 0; border-radius: 14px; font: inherit; font-size: 13px; background: transparent; color: inherit; box-sizing: border-box; outline: none; }
+.gp-search-input::placeholder { color: #94a3b8; }
+.gp-search-clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; border-radius: 50%; border: 0; background: rgba(148,163,184,0.15); color: #64748b; display: none; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; transition: background .2s, transform .2s; padding: 0; line-height: 1; }
+.gp-search-clear:hover { background: rgba(124,58,237,0.15); color: #7c3aed; transform: translateY(-50%) scale(1.1); }
+.dark .gp-search { background: rgba(15,23,42,0.6); border-color: rgba(148,163,184,0.12); }
+.dark .gp-search:focus-within { background: rgba(15,23,42,0.8); border-color: #a78bfa; box-shadow: 0 0 0 4px rgba(167,139,250,0.1); }
+.dark .gp-search:focus-within .gp-search-icon { color: #a78bfa; }
+.dark .gp-search-clear:hover { background: rgba(167,139,250,0.15); color: #a78bfa; }
+
+/* Mobile responsive overrides */
+@media (max-width: 768px) {
+  .gp-hero-content h1 { font-size: clamp(20px, 5vw, 32px) !important; }
+  .gp-hero-content p { font-size: 13px !important; }
+  .gp-hero-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 14px 16px 20px !important; }
+  .gp-stat-card { padding: 16px 12px !important; flex-direction: column !important; gap: 6px; text-align: center !important; border-radius: 16px; backdrop-filter: blur(8px); }
+  .gp-stat-card .gp-stat-icon { font-size: 22px; width: 48px; height: 48px; border-radius: 14px; flex-shrink: 0; margin-bottom: 8px; }
+  .gp-stat-card .gp-stat-value { font-size: 20px !important; }
+  .gp-stat-card .gp-stat-label { font-size: 11px !important; }
+  .gp-stat-card:hover { transform: none; }
+  /* Profile bar mobile */
+  .gp-profile-bar { flex-wrap: wrap; gap: 10px; padding: 14px 16px !important; border-radius: 18px; }
+  .gp-profile-bar-avatar { width: 44px; height: 44px; border-width: 2px; }
+  .gp-profile-bar-info strong { font-size: 14px; }
+  .gp-profile-bar-balance { margin-left: 0; padding: 5px 12px; }
+  .gp-profile-bar-balance .gp-balance-value { font-size: 14px; }
+  .gp-profile-bar-actions { width: 100%; display: flex; gap: 6px; flex-wrap: wrap; }
+  .gp-profile-bar-actions .gp-btn { font-size: 11px; padding: 7px 10px; flex: 1; min-width: 0; justify-content: center; white-space: nowrap; border-radius: 10px; font-weight: 600; }
+  /* Section header mobile */
+  .gp-section-switcher { overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 0; padding: 0 4px; }
+  .gp-switcher-btn { white-space: nowrap; font-size: 13px; padding: 10px 14px; flex-shrink: 0; border-radius: 10px; }
+  .gp-section-header { display: flex; flex-direction: column; gap: 12px; padding: 0 16px 14px !important; position: relative; }
+  .gp-section-header h2 { font-size: 17px; letter-spacing: -.02em; }
+  .gp-section-header h2 i { font-size: 16px; }
+  .gp-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; display: flex; gap: 6px; width: 100%; padding-bottom: 4px; margin-top: -2px; }
+  .gp-tab { white-space: nowrap; font-size: 12px; padding: 8px 14px; flex-shrink: 0; border-radius: 9px; }
+  .gp-search { width: 100%; flex-shrink: 1; border-radius: 12px; }
+  .gp-search-input { font-size: 13px; padding: 11px 44px 11px 42px !important; }
+  .gp-search:focus-within { box-shadow: 0 0 0 4px rgba(124,58,237,0.1); }
+  .gp-search .gp-search-icon { left: 13px; font-size: 14px; }
+  .gp-grid { grid-template-columns: 1fr !important; gap: 12px !important; padding: 0 4px !important; }
+  .gp-card { border-radius: 18px !important; }
+  .gp-card-body h3 { font-size: 15px !important; }
+  .gp-card-body p { font-size: 12px !important; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .gp-card-meta { flex-wrap: wrap; gap: 6px; font-size: 12px !important; }
+  .gp-card-meta > div { flex: 1; min-width: calc(50% - 6px); }
+  .gp-card-actions { flex-wrap: wrap; gap: 6px; }
+  .gp-card-actions .gp-btn { font-size: 11px; padding: 7px 12px; border-radius: 10px; }
+  .gp-my-grid { grid-template-columns: 1fr !important; gap: 14px !important; }
+  .gp-my-panel { border-radius: 18px; overflow: hidden; }
+  .gp-my-panel-header { font-size: 14px; padding: 14px 18px !important; }
+  .gp-my-item { flex-wrap: wrap; gap: 8px; padding: 12px 14px !important; }
+  .gp-my-item > div:last-child { width: 100%; display: flex; gap: 6px; }
+  .gp-my-item > div:last-child .gp-btn { flex: 1; justify-content: center; font-size: 11px; padding: 6px 10px; border-radius: 9px; }
+  .gp-my-info strong { font-size: 13px; }
+  .gp-my-info span { font-size: 11px; }
+  .gp-agent-quick { flex-direction: column; gap: 6px; }
+  .gp-agent-quick .gp-btn { width: 100%; justify-content: center; border-radius: 10px; }
+  .gp-modal-panel { margin: 12px !important; max-height: 88vh !important; border-radius: 22px !important; }
+  .gp-modal-body { padding: 16px !important; }
+  .gp-form-grid { grid-template-columns: 1fr !important; gap: 10px !important; }
+  .gp-form-grid.three { grid-template-columns: 1fr !important; }
+  .gp-icon-picker { gap: 4px; }
+  .gp-icon-opt { width: 36px; height: 36px; font-size: 14px; border-radius: 10px; }
+  .gp-color-picker { gap: 4px; }
+  .gp-color-opt { width: 28px; height: 28px; }
+  .ba-method-grid { gap: 8px; }
+  .ba-method-card { padding: 10px; border-radius: 14px; }
+  .gp-radio-group { flex-direction: column; gap: 6px; }
+  .gp-radio { padding: 10px 12px; border-radius: 10px; }
+  .gp-participant { flex-wrap: wrap; gap: 8px; padding: 10px; border-radius: 12px; }
+  .gp-team-member { flex-wrap: wrap; gap: 8px; padding: 10px; border-radius: 12px; }
+  .gp-team-add { flex-direction: column; gap: 8px; }
+  .gp-team-add .gp-btn { width: 100%; justify-content: center; border-radius: 10px; }
+  .gp-txn-item { flex-wrap: wrap; padding: 10px; border-radius: 12px; }
+  .gp-txn-amount { margin-left: auto; }
+  .gp-hero { padding: 20px 16px 0 !important; min-height: auto !important; border-radius: 0 0 28px 28px !important; }
+  .gp-hero-bg { min-height: 300px !important; }
+  .gp-section { padding: 12px 8px !important; }
+  .gp-empty { padding: 32px 16px !important; border-radius: 16px; }
+  .gp-empty i { font-size: 32px !important; }
+  .gp-countdown { font-size: 11px; }
+  .gp-participants { gap: 6px; }
+  .gp-agent-badge-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .gp-agent-hero-title { font-size: 18px !important; }
+  .ba-inputs-grid { grid-template-columns: 1fr !important; gap: 10px; }
+  .ba-merchant-box--premium { padding: 12px !important; border-radius: 14px; }
+  .ba-instr-step { font-size: 12px; }
+  .gp-modal-actions { flex-wrap: wrap; gap: 8px; }
+  .gp-modal-actions .gp-btn { flex: 1; min-width: 0; justify-content: center; font-size: 12px; padding: 9px 12px; border-radius: 10px; }
+  .gp-section-header h2 i { font-size: 16px; }
+  .gp-card-head .gp-card-icon { width: 40px; height: 40px; font-size: 18px; border-radius: 12px; }
+  .gp-card-head .gp-badge { font-size: 10px; padding: 4px 10px; border-radius: 8px; }
+  .gp-card-actions .gp-agent-badge { font-size: 10px; padding: 3px 8px; }
+  .gp-card-meta i { font-size: 11px; }
+  .gp-card-tag { font-size: 11px; }
+  .gp-card-host { font-size: 11px; }
+  .gp-my-panel .gp-my-icon { width: 36px; height: 36px; font-size: 16px; border-radius: 10px; }
+  .gp-badge.sm { font-size: 9px; padding: 2px 8px; }
+}
+@media (max-width: 480px) {
+  .gp-hero-stats { padding: 10px 10px 16px !important; gap: 8px; }
+  .gp-stat-card { padding: 14px 10px !important; gap: 6px; border-radius: 14px; }
+  .gp-stat-card .gp-stat-icon { font-size: 18px; width: 40px; height: 40px; border-radius: 12px; margin-bottom: 6px; }
+  .gp-stat-card .gp-stat-value { font-size: 17px !important; }
+  .gp-stat-card .gp-stat-label { font-size: 10px !important; }
+  .gp-card { padding: 14px !important; }
+  .gp-card-head { gap: 8px; }
+  .gp-card-icon { width: 36px; height: 36px; font-size: 16px; }
+  .gp-badge { font-size: 10px; padding: 3px 8px; }
+  .gp-card-actions .gp-btn { font-size: 10px; padding: 6px 10px; }
+  .gp-countdown { font-size: 10px; }
+  .gp-section-header h2 { font-size: 15px; }
+  .gp-tab { font-size: 11px; padding: 7px 12px; }
+  .gp-section-header { padding: 0 12px 12px !important; gap: 10px; }
+  .gp-grid { padding: 0 2px !important; gap: 10px !important; }
+  .gp-card-meta > div { min-width: 100%; }
+  .gp-profile-bar { padding: 12px 14px !important; gap: 8px; }
+  .gp-profile-bar-avatar { width: 38px; height: 38px; }
+  .gp-profile-bar-info strong { font-size: 13px; }
+  .gp-profile-bar-balance { padding: 4px 10px; }
+  .gp-profile-bar-balance .gp-balance-value { font-size: 13px; }
+  .gp-profile-bar-actions .gp-btn { font-size: 10px; padding: 6px 8px; }
+}
+</style>
 <canvas id="gpParticles"></canvas>
 
 <div class="gp-page" id="tournamentsPage" data-csrf="<?php echo htmlspecialchars($csrfToken); ?>" data-user-id="<?php echo (int)($viewerId ?? 0); ?>" data-role="<?php echo htmlspecialchars($userRole); ?>" data-balance="<?php echo $userBalance; ?>">
@@ -113,7 +285,6 @@ $palette = ['#7c3aed','#2563eb','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4
         </div>
         <div class="gp-profile-bar-actions">
             <?php if ($userRole === 'agent'): ?>
-                <button type="button" class="gp-btn gp-btn-sm gp-btn-primary" data-open-modal="bKashModal"><i class="fas fa-mobile-screen-button"></i> bKash</button>
                 <button type="button" class="gp-btn gp-btn-sm gp-btn-accent" data-open-modal="createTournamentModal"><i class="fas fa-trophy"></i> Add tournament</button>
             <?php elseif ($userRole === 'user'): ?>
                 <button type="button" class="gp-btn gp-btn-sm gp-btn-gradient" data-open-modal="becomeAgentModal"><i class="fas fa-crown"></i> Become an agent</button>
@@ -150,8 +321,9 @@ $palette = ['#7c3aed','#2563eb','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4
                 <button class="gp-tab" data-filter="completed" role="tab">Completed</button>
             </div>
             <div class="gp-search">
-                <i class="fas fa-search"></i>
+                <i class="fas fa-search gp-search-icon"></i>
                 <input type="text" id="gpSearch" placeholder="Search tournaments..." class="gp-search-input">
+                <button type="button" class="gp-search-clear" id="gpSearchClear" aria-label="Clear search"><i class="fas fa-times"></i></button>
             </div>
         </div>
 
@@ -307,7 +479,6 @@ $palette = ['#7c3aed','#2563eb','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4
             <div class="gp-my-panel gp-agent-panel">
                 <div class="gp-my-panel-header"><i class="fas fa-crown"></i> Agent dashboard <span class="gp-count">৳<?php echo number_format($userBalance, 0); ?></span></div>
                 <div class="gp-agent-quick">
-                    <button class="gp-btn gp-btn-sm gp-btn-primary" data-open-modal="bKashModal"><i class="fas fa-mobile-screen-button"></i> bKash</button>
                     <button class="gp-btn gp-btn-sm gp-btn-accent" data-open-modal="createTournamentModal"><i class="fas fa-trophy"></i> Add tournament</button>
                     <button class="gp-btn gp-btn-sm gp-btn-outline" data-open-modal="agentHistoryModal"><i class="fas fa-clock-rotate-left"></i> History</button>
                 </div>
@@ -504,86 +675,6 @@ $palette = ['#7c3aed','#2563eb','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4
     </div>
 </div>
 
-<!-- ═══ bKash Payment Modal ═══ -->
-<div class="gp-modal hidden" id="bKashModal">
-    <div class="gp-modal-panel sm">
-        <div class="gp-modal-head">
-            <h3><i class="fas fa-mobile-screen-button" style="color:#E2136E"></i> bKash Payment</h3>
-            <button class="gp-modal-close" data-close-modal><i class="fas fa-times"></i></button>
-        </div>
-        <div class="gp-modal-body">
-            <!-- Step 1: Amount + Phone -->
-            <div id="bkashStep1">
-                <div class="gp-bkash-merchant">
-                    <i class="fas fa-building-columns"></i>
-                    <div>
-                        <strong>Merchant: DreamBD Arena</strong>
-                        <span>bKash Merchant: <strong>01XXXXXXXXX</strong></span>
-                    </div>
-                </div>
-                <form id="bkashStep1Form">
-                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
-                    <input type="hidden" name="action" value="bkash_send_otp">
-                    <div class="gp-amount-grid">
-                        <?php foreach ([50, 100, 200, 500, 1000, 5000] as $amt): ?>
-                        <button type="button" class="gp-amount-btn" data-amount="<?php echo $amt; ?>">৳<?php echo $amt; ?></button>
-                        <?php endforeach; ?>
-                    </div>
-                    <div class="gp-form-group">
-                        <label>Amount (৳)</label>
-                        <div class="gp-input-group">
-                            <span class="gp-input-prefix">৳</span>
-                            <input type="number" name="bkash_amount" id="bkashAmount" min="10" class="gp-input" placeholder="Enter amount" required>
-                        </div>
-                    </div>
-                    <div class="gp-form-group">
-                        <label>Your bKash account number</label>
-                        <div class="gp-input-group">
-                            <span class="gp-input-prefix"><i class="fas fa-mobile-screen"></i></span>
-                            <input type="tel" name="bkash_phone" class="gp-input" placeholder="01XXXXXXXXX" pattern="01[3-9]\d{8}" required>
-                        </div>
-                        <span class="gp-form-hint">Enter the bKash number you're paying from</span>
-                    </div>
-                    <div class="gp-modal-actions">
-                        <button type="button" class="gp-btn gp-btn-ghost" data-close-modal>Cancel</button>
-                        <button type="submit" class="gp-btn gp-btn-bkash"><i class="fas fa-paper-plane"></i> Send OTP</button>
-                    </div>
-                    <div class="gp-feedback hidden"></div>
-                </form>
-            </div>
-
-            <!-- Step 2: OTP Verify -->
-            <div id="bkashStep2" style="display:none">
-                <div class="gp-bkash-check">
-                    <i class="fas fa-mobile-screen-button fa-3x" style="color:#E2136E"></i>
-                    <p>An OTP has been sent to <strong id="bkashPhoneDisplay"></strong></p>
-                    <p class="text-sm text-gray-500">Enter the 6-digit code below</p>
-                </div>
-                <form id="bkashStep2Form">
-                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
-                    <input type="hidden" name="action" value="bkash_verify_otp">
-                    <div class="gp-form-group">
-                        <label>OTP Code</label>
-                        <div class="gp-otp-inputs" id="bkashOtpInputs">
-                            <?php for ($i = 0; $i < 6; $i++): ?>
-                            <input type="text" class="gp-otp-box" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" required>
-                            <?php endfor; ?>
-                        </div>
-                        <input type="hidden" name="bkash_otp" id="bkashOtpHidden">
-                    </div>
-                    <div class="gp-bkash-demo-note">
-                        <i class="fas fa-flask"></i> Demo mode — use OTP: <strong id="bkashDemoOtp">------</strong>
-                    </div>
-                    <div class="gp-modal-actions">
-                        <button type="button" class="gp-btn gp-btn-ghost" id="bkashBackBtn"><i class="fas fa-arrow-left"></i> Back</button>
-                        <button type="submit" class="gp-btn gp-btn-bkash"><i class="fas fa-check-circle"></i> Confirm Payment</button>
-                    </div>
-                    <div class="gp-feedback hidden"></div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- Create Tournament Modal (Agent only) -->
 <div class="gp-modal hidden" id="createTournamentModal">
@@ -873,10 +964,20 @@ $palette = ['#7c3aed','#2563eb','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4
 
     safe('Search', function() {
         var inp = document.getElementById('gpSearch'); if (!inp) return;
-        inp.addEventListener('input', function() {
+        var clearBtn = document.getElementById('gpSearchClear');
+        function filterCards() {
             var q = inp.value.trim().toLowerCase();
             document.querySelectorAll('.gp-card').forEach(function(c){ c.classList.toggle('hidden', q && !((c.querySelector('h3')||{}).textContent||'').toLowerCase().includes(q)); });
-        });
+            if (clearBtn) clearBtn.style.display = q ? 'flex' : 'none';
+        }
+        inp.addEventListener('input', filterCards);
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function() {
+                inp.value = '';
+                filterCards();
+                inp.focus();
+            });
+        }
     });
 
     safe('Modals', function() {
@@ -957,11 +1058,6 @@ $palette = ['#7c3aed','#2563eb','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4
                 var f = document.getElementById(formId); if (f) f.querySelectorAll('.gp-feedback').forEach(function(el){el.classList.add('hidden');el.textContent='';});
             });
         }
-
-        // bKash flow
-        step1Handler('bkashStep1Form','bkashStep1','bkashStep2','bkashPhoneDisplay','bkashOtpInputs','bkashDemoOtp','<i class="fas fa-paper-plane"></i> Send OTP','bkash_send_otp');
-        step2Handler('bkashStep2Form','bkashOtpInputs','bkashOtpHidden','<i class="fas fa-check-circle"></i> Confirm Payment','Payment successful!','bkash_verify_otp');
-        backBtn('bkashBackBtn','bkashStep2','bkashStep1','bkashOtpInputs','bkashOtpHidden','bkashStep2Form');
 
         // Become agent flow — step transition
         var baInfoStep = document.getElementById('baInfoStep');
@@ -1120,24 +1216,6 @@ $palette = ['#7c3aed','#2563eb','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4
                 });
             });
         }
-
-        // Fix: Set amount for bKash step1 (the bkash_send_otp action reads bkash_amount)
-        var bkashStep1Form = document.getElementById('bkashStep1Form');
-        if (bkashStep1Form) {
-            bkashStep1Form.addEventListener('submit', function() {
-                var amt = document.getElementById('bkashAmount'); if (amt) { var inp = document.createElement('input'); inp.type='hidden'; inp.name='bkash_amount'; inp.value=amt.value; this.appendChild(inp); }
-                // Remove the extra submit listeners to avoid duplicate calls
-            }, true); // use capture to run first
-        }
-
-        // bKash amount buttons
-        document.querySelectorAll('#bKashModal .gp-amount-btn').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                document.querySelectorAll('#bKashModal .gp-amount-btn').forEach(function(b){b.classList.remove('active');});
-                btn.classList.add('active');
-                var inp = document.getElementById('bkashAmount'); if (inp) inp.value = btn.getAttribute('data-amount');
-            });
-        });
 
         // Create Tournament
         document.getElementById('createTournamentForm') && document.getElementById('createTournamentForm').addEventListener('submit', function(e) {

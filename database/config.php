@@ -209,6 +209,7 @@ function ensureTournamentFeatureSchema(PDO $db): void {
             room_password VARCHAR(120) NULL,
             room_link VARCHAR(255) NULL,
             invite_note TEXT NULL,
+            metadata_json TEXT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_tournament_chat (tournament_id, created_at),
             INDEX idx_sender_chat (sender_id)
@@ -247,6 +248,7 @@ function ensureTournamentFeatureSchema(PDO $db): void {
 
     // Migrate existing tournament_results table with missing columns
     $tableMigrations = [
+        "ALTER TABLE tournament_chat_messages ADD COLUMN IF NOT EXISTS metadata_json TEXT NULL AFTER invite_note",
         "ALTER TABLE tournament_results ADD COLUMN IF NOT EXISTS result_scope ENUM('team','player') NOT NULL DEFAULT 'player' AFTER user_id",
         "ALTER TABLE tournament_results ADD COLUMN IF NOT EXISTS result_label VARCHAR(255) NULL AFTER score",
         "ALTER TABLE tournament_results ADD COLUMN IF NOT EXISTS prize_amount DECIMAL(10,2) DEFAULT 0.00 AFTER result_label",

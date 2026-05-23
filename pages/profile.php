@@ -40,6 +40,23 @@ try {
     try {
         $recentTournamentResults = getUserTournamentResults($db, $profileId, 6);
     } catch (Throwable $e) {}
+
+    $leaderboardRank = '-';
+    $completedTournaments = 0;
+    $overallPoints = 0;
+    try {
+        $stmt = $db->prepare("SELECT COALESCE(SUM(COALESCE(points_earned,0)),0) AS total_pts, COUNT(DISTINCT tournament_id) AS completed_count FROM tournament_results WHERE user_id = ?");
+        $stmt->execute([$profileId]);
+        $row = $stmt->fetch();
+        $overallPoints = (int)($row['total_pts'] ?? 0);
+        $completedTournaments = (int)($row['completed_count'] ?? 0);
+        if ($completedTournaments > 0) {
+            $stmt = $db->prepare("SELECT COUNT(*) + 1 AS rank FROM (SELECT user_id, SUM(COALESCE(points_earned,0)) AS total FROM tournament_results GROUP BY user_id HAVING total > ?) t");
+            $stmt->execute([$overallPoints]);
+            $leaderboardRank = '#' . (int)$stmt->fetchColumn();
+        }
+    } catch (Throwable $e) {}
+
     $preferences = !empty($profileUser['preferences']) ? json_decode($profileUser['preferences'], true) : [];
     $friendshipStatus = getFriendshipStatus($db, $viewerId, $profileId);
     $isOwnProfile = $profileId === $viewerId;
@@ -204,6 +221,17 @@ function renderProfileActionButtons($isOwnProfile, $friendshipStatus, $profileId
                 <div class="intro-item"><i class="fas fa-calendar" style="color:#f59e0b"></i><span>Joined <?php echo date('F Y', strtotime($profileUser['registered_at'] ?? 'now')); ?></span></div>
                 <div class="intro-item"><i class="fas fa-shield-heart" style="color:#ec4899"></i><span><?php echo !empty($profileUser['email_verified']) ? 'Verified member' : 'Email not verified'; ?></span></div>
             </div>
+
+            <?php if ($completedTournaments > 0): ?>
+            <div class="profile-card sidebar-tournament-stats">
+                <div class="card-heading"><h3>Tournament Stats</h3></div>
+                <div class="snapshot-list">
+                    <div class="snapshot-item"><span>Leaderboard Rank</span><strong><?php echo htmlspecialchars($leaderboardRank); ?></strong></div>
+                    <div class="snapshot-item"><span>Completed</span><strong><?php echo $completedTournaments; ?></strong></div>
+                    <div class="snapshot-item"><span>Total Points</span><strong><?php echo $overallPoints; ?></strong></div>
+                </div>
+            </div>
+            <?php endif; ?>
 
             <?php if ($friendRequests): ?>
             <div class="profile-card sidebar-requests" id="friendRequestsPanel">
@@ -446,6 +474,10 @@ function renderProfileActionButtons($isOwnProfile, $friendshipStatus, $profileId
                             <div class="snapshot-item"><span>Friends</span><strong><?php echo $stats['friends']; ?></strong></div>
                             <div class="snapshot-item"><span>Photos</span><strong><?php echo $stats['photos']; ?></strong></div>
                             <div class="snapshot-item"><span>Sessions</span><strong><?php echo (int) $profileUser['session_count']; ?></strong></div>
+                            <?php if ($completedTournaments > 0): ?>
+                            <div class="snapshot-item"><span>Rank</span><strong><?php echo htmlspecialchars($leaderboardRank); ?></strong></div>
+                            <div class="snapshot-item"><span>Completed</span><strong><?php echo $completedTournaments; ?></strong></div>
+                            <?php endif; ?>
                         </div>
                     </div>
                     <?php if ($recentTournamentResults): ?>

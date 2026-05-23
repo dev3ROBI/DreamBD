@@ -314,25 +314,30 @@ class Auth {
 
         try {
             $this->db->prepare("DELETE FROM user_sessions WHERE user_id = ? AND expires_at <= NOW()")->execute([$user_id]);
+            $token = session_id();
+            $ua = $_SERVER['HTTP_USER_AGENT'] ?? null;
+            $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+            $now = time();
+
             $stmt = $this->db->prepare("
-                INSERT INTO user_sessions (session_token, user_id, payload, user_agent, ip_address, last_activity, expires_at)
-                VALUES (?, ?, ?, ?, ?, UNIX_TIMESTAMP(), DATE_ADD(NOW(), INTERVAL 24 HOUR))
-                ON DUPLICATE KEY UPDATE
-                    session_token = VALUES(session_token),
-                    user_id = VALUES(user_id),
-                    payload = VALUES(payload),
-                    user_agent = VALUES(user_agent),
-                    ip_address = VALUES(ip_address),
-                    last_activity = UNIX_TIMESTAMP(),
-                    expires_at = DATE_ADD(NOW(), INTERVAL 24 HOUR)
+                SELECT id FROM user_sessions WHERE session_token = ? AND user_id = ? LIMIT 1
             ");
-            $stmt->execute([
-                session_id(),
-                $user_id,
-                json_encode(['type' => 'session']),
-                $_SERVER['HTTP_USER_AGENT'] ?? null,
-                $_SERVER['REMOTE_ADDR'] ?? null
-            ]);
+            $stmt->execute([$token, $user_id]);
+            $existing = $stmt->fetch();
+
+            if ($existing) {
+                $stmt = $this->db->prepare("
+                    UPDATE user_sessions SET payload = ?, user_agent = ?, ip_address = ?, last_activity = ?, expires_at = DATE_ADD(NOW(), INTERVAL 24 HOUR)
+                    WHERE id = ?
+                ");
+                $stmt->execute([json_encode(['type' => 'session']), $ua, $ip, $now, $existing['id']]);
+            } else {
+                $stmt = $this->db->prepare("
+                    INSERT INTO user_sessions (session_token, user_id, payload, user_agent, ip_address, last_activity, expires_at)
+                    VALUES (?, ?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 24 HOUR))
+                ");
+                $stmt->execute([$token, $user_id, json_encode(['type' => 'session']), $ua, $ip, $now]);
+            }
         } catch (PDOException $e) {
             error_log("Persist session error: " . $e->getMessage());
         }

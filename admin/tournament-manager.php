@@ -46,6 +46,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->execute([(int)($_POST['id'] ?? 0)]);
                 $messages[] = 'Tournament deleted';
             }
+            if ($action === 'set_live') {
+                $stmt = $db->prepare("UPDATE tournaments SET status='live', starts_at=COALESCE(starts_at, NOW()) WHERE id=? AND status='upcoming'");
+                $stmt->execute([(int)($_POST['id'] ?? 0)]);
+                if ($stmt->rowCount()) {
+                    $messages[] = 'Tournament is now LIVE!';
+                } else {
+                    $errors[] = 'Tournament must be upcoming to go live.';
+                }
+            }
             if ($action === 'edit') {
                 $stmt = $db->prepare("SELECT * FROM tournaments WHERE id=?");
                 $stmt->execute([(int)($_POST['id'] ?? 0)]);
@@ -248,6 +257,14 @@ try {
                                     <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
                                     <button class="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"><i class="fas fa-edit"></i></button>
                                 </form>
+                                <?php if ($item['status'] === 'upcoming'): ?>
+                                <form method="POST">
+                                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
+                                    <input type="hidden" name="action" value="set_live">
+                                    <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
+                                    <button class="p-2 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg transition-colors" title="Go Live"><i class="fas fa-broadcast-tower"></i></button>
+                                </form>
+                                <?php endif; ?>
                                 <?php if (in_array($item['status'], ['completed', 'live'])): ?>
                                 <a href="index.php?page=tournament-room&id=<?php echo $item['id']; ?>" class="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors" title="Submit Results" data-no-ajax>
                                     <i class="fas fa-medal"></i>
