@@ -154,7 +154,7 @@ $palette = ['#7c3aed','#2563eb','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4
   .gp-grid { grid-template-columns: 1fr !important; gap: 12px !important; padding: 0 4px !important; }
   .gp-card { border-radius: 18px !important; }
   .gp-card-body h3 { font-size: 15px !important; }
-  .gp-card-body p { font-size: 12px !important; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .gp-card-body p { font-size: 12px !important; display: -webkit-box; line-clamp: 2; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .gp-card-meta { flex-wrap: wrap; gap: 6px; font-size: 12px !important; }
   .gp-card-meta > div { flex: 1; min-width: calc(50% - 6px); }
   .gp-card-actions { flex-wrap: wrap; gap: 6px; }

@@ -1,4 +1,9 @@
 <?php
+// Expected variables from parent scope
+/** @var string $page - Current page being viewed */
+/** @var bool $isLoggedIn - Whether user is authenticated */
+/** @var string|null $user_name - User's full name if logged in */
+
 $headerCounts = ['messages' => 0, 'notifications' => 0];
 if (!empty($isLoggedIn) && !empty($_SESSION['user_id']) && class_exists('Database')) {
     try {
@@ -359,9 +364,6 @@ $displayName = htmlspecialchars(explode(' ', $user_name ?? 'User')[0] ?? 'User')
 }
 .dream-counter-btn {
   position: relative;
-}
-.dream-counter-btn {
-  position: relative;
   overflow: visible !important;
 }
 .dream-counter-badge {
@@ -664,15 +666,12 @@ $displayName = htmlspecialchars(explode(' ', $user_name ?? 'User')[0] ?? 'User')
   display: none;
 }
 .dream-search-suggestion .sr-body .sr-note {
-  display: -webkit-box;
   color: #64748b;
   font-size: .78rem;
   line-height: 1.4;
-  white-space: normal;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
 }
 .dream-search-suggestion {
   display: flex;
@@ -1857,8 +1856,7 @@ $displayName = htmlspecialchars(explode(' ', $user_name ?? 'User')[0] ?? 'User')
   .mobile-search-btn {
     display: flex !important;
   }
-  .dream-profile-chip span.hidden\:lg\:inline,
-  .dream-profile-chip .hidden\lg\:inline {
+  .dream-profile-chip span.lg\:inline {
     display: none;
   }
   .dream-brand-copy small {
