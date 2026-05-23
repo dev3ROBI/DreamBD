@@ -456,10 +456,26 @@ function renderProfileActionButtons($isOwnProfile, $friendshipStatus, $profileId
                             <a class="person-row" href="index.php?page=tournament-room&id=<?php echo (int) ($result['tournament_id'] ?? 0); ?>" data-no-ajax>
                                 <div class="person-copy">
                                     <strong>#<?php echo (int) ($result['placement'] ?? 0); ?> <?php echo htmlspecialchars($result['tournament_title'] ?? 'Tournament'); ?></strong>
-                                    <span><?php echo htmlspecialchars($result['result_label'] ?: (($result['linked_team_name'] ?? '') ?: 'Player result')); ?><?php if (!empty($result['score'])): ?>, score <?php echo htmlspecialchars($result['score']); ?><?php endif; ?></span>
+                                    <span><?php echo htmlspecialchars($result['result_label'] ?: (($result['linked_team_name'] ?? '') ?: 'Player result')); ?><?php if (!empty($result['score'])): ?>, score <?php echo htmlspecialchars($result['score']); ?><?php endif; ?><?php if (!empty($result['points_earned'])): ?>, <?php echo (int) $result['points_earned']; ?> pts<?php endif; ?><?php if (!empty($result['prize_amount'])): ?>, ৳<?php echo htmlspecialchars($result['prize_amount']); ?><?php endif; ?></span>
                                 </div>
                             </a>
                             <?php endforeach; ?>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                    <?php if ($recentTournamentResults): ?>
+                    <div class="profile-card mobile-only-profile-card">
+                        <div class="card-heading"><h3>🏆 Points Summary</h3></div>
+                        <div class="snapshot-list">
+                            <?php
+                            $totalPoints = array_sum(array_column($recentTournamentResults, 'points_earned'));
+                            $totalPrize = array_sum(array_column($recentTournamentResults, 'prize_amount'));
+                            $bestRank = !empty($recentTournamentResults) ? min(array_column($recentTournamentResults, 'placement')) : '-';
+                            ?>
+                            <div class="snapshot-item"><span>Total Points</span><strong><?php echo (int) $totalPoints; ?></strong></div>
+                            <div class="snapshot-item"><span>Total Prize</span><strong>৳<?php echo number_format((float) $totalPrize, 0); ?></strong></div>
+                            <div class="snapshot-item"><span>Best Rank</span><strong>#<?php echo htmlspecialchars((string) $bestRank); ?></strong></div>
+                            <div class="snapshot-item"><span>Events</span><strong><?php echo count($recentTournamentResults); ?></strong></div>
                         </div>
                     </div>
                     <?php endif; ?>
@@ -599,10 +615,26 @@ function renderProfileActionButtons($isOwnProfile, $friendshipStatus, $profileId
                     <a class="person-row" href="index.php?page=tournament-room&id=<?php echo (int) ($result['tournament_id'] ?? 0); ?>" data-no-ajax>
                         <div class="person-copy">
                             <strong>#<?php echo (int) ($result['placement'] ?? 0); ?> <?php echo htmlspecialchars($result['tournament_title'] ?? 'Tournament'); ?></strong>
-                            <span><?php echo htmlspecialchars($result['result_label'] ?: (($result['linked_team_name'] ?? '') ?: 'Player result')); ?><?php if (!empty($result['score'])): ?>, score <?php echo htmlspecialchars($result['score']); ?><?php endif; ?></span>
+                            <span><?php echo htmlspecialchars($result['result_label'] ?: (($result['linked_team_name'] ?? '') ?: 'Player result')); ?><?php if (!empty($result['score'])): ?>, score <?php echo htmlspecialchars($result['score']); ?><?php endif; ?><?php if (!empty($result['points_earned'])): ?>, <?php echo (int) $result['points_earned']; ?> pts<?php endif; ?><?php if (!empty($result['prize_amount'])): ?>, ৳<?php echo htmlspecialchars($result['prize_amount']); ?><?php endif; ?></span>
                         </div>
                     </a>
                     <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+            <?php if ($recentTournamentResults): ?>
+            <div class="profile-card">
+                <div class="card-heading"><h3>Points Summary</h3></div>
+                <div class="snapshot-list">
+                    <?php
+                    $totalPoints = array_sum(array_column($recentTournamentResults, 'points_earned'));
+                    $totalPrize = array_sum(array_column($recentTournamentResults, 'prize_amount'));
+                    $bestRank = !empty($recentTournamentResults) ? min(array_column($recentTournamentResults, 'placement')) : '-';
+                    ?>
+                    <div class="snapshot-item"><span>Total Points</span><strong><?php echo (int) $totalPoints; ?></strong></div>
+                    <div class="snapshot-item"><span>Total Prize</span><strong>৳<?php echo number_format((float) $totalPrize, 0); ?></strong></div>
+                    <div class="snapshot-item"><span>Best Rank</span><strong>#<?php echo htmlspecialchars((string) $bestRank); ?></strong></div>
+                    <div class="snapshot-item"><span>Events</span><strong><?php echo count($recentTournamentResults); ?></strong></div>
                 </div>
             </div>
             <?php endif; ?>

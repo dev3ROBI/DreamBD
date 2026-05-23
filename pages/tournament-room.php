@@ -199,8 +199,10 @@ $title = htmlspecialchars($tournament['title'] ?? 'Tournament');
                                     </div>
                                     <input type="hidden" name="team_id" value="<?php echo (int) ($team['team_id'] ?? 0); ?>">
                                     <input type="number" name="placement" min="1" placeholder="Place">
+                                    <input type="number" name="points_earned" min="0" placeholder="Points" title="Points earned">
                                     <input type="text" name="score" placeholder="Score">
                                     <input type="text" name="result_label" placeholder="Winner / Runner-up">
+                                    <input type="number" name="prize_amount" min="0" step="0.01" placeholder="Prize ৳" title="Prize amount">
                                     <input type="text" name="notes" placeholder="Notes">
                                 </div>
                             <?php endforeach; ?>
@@ -221,8 +223,10 @@ $title = htmlspecialchars($tournament['title'] ?? 'Tournament');
                                     <input type="hidden" name="user_id" value="<?php echo (int) ($participant['user_id'] ?? 0); ?>">
                                     <input type="hidden" name="team_id" value="<?php echo (int) ($participant['team_id'] ?? 0); ?>">
                                     <input type="number" name="placement" min="1" placeholder="Place">
+                                    <input type="number" name="points_earned" min="0" placeholder="Points" title="Points earned">
                                     <input type="text" name="score" placeholder="Score / kills">
                                     <input type="text" name="result_label" placeholder="MVP / Finalist">
+                                    <input type="number" name="prize_amount" min="0" step="0.01" placeholder="Prize ৳" title="Prize amount">
                                     <input type="text" name="notes" placeholder="Notes">
                                 </div>
                             <?php endforeach; ?>
@@ -267,13 +271,13 @@ $title = htmlspecialchars($tournament['title'] ?? 'Tournament');
                     <?php foreach ($results['teams'] as $result): ?>
                         <div class="tr-result-card">
                             <strong>#<?php echo (int) ($result['placement'] ?? 0); ?> <?php echo htmlspecialchars($result['linked_team_name'] ?: 'Team'); ?></strong>
-                            <span class="tr-note"><?php echo htmlspecialchars($result['result_label'] ?: 'Team result'); ?><?php if (!empty($result['score'])): ?>, score <?php echo htmlspecialchars($result['score']); ?><?php endif; ?></span>
+                            <span class="tr-note"><?php echo htmlspecialchars($result['result_label'] ?: 'Team result'); ?><?php if (!empty($result['score'])): ?>, score <?php echo htmlspecialchars($result['score']); ?><?php endif; ?><?php if (!empty($result['points_earned'])): ?>, <?php echo (int) $result['points_earned']; ?> pts<?php endif; ?><?php if (!empty($result['prize_amount'])): ?>, ৳<?php echo htmlspecialchars($result['prize_amount']); ?><?php endif; ?></span>
                         </div>
                     <?php endforeach; ?>
                     <?php foreach ($results['players'] as $result): ?>
                         <div class="tr-result-card">
                             <strong>#<?php echo (int) ($result['placement'] ?? 0); ?> <?php echo htmlspecialchars($result['full_name'] ?: $result['username'] ?: 'Player'); ?></strong>
-                            <span class="tr-note"><?php echo htmlspecialchars($result['result_label'] ?: 'Player result'); ?><?php if (!empty($result['score'])): ?>, score <?php echo htmlspecialchars($result['score']); ?><?php endif; ?></span>
+                            <span class="tr-note"><?php echo htmlspecialchars($result['result_label'] ?: 'Player result'); ?><?php if (!empty($result['score'])): ?>, score <?php echo htmlspecialchars($result['score']); ?><?php endif; ?><?php if (!empty($result['points_earned'])): ?>, <?php echo (int) $result['points_earned']; ?> pts<?php endif; ?><?php if (!empty($result['prize_amount'])): ?>, ৳<?php echo htmlspecialchars($result['prize_amount']); ?><?php endif; ?></span>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -343,10 +347,14 @@ $title = htmlspecialchars($tournament['title'] ?? 'Tournament');
         if (!board) { return; }
         var cards = [];
         (results.teams || []).forEach(function (result) {
-            cards.push('<div class="tr-result-card"><strong>#' + escapeHtml(String(result.placement || '0')) + ' ' + escapeHtml(result.linked_team_name || 'Team') + '</strong><span class="tr-note">' + escapeHtml(result.result_label || 'Team result') + (result.score ? ', score ' + escapeHtml(result.score) : '') + '</span></div>');
+            var pts = result.points_earned ? ', ' + escapeHtml(String(result.points_earned)) + ' pts' : '';
+            var prize = result.prize_amount && parseFloat(result.prize_amount) > 0 ? ', ৳' + escapeHtml(String(result.prize_amount)) : '';
+            cards.push('<div class="tr-result-card"><strong>#' + escapeHtml(String(result.placement || '0')) + ' ' + escapeHtml(result.linked_team_name || 'Team') + '</strong><span class="tr-note">' + escapeHtml(result.result_label || 'Team result') + (result.score ? ', score ' + escapeHtml(result.score) : '') + pts + prize + '</span></div>');
         });
         (results.players || []).forEach(function (result) {
-            cards.push('<div class="tr-result-card"><strong>#' + escapeHtml(String(result.placement || '0')) + ' ' + escapeHtml(result.full_name || result.username || 'Player') + '</strong><span class="tr-note">' + escapeHtml(result.result_label || 'Player result') + (result.score ? ', score ' + escapeHtml(result.score) : '') + '</span></div>');
+            var pts = result.points_earned ? ', ' + escapeHtml(String(result.points_earned)) + ' pts' : '';
+            var prize = result.prize_amount && parseFloat(result.prize_amount) > 0 ? ', ৳' + escapeHtml(String(result.prize_amount)) : '';
+            cards.push('<div class="tr-result-card"><strong>#' + escapeHtml(String(result.placement || '0')) + ' ' + escapeHtml(result.full_name || result.username || 'Player') + '</strong><span class="tr-note">' + escapeHtml(result.result_label || 'Player result') + (result.score ? ', score ' + escapeHtml(result.score) : '') + pts + prize + '</span></div>');
         });
         board.innerHTML = cards.length ? cards.join('') : '<div class="tr-result-card"><strong>No results yet</strong><span class="tr-note">Final standings will appear here once the agent publishes them.</span></div>';
     }
@@ -356,8 +364,10 @@ $title = htmlspecialchars($tournament['title'] ?? 'Tournament');
             var payload = {
                 team_id: row.querySelector('input[name="team_id"]') ? row.querySelector('input[name="team_id"]').value : '',
                 placement: row.querySelector('input[name="placement"]').value,
+                points_earned: row.querySelector('input[name="points_earned"]') ? row.querySelector('input[name="points_earned"]').value : '0',
                 score: row.querySelector('input[name="score"]').value,
                 result_label: row.querySelector('input[name="result_label"]').value,
+                prize_amount: row.querySelector('input[name="prize_amount"]') ? row.querySelector('input[name="prize_amount"]').value : '0',
                 notes: row.querySelector('input[name="notes"]').value
             };
             if (includeUser && row.querySelector('input[name="user_id"]')) {

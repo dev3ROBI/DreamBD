@@ -15,7 +15,7 @@ $isLoggedIn = $auth->isLoggedIn();
 $user_name = $isLoggedIn ? ($_SESSION['full_name'] ?? $_SESSION['username'] ?? null) : null;
 
 $page = $_GET['page'] ?? 'home';
-$allowed_pages = ['home', 'community', 'products', 'tournaments', 'tournament-room', 'how-it-works', 'cart', 'login', 'register', 'rules', 'faq', 'profile', 'messages', 'notifications', 'search', 'agent-dashboard', 'balance', 'p2p', 'admin'];
+$allowed_pages = ['home', 'community', 'products', 'tournaments', 'tournament-room', 'how-it-works', 'cart', 'login', 'register', 'rules', 'faq', 'profile', 'messages', 'notifications', 'search', 'agent-dashboard', 'balance', 'p2p', 'admin', 'agent_submit_results'];
 $page = in_array($page, $allowed_pages) ? $page : 'home';
 
 $is_ajax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && 

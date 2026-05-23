@@ -1737,6 +1737,7 @@ function saveTournamentResults(PDO $pdo, int $tournamentId, int $agentId, array 
             'result_label' => trim((string) ($row['result_label'] ?? '')),
             'notes' => trim((string) ($row['notes'] ?? '')),
             'prize_amount' => (float) ($row['prize_amount'] ?? 0),
+            'points_earned' => (int) ($row['points_earned'] ?? 0),
         ];
     }
 
@@ -1755,6 +1756,7 @@ function saveTournamentResults(PDO $pdo, int $tournamentId, int $agentId, array 
             'result_label' => trim((string) ($row['result_label'] ?? '')),
             'notes' => trim((string) ($row['notes'] ?? '')),
             'prize_amount' => (float) ($row['prize_amount'] ?? 0),
+            'points_earned' => (int) ($row['points_earned'] ?? 0),
         ];
     }
 
@@ -1768,8 +1770,8 @@ function saveTournamentResults(PDO $pdo, int $tournamentId, int $agentId, array 
 
         $insertStmt = $pdo->prepare("
             INSERT INTO tournament_results
-                (tournament_id, team_id, user_id, result_scope, placement, score, result_label, prize_amount, notes, submitted_by)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (tournament_id, team_id, user_id, result_scope, placement, points_earned, score, result_label, prize_amount, notes, submitted_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
 
         foreach ($cleanTeamResults as $teamResult) {
@@ -1779,6 +1781,7 @@ function saveTournamentResults(PDO $pdo, int $tournamentId, int $agentId, array 
                 null,
                 'team',
                 $teamResult['placement'],
+                $teamResult['points_earned'],
                 $teamResult['score'],
                 $teamResult['result_label'],
                 $teamResult['prize_amount'],
@@ -1794,6 +1797,7 @@ function saveTournamentResults(PDO $pdo, int $tournamentId, int $agentId, array 
                 $playerResult['user_id'],
                 'player',
                 $playerResult['placement'],
+                $playerResult['points_earned'],
                 $playerResult['score'],
                 $playerResult['result_label'],
                 $playerResult['prize_amount'],
@@ -1803,6 +1807,7 @@ function saveTournamentResults(PDO $pdo, int $tournamentId, int $agentId, array 
         }
 
         $pdo->prepare("UPDATE tournaments SET status = 'completed' WHERE id = ?")->execute([$tournamentId]);
+
         foreach ($cleanPlayerResults as $playerResult) {
             createNotification(
                 $pdo,
@@ -1814,6 +1819,8 @@ function saveTournamentResults(PDO $pdo, int $tournamentId, int $agentId, array 
             );
         }
 
+        updateTournamentLeaderboard($pdo, $tournamentId);
+
         $pdo->commit();
         return ['success' => true, 'message' => 'Tournament results submitted successfully.'];
     } catch (Throwable $e) {
@@ -1821,6 +1828,51 @@ function saveTournamentResults(PDO $pdo, int $tournamentId, int $agentId, array 
             $pdo->rollBack();
         }
         return ['success' => false, 'message' => 'Could not save tournament results.'];
+    }
+}
+
+function canSubmitTournamentResults(PDO $pdo, int $tournamentId, int $agentId): bool {
+    $tournament = getTournamentByIdWithCounts($pdo, $tournamentId);
+    if (!$tournament) return false;
+    if ((int) ($tournament['agent_id'] ?? 0) !== $agentId) return false;
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM tournament_results WHERE tournament_id = ?");
+    $stmt->execute([$tournamentId]);
+    return (int) $stmt->fetchColumn() === 0;
+}
+
+function updateTournamentLeaderboard(PDO $pdo, int $tournamentId): void {
+    try {
+        $stmt = $pdo->prepare("
+            SELECT user_id, SUM(points_earned) AS total_points, SUM(prize_amount) AS total_prize,
+                   COUNT(*) AS tournaments_played, MIN(placement) AS best_rank
+            FROM tournament_results
+            WHERE tournament_id = ? AND user_id IS NOT NULL
+            GROUP BY user_id
+        ");
+        $stmt->execute([$tournamentId]);
+        $players = $stmt->fetchAll();
+
+        $stmt = $pdo->prepare("
+            INSERT INTO tournament_leaderboard (tournament_id, user_id, total_points, total_prize, tournaments_played, best_rank)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                total_points = VALUES(total_points),
+                total_prize = VALUES(total_prize),
+                tournaments_played = tournaments_played + 1,
+                best_rank = LEAST(IFNULL(best_rank, 999), VALUES(best_rank))
+        ");
+        foreach ($players as $player) {
+            $stmt->execute([
+                $tournamentId,
+                (int) $player['user_id'],
+                (int) ($player['total_points'] ?? 0),
+                (float) ($player['total_prize'] ?? 0),
+                1,
+                (int) ($player['best_rank'] ?? 999),
+            ]);
+        }
+    } catch (Throwable $e) {
+        error_log("Leaderboard update failed: " . $e->getMessage());
     }
 }
 

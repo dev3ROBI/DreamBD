@@ -248,6 +248,11 @@ try {
                                     <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
                                     <button class="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"><i class="fas fa-edit"></i></button>
                                 </form>
+                                <?php if (in_array($item['status'], ['completed', 'live'])): ?>
+                                <a href="index.php?page=tournament-room&id=<?php echo $item['id']; ?>" class="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors" title="Submit Results" data-no-ajax>
+                                    <i class="fas fa-medal"></i>
+                                </a>
+                                <?php endif; ?>
                                 <form method="POST" onsubmit="return confirm('Delete tournament?')">
                                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
                                     <input type="hidden" name="action" value="delete">
