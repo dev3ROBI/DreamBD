@@ -204,8 +204,6 @@ class AjaxNavigation {
                 contentArea.classList.remove('content-exiting');
                 contentArea.classList.add('content-entering');
 
-                var globals = ['assets/js/home.js', 'assets/js/profile.js', 'assets/js/main.js', 'assets/js/navbar.js', 'assets/js/ajax.js', 'assets/js/auth-handler.js', 'assets/js/social-pages.js', 'assets/js/social-feed.js'];
-
                 contentArea.querySelectorAll('link[rel="stylesheet"]').forEach(function(oldLink) {
                     try {
                         var newLink = document.createElement('link');
@@ -216,15 +214,21 @@ class AjaxNavigation {
                 });
                 contentArea.querySelectorAll('script').forEach(function(oldScr) {
                     try {
-                        if (oldScr.src) {
-                            var path = oldScr.src.replace(/^.*\/\/[^\/]+/, '');
-                            if (globals.some(function(g) { return path.indexOf(g) !== -1; })) return;
-                        }
                         var newScr = document.createElement('script');
-                        newScr.textContent = oldScr.textContent || '';
-                        if (oldScr.src) newScr.src = oldScr.src;
+                        Array.from(oldScr.attributes).forEach(function(attr) {
+                            newScr.setAttribute(attr.name, attr.value);
+                        });
+                        if (oldScr.src) {
+                            newScr.src = oldScr.src;
+                        } else {
+                            newScr.textContent = oldScr.textContent;
+                        }
                         oldScr.parentNode.replaceChild(newScr, oldScr);
                     } catch (e) {}
+                });
+                this.dispatchPageEvent('pageContentLoaded', {
+                    page: page,
+                    navigationId: navigationId
                 });
             }
 

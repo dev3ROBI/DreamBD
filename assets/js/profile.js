@@ -1128,6 +1128,12 @@ document.addEventListener('pageChanged', (e) => {
         setTimeout(tryInitProfile, 150);
     }
 });
+document.addEventListener('pageContentLoaded', (e) => {
+    if (e.detail?.page === 'profile') {
+        profileInitAttempts = 0;
+        setTimeout(tryInitProfile, 100);
+    }
+});
 (function() {
     const p = new URLSearchParams(window.location.search);
     if (p.get('page') === 'profile') setTimeout(tryInitProfile, 300);
