@@ -1,22 +1,3 @@
-/* AJAX Content Transitions */
-.content-exiting {
-    opacity: 0;
-    transform: translateY(-10px);
-    transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-.content-entering {
-    opacity: 0;
-    transform: translateY(10px);
-    transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-.content-entered {
-    opacity: 1;
-    transform: translateY(0);
-    transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
 /* ===== CSS VARIABLES ===== */
 :root {
     /* Modern Color Palette (Apple/Stripe vibe) */
@@ -880,9 +861,6 @@ textarea.form-control {
         font-size: 1.9rem;
     }
 }
-    :root {
-        --header-height: var(--header-height-mobile);
-    }
     
     h1 { font-size: var(--font-size-4xl); }
     h2 { font-size: var(--font-size-3xl); }

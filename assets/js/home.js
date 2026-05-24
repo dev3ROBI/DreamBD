@@ -132,6 +132,8 @@ class HomePage {
     }
 
     initPostMenus() {
+        if (window.__homePostMenusBound) return;
+        window.__homePostMenusBound = true;
         document.addEventListener('click', (e) => {
             const btn = e.target.closest('.home-btn-post-menu, .btn-ghost');
             if (btn) {
@@ -158,7 +160,10 @@ const maybeInitHomePage = (force = false) => {
     if (document.querySelector('.home-facebook-layout, .home-hero-slider')) initHomePage(force);
 };
 
-document.addEventListener('DOMContentLoaded', () => maybeInitHomePage());
+if (!window.__homePageListenersAttached) {
+    window.__homePageListenersAttached = true;
+    document.addEventListener('DOMContentLoaded', () => maybeInitHomePage());
+    document.addEventListener('pageChanged', () => setTimeout(() => maybeInitHomePage(true), 200));
+}
 if (document.readyState !== 'loading') maybeInitHomePage();
-document.addEventListener('pageChanged', () => setTimeout(() => maybeInitHomePage(true), 200));
 })();

@@ -350,10 +350,10 @@ class DreamBDApp {
                         return;
                     }
                     
-                    // For internal links without data-page, navigate normally
                     const href = link.getAttribute('href');
                     if (href && href.includes('index.php?page=')) {
                         e.preventDefault();
+                        e.stopPropagation();
                         const page = new URL(href, window.location.origin).searchParams.get('page');
                         if (page && window.AjaxNavigation) {
                             window.AjaxNavigation.navigate(page, href);

@@ -959,18 +959,60 @@ $displayName = htmlspecialchars(explode(' ', $user_name ?? 'User')[0] ?? 'User')
   }
   .dream-navbar-shell {
     padding: 0.6rem 0.8rem;
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 }
 @media (max-width: 640px) {
   .dream-navbar-shell {
-    padding: 0.5rem 0.7rem;
+    padding: 0.5rem 0.6rem;
+    gap: 0.35rem;
   }
-  .dream-brand-copy small {
+  .dream-brand-copy {
     display: none;
+  }
+  .dream-search {
+    width: clamp(140px, 26vw, 200px);
+    min-width: 0;
   }
   .dream-profile-chip span,
   .dream-auth-link {
     display: none;
+  }
+}
+@media (max-width: 420px) {
+  .dream-navbar-shell {
+    padding: 0.4rem 0.4rem;
+    gap: 0.2rem;
+  }
+  .dream-navbar-right {
+    gap: 0.15rem;
+  }
+  .dream-icon-btn {
+    width: 34px;
+    height: 34px;
+  }
+  .dream-cart-btn {
+    display: none !important;
+  }
+  .dream-search {
+    width: clamp(100px, 24vw, 150px);
+  }
+  .dream-navbar-left {
+    gap: 0.3rem;
+  }
+  .dream-brand {
+    gap: 0.35rem;
+  }
+  .dream-brand-mark img {
+    width: 30px;
+    height: 30px;
+  }
+  .dream-profile-avatar {
+    width: 30px;
+    height: 30px;
+  }
+  .dream-profile-chip {
+    padding: 0.2rem;
   }
 }
 .dream-navbar-center {

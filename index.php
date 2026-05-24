@@ -118,6 +118,16 @@ $themeAttr = htmlspecialchars($theme, ENT_QUOTES, 'UTF-8');
     <link rel="stylesheet" href="<?php echo dream_asset('assets/css/social-pages.css'); ?>">
     <link rel="stylesheet" href="<?php echo dream_asset('assets/css/animations.css'); ?>">
     <link rel="stylesheet" href="<?php echo dream_asset('assets/css/community.css'); ?>">
+
+    <style>
+        body { opacity: 0; }
+        body.css-ready { opacity: 1; transition: opacity 0.15s ease; }
+    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.body.classList.add('css-ready');
+        });
+    </script>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300" id="body" data-csrf-token="<?php echo htmlspecialchars($csrf_token); ?>">
     
@@ -126,7 +136,90 @@ $themeAttr = htmlspecialchars($theme, ENT_QUOTES, 'UTF-8');
     
     <!-- Main Content -->
     <main id="mainContent" class="main-content min-h-screen">
-        <?php include "pages/{$page}.php"; ?>
+        <div id="pageSkeleton" class="page-skeleton" aria-hidden="true">
+            <div class="skeleton-container">
+                <div class="sk-hero">
+                    <div class="sk-banner"></div>
+                    <div class="sk-hero-content">
+                        <div class="sk-avatar sk-avatar-lg"></div>
+                        <div class="sk-hero-text">
+                            <div class="sk-line sk-line-lg"></div>
+                            <div class="sk-line sk-line-sm"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="sk-tabs">
+                    <div class="sk-tab"></div>
+                    <div class="sk-tab"></div>
+                    <div class="sk-tab"></div>
+                    <div class="sk-tab"></div>
+                </div>
+                <div class="sk-feed">
+                    <div class="sk-post">
+                        <div class="sk-post-head">
+                            <div class="sk-avatar"></div>
+                            <div class="sk-post-head-text">
+                                <div class="sk-line sk-line-md"></div>
+                                <div class="sk-line sk-line-xs"></div>
+                            </div>
+                        </div>
+                        <div class="sk-post-body">
+                            <div class="sk-line sk-line-xl"></div>
+                            <div class="sk-line sk-line-lg"></div>
+                            <div class="sk-line sk-line-md"></div>
+                        </div>
+                        <div class="sk-post-thumb"></div>
+                        <div class="sk-post-actions">
+                            <div class="sk-action"></div>
+                            <div class="sk-action"></div>
+                            <div class="sk-action"></div>
+                        </div>
+                    </div>
+                    <div class="sk-post">
+                        <div class="sk-post-head">
+                            <div class="sk-avatar"></div>
+                            <div class="sk-post-head-text">
+                                <div class="sk-line sk-line-md"></div>
+                                <div class="sk-line sk-line-xs"></div>
+                            </div>
+                        </div>
+                        <div class="sk-post-body">
+                            <div class="sk-line sk-line-xl"></div>
+                            <div class="sk-line sk-line-lg"></div>
+                            <div class="sk-line sk-line-sm"></div>
+                        </div>
+                        <div class="sk-post-actions">
+                            <div class="sk-action"></div>
+                            <div class="sk-action"></div>
+                            <div class="sk-action"></div>
+                        </div>
+                    </div>
+                    <div class="sk-post">
+                        <div class="sk-post-head">
+                            <div class="sk-avatar"></div>
+                            <div class="sk-post-head-text">
+                                <div class="sk-line sk-line-md"></div>
+                                <div class="sk-line sk-line-xs"></div>
+                            </div>
+                        </div>
+                        <div class="sk-post-body">
+                            <div class="sk-line sk-line-xl"></div>
+                            <div class="sk-line sk-line-md"></div>
+                            <div class="sk-line sk-line-sm"></div>
+                        </div>
+                        <div class="sk-post-thumb"></div>
+                        <div class="sk-post-actions">
+                            <div class="sk-action"></div>
+                            <div class="sk-action"></div>
+                            <div class="sk-action"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="pageContent">
+            <?php include "pages/{$page}.php"; ?>
+        </div>
     </main>
 
     <!-- Modal Root (fixed-position, outside mainContent to avoid stacking issues) -->
@@ -493,10 +586,15 @@ $themeAttr = htmlspecialchars($theme, ENT_QUOTES, 'UTF-8');
                     }
                 });
                 userDropdownMenu.addEventListener('click', (e) => {
-                    e.stopPropagation();
+                    if (e.target.closest('a, button')) {
+                        hideUserDropdown();
+                    }
                 });
-                document.addEventListener('click', () => {
-                    if (!userDropdownMenu.classList.contains('hidden')) {
+                document.addEventListener('click', (e) => {
+                    if (!userDropdownMenu.classList.contains('hidden') &&
+                        !userDropdownMenu.contains(e.target) &&
+                        e.target !== userDropdownToggle &&
+                        !userDropdownToggle.contains(e.target)) {
                         hideUserDropdown();
                     }
                 });

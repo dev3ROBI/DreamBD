@@ -15,6 +15,11 @@ class ProfileManager {
     }
 
     init() {
+        if (this._resizeHandler) {
+            window.removeEventListener('resize', this._resizeHandler);
+        }
+        this._resizeHandler = () => this.refreshAvatarCropEditor();
+
         this.setupNavigation();
         this.setupModal();
         this.setupAvatarUpload();
@@ -27,7 +32,7 @@ class ProfileManager {
         this.setupTheme();
         this.applySavedTheme();
         this.animateCounters();
-        window.addEventListener('resize', () => this.refreshAvatarCropEditor());
+        window.addEventListener('resize', this._resizeHandler);
     }
 
     setupNavigation() {
@@ -1101,11 +1106,6 @@ let profileInitAttempts = 0;
 
 function initProfileManager() {
     if (!document.querySelector('[data-profile-page]')) return;
-    if (window.profileManager) {
-        // Re-bind settings tab listeners for dynamically loaded content
-        window.profileManager.bindSettingsTabs();
-        return;
-    }
     window.profileManager = new ProfileManager();
 }
 
