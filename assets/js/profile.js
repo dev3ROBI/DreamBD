@@ -1,6 +1,6 @@
 class ProfileManager {
     constructor() {
-        this.root = document.querySelector('[data-profile-page]') || document.querySelector('[data-home-page]');
+        this.root = document.querySelector('[data-profile-page]');
         this.selectedAvatarFile = null;
         this.avatarCrop = { zoom: 1, x: 0, y: 0 };
         this.avatarCropBounds = { minZoom: 1, maxZoom: 3, maxX: 0, maxY: 0, circleSize: 0, baseScale: 1 };

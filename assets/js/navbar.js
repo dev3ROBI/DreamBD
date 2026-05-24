@@ -432,7 +432,3 @@ const DreamBDNavbar = {
 document.addEventListener('DOMContentLoaded', function() {
     DreamBDNavbar.init();
 });
-
-document.addEventListener('pageContentLoaded', function() {
-    DreamBDNavbar.init();
-});
