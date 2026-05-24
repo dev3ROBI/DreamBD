@@ -54,8 +54,6 @@ class DreamBDApp {
             // Initialize in sequence for better performance
             await Promise.all([
                 this.initTheme(),
-                this.initMobileMenu(),
-                this.initDropdowns(),
                 this.initBackToTop(),
                 this.initFormValidation(),
                 this.initCart(),

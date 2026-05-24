@@ -15,10 +15,40 @@ class ProfileManager {
     }
 
     init() {
-        if (this._resizeHandler) {
-            window.removeEventListener('resize', this._resizeHandler);
-        }
-        this._resizeHandler = () => this.refreshAvatarCropEditor();
+        this.destroy(); // Clean up any existing listeners if this instance is re-initialized
+
+        this._handlers = {
+            resize: () => this.refreshAvatarCropEditor(),
+            hashchange: () => {
+                const hash = window.location.hash.replace('#', '');
+                if (hash && ['timeline','about','friends','photos'].includes(hash)) {
+                    this.switchMainTab(hash);
+                }
+            },
+            socialClick: (event) => {
+                const friendButton = event.target.closest('.friend-toggle-btn');
+                const friendResponse = event.target.closest('.friend-response-btn');
+                const dismissButton = event.target.closest('[data-dismiss-user-id]');
+
+                if (friendButton) {
+                    this.handleFriendAction(friendButton);
+                } else if (friendResponse) {
+                    this.respondToFriendRequest(friendResponse);
+                } else if (dismissButton) {
+                    this.dismissSuggestion(dismissButton);
+                }
+            },
+            globalFriendClick: (event) => {
+                const fb = event.target.closest('.friend-toggle-btn, .friend-response-btn');
+                if (!fb) return;
+                event.preventDefault();
+                if (fb.classList.contains('friend-toggle-btn')) {
+                    this.handleFriendAction(fb);
+                } else if (fb.classList.contains('friend-response-btn')) {
+                    this.respondToFriendRequest(fb);
+                }
+            }
+        };
 
         this.setupNavigation();
         this.setupModal();
@@ -27,12 +57,25 @@ class ProfileManager {
         this.setupForms();
         this.setupSessionDeletion();
 
-        this.setupSocialActions();
         this.setupFriendsView();
         this.setupTheme();
         this.applySavedTheme();
         this.animateCounters();
-        window.addEventListener('resize', this._resizeHandler);
+        
+        window.addEventListener('resize', this._handlers.resize);
+        window.addEventListener('hashchange', this._handlers.hashchange);
+        document.addEventListener('click', this._handlers.socialClick);
+        document.addEventListener('click', this._handlers.globalFriendClick);
+    }
+
+    destroy() {
+        if (this._handlers) {
+            window.removeEventListener('resize', this._handlers.resize);
+            window.removeEventListener('hashchange', this._handlers.hashchange);
+            document.removeEventListener('click', this._handlers.socialClick);
+            document.removeEventListener('click', this._handlers.globalFriendClick);
+        }
+        this._handlers = null;
     }
 
     setupNavigation() {
@@ -737,22 +780,6 @@ class ProfileManager {
         reader.readAsDataURL(file);
     }
 
-    setupSocialActions() {
-        document.addEventListener('click', (event) => {
-            const friendButton = event.target.closest('.friend-toggle-btn');
-            const friendResponse = event.target.closest('.friend-response-btn');
-            const dismissButton = event.target.closest('[data-dismiss-user-id]');
-
-            if (friendButton) {
-                this.handleFriendAction(friendButton);
-            } else if (friendResponse) {
-                this.respondToFriendRequest(friendResponse);
-            } else if (dismissButton) {
-                this.dismissSuggestion(dismissButton);
-            }
-        });
-    }
-
     setupFriendsView() {
         this.root.querySelectorAll('[data-friends-view]').forEach((button) => {
             button.addEventListener('click', () => {
@@ -1105,7 +1132,18 @@ window.ProfileManager = ProfileManager;
 let profileInitAttempts = 0;
 
 function initProfileManager() {
-    if (!document.querySelector('[data-profile-page]')) return;
+    if (!document.querySelector('[data-profile-page]')) {
+        if (window.profileManager) {
+            window.profileManager.destroy();
+            window.profileManager = null;
+        }
+        return;
+    }
+    
+    // Clean up existing instance before creating a new one
+    if (window.profileManager) {
+        window.profileManager.destroy();
+    }
     window.profileManager = new ProfileManager();
 }
 
@@ -1114,7 +1152,9 @@ function tryInitProfile() {
     if (profileInitAttempts > 10) return;
     profileInitAttempts++;
     initProfileManager();
-    if (!window.profileManager) setTimeout(tryInitProfile, 200);
+    if (!window.profileManager && document.querySelector('[data-profile-page]')) {
+        setTimeout(tryInitProfile, 200);
+    }
 }
 
 // Init strategies
@@ -1138,18 +1178,6 @@ document.addEventListener('pageContentLoaded', (e) => {
     const p = new URLSearchParams(window.location.search);
     if (p.get('page') === 'profile') setTimeout(tryInitProfile, 300);
 })();
-
-// Global friend action handler (works across all pages)
-document.addEventListener('click', (event) => {
-    const fb = event.target.closest('.friend-toggle-btn, .friend-response-btn');
-    if (!fb || !window.profileManager) return;
-    event.preventDefault();
-    if (fb.classList.contains('friend-toggle-btn')) {
-        window.profileManager.handleFriendAction(fb);
-    } else if (fb.classList.contains('friend-response-btn')) {
-        window.profileManager.respondToFriendRequest(fb);
-    }
-});
 
 function openSettings() {
     window.profileManager?.openSiteDialog('profileSettingsDialog');

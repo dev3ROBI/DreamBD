@@ -152,6 +152,57 @@ class AjaxNavigation {
         document.documentElement.style.overflow = '';
     }
 
+    executeScripts(container) {
+        if (!container) return;
+        
+        const scripts = container.querySelectorAll('script');
+        scripts.forEach(oldScript => {
+            const newScript = document.createElement('script');
+            
+            // Copy attributes
+            Array.from(oldScript.attributes).forEach(attr => {
+                newScript.setAttribute(attr.name, attr.value);
+            });
+            
+            if (oldScript.src) {
+                // For external scripts
+                newScript.src = oldScript.src;
+                newScript.async = false; // Maintain execution order
+            } else {
+                // For inline scripts, wrap in a way that handles DOMContentLoaded
+                let content = oldScript.textContent;
+                
+                // If the script is waiting for DOMContentLoaded, we should execute it immediately
+                // since DOMContentLoaded has already fired for the initial page.
+                if (content.includes('DOMContentLoaded') || content.includes('jQuery(function') || content.includes('$(function')) {
+                    content = `(function() { 
+                        const DOMContentLoaded = 'DOMContentLoaded';
+                        const originalAddEventListener = document.addEventListener;
+                        document.addEventListener = function(event, cb, opts) {
+                            if (event === DOMContentLoaded) {
+                                setTimeout(() => {
+                                    try { cb({ type: DOMContentLoaded }); } catch(e) { console.error(e); }
+                                }, 1);
+                            } else {
+                                originalAddEventListener.call(document, event, cb, opts);
+                            }
+                        };
+                        try {
+                            ${content}
+                        } catch(e) {
+                            console.error('Error executing inline script:', e);
+                        } finally {
+                            document.addEventListener = originalAddEventListener;
+                        }
+                    })();`;
+                }
+                newScript.textContent = content;
+            }
+            
+            oldScript.parentNode.replaceChild(newScript, oldScript);
+        });
+    }
+
     async navigateTo(page, href, pushState = true, navigationId = null) {
         const mainContent = document.querySelector('.main-content');
         const contentArea = document.getElementById('pageContent');
@@ -212,24 +263,27 @@ class AjaxNavigation {
                         oldLink.parentNode.replaceChild(newLink, oldLink);
                     } catch (e) {}
                 });
-                contentArea.querySelectorAll('script').forEach(function(oldScr) {
-                    try {
-                        var newScr = document.createElement('script');
-                        Array.from(oldScr.attributes).forEach(function(attr) {
-                            newScr.setAttribute(attr.name, attr.value);
-                        });
-                        if (oldScr.src) {
-                            newScr.src = oldScr.src;
-                        } else {
-                            newScr.textContent = oldScr.textContent;
-                        }
-                        oldScr.parentNode.replaceChild(newScr, oldScr);
-                    } catch (e) {}
-                });
-                this.dispatchPageEvent('pageContentLoaded', {
-                    page: page,
-                    navigationId: navigationId
-                });
+                
+                // Execute scripts in the new content
+                this.executeScripts(contentArea);
+
+                // Dispatch events AFTER scripts are executed
+                setTimeout(() => {
+                    this.dispatchPageEvent('pageContentLoaded', {
+                        page: page,
+                        navigationId: navigationId,
+                        data: data
+                    });
+                    
+                    this.dispatchPageEvent('pageChanged', {
+                        page: page,
+                        data: data,
+                        timestamp: Date.now(),
+                        navigationId: navigationId
+                    });
+                    
+                    this.initializePageScripts();
+                }, 50);
             }
 
             document.title = `${data.title} - DreamBD`;
