@@ -15,14 +15,25 @@ $response = ['success' => false, 'message' => ''];
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$security->validateCSRFToken($_POST['csrf_token'] ?? '')) {
         $response['message'] = 'Invalid security token.';
-    } elseif (!isset($_SESSION['user_id'])) {
-        $response['message'] = 'You must be logged in.';
     } else {
-        $result = $auth->resendVerification((int) $_SESSION['user_id']);
-        $response['success'] = $result['success'];
-        $response['message'] = $result['success']
-            ? 'Verification email sent! Check your inbox.'
-            : ($result['message'] ?? 'Failed to send verification email.');
+        $email = trim($_POST['email'] ?? '');
+        if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $response['message'] = 'Valid email is required.';
+        } else {
+            $db = Database::getInstance()->getConnection();
+            $stmt = $db->prepare("SELECT id FROM users WHERE email = ? LIMIT 1");
+            $stmt->execute([$email]);
+            $user = $stmt->fetch();
+            if (!$user) {
+                $response['message'] = 'Email not found.';
+            } else {
+                $result = $auth->resendVerification((int) $user['id']);
+                $response['success'] = $result['success'];
+                $response['message'] = $result['success']
+                    ? 'Verification email sent! Check your inbox.'
+                    : ($result['message'] ?? 'Failed to send verification email.');
+            }
+        }
     }
 }
 

@@ -1,23 +1,15 @@
 <?php
-require_once __DIR__ . '/../vendor/autoload.php';
-
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\SMTP;
-use PHPMailer\PHPMailer\Exception;
 
 class Mailer {
     private static $instance = null;
-    private $config;
+    private $apiKey;
+    private $from;
+    private $fromName;
 
     private function __construct() {
-        $this->config = [
-            'host' => DatabaseConfig::getSmtpHost(),
-            'port' => DatabaseConfig::getSmtpPort(),
-            'user' => DatabaseConfig::getSmtpUser(),
-            'pass' => DatabaseConfig::getSmtpPass(),
-            'from' => getenv('SMTP_FROM') ?: 'noreply@dreambd.com',
-            'from_name' => getenv('SMTP_FROM_NAME') ?: 'DreamBD',
-        ];
+        $this->apiKey = DatabaseConfig::getSmtpPass();
+        $this->from = getenv('SMTP_FROM') ?: 'noreply@robicodes.xyz';
+        $this->fromName = getenv('SMTP_FROM_NAME') ?: 'RobiCodes Support';
     }
 
     public static function getInstance() {
@@ -25,33 +17,48 @@ class Mailer {
         return self::$instance;
     }
 
-    public function send(string $to, string $subject, string $body): array {
-        $mail = new PHPMailer(true);
-        try {
-            $mail->isSMTP();
-            $mail->Host = $this->config['host'];
-            $mail->SMTPAuth = true;
-            $mail->Username = $this->config['user'];
-            $mail->Password = $this->config['pass'];
-            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-            $mail->Port = (int) $this->config['port'];
-            $mail->CharSet = 'UTF-8';
-            $mail->SMTPDebug = 0;
+    public function send(string $to, string $subject, string $body, ?string $from = null, ?string $fromName = null): array {
+        $payload = json_encode([
+            'sender' => ['name' => $fromName ?? $this->fromName, 'email' => $from ?? $this->from],
+            'to' => [['email' => $to]],
+            'subject' => $subject,
+            'htmlContent' => $body,
+        ]);
 
-            $mail->setFrom($this->config['from'], $this->config['from_name']);
-            $mail->addAddress($to);
-            $mail->addReplyTo($this->config['from'], $this->config['from_name']);
+        $ch = curl_init('https://api.brevo.com/v3/smtp/email');
+        $caPath = 'D:\xampp\php\cacert.pem';
+        $caOpts = file_exists($caPath)
+            ? [CURLOPT_CAINFO => realpath($caPath)]
+            : [CURLOPT_SSL_VERIFYPEER => false];
+        curl_setopt_array($ch, $caOpts + [
+            CURLOPT_HTTPHEADER => [
+                'api-key: ' . $this->apiKey,
+                'Content-Type: application/json',
+                'Accept: application/json',
+            ],
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $payload,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 30,
+        ]);
 
-            $mail->isHTML(true);
-            $mail->Subject = $subject;
-            $mail->Body = $body;
-            $mail->AltBody = strip_tags(str_replace(['<br>', '<br/>', '<br />', '</p>'], "\n", $body));
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
 
-            $mail->send();
-            return ['success' => true, 'message' => 'Email sent successfully'];
-        } catch (Exception $e) {
-            error_log("Mailer Error: " . $mail->ErrorInfo);
-            return ['success' => false, 'message' => $mail->ErrorInfo];
+        if ($error) {
+            error_log("Mailer cURL Error: " . $error);
+            return ['success' => false, 'message' => 'Network error: ' . $error];
         }
+
+        if ($httpCode >= 200 && $httpCode < 300) {
+            return ['success' => true, 'message' => 'Email sent successfully'];
+        }
+
+        $data = json_decode($response, true);
+        $msg = $data['message'] ?? 'HTTP ' . $httpCode;
+        error_log("Mailer API Error: $msg — Response: " . substr($response, 0, 500));
+        return ['success' => false, 'message' => $msg];
     }
 }

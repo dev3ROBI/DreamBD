@@ -323,19 +323,27 @@ try {
 
         // Add missing columns if they don't exist (Migration style)
         $migrations = [
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS uuid CHAR(36) AFTER id",
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(30) AFTER full_name",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT AFTER phone",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login DATETIME AFTER status",
             "ALTER TABLE slider_content ADD COLUMN IF NOT EXISTS slider_type ENUM('features','tournament','leaderboard','ads') DEFAULT 'features' AFTER badge",
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verification_token VARCHAR(64) DEFAULT NULL AFTER email_verified",
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verification_expires DATETIME DEFAULT NULL AFTER email_verification_token",
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token VARCHAR(64) DEFAULT NULL AFTER email_verification_expires",
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires DATETIME DEFAULT NULL AFTER reset_token"
         ];
         foreach ($migrations as $sql) {
             try { $db->exec($sql); } catch (PDOException $e) {}
         }
+    }
+
+    // Always-run column migrations for existing databases
+    $alwaysRun = [
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS uuid CHAR(36) AFTER id",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(30) AFTER full_name",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified TINYINT(1) NOT NULL DEFAULT 0 AFTER status",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verification_token VARCHAR(64) DEFAULT NULL AFTER email_verified",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verification_expires DATETIME DEFAULT NULL AFTER email_verification_token",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token VARCHAR(64) DEFAULT NULL AFTER email_verification_expires",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires DATETIME DEFAULT NULL AFTER reset_token",
+    ];
+    foreach ($alwaysRun as $sql) {
+        try { $db->exec($sql); } catch (Throwable $e) {}
     }
 
     ensureUserSessionsSchema($db);

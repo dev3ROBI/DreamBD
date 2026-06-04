@@ -495,23 +495,66 @@ $themeAttr = htmlspecialchars($theme, ENT_QUOTES, 'UTF-8');
                     <i class="fas fa-key text-base text-white"></i>
                 </div>
                 <h2 class="text-lg font-bold text-gray-900 dark:text-white">Reset Password</h2>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Enter your email and we'll send you a reset link</p>
+                <p id="forgotDesc" class="text-sm text-gray-500 dark:text-gray-400 mt-1">Enter your email to receive an OTP</p>
             </div>
             
-            <form method="POST" action="handlers/forgot_handler.php" id="forgotPasswordForm" data-ajax-form="true" novalidate>
+            <form method="POST" action="handlers/reset_handler.php" id="forgotPasswordForm" data-ajax-form="true" novalidate>
                 <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
+                <input type="hidden" name="email" id="forgotEmailHidden" value="">
                 
-                <div class="mb-4">
-                    <label for="reset_email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email address</label>
-                    <input type="email" id="reset_email" name="email" required autocomplete="email"
-                           class="block w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                           placeholder="you@example.com">
+                <!-- Step 1: Email -->
+                <div id="forgotStepEmail">
+                    <div class="mb-4">
+                        <label for="reset_email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email address</label>
+                        <input type="email" id="reset_email" name="email_visible" required autocomplete="email"
+                               class="block w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                               placeholder="you@example.com">
+                    </div>
+                    <button type="submit" class="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                        <span class="btn-text">Send OTP</span>
+                        <span class="btn-loader hidden"><i class="fas fa-spinner fa-spin"></i> Sending...</span>
+                    </button>
                 </div>
                 
-                <button type="submit" class="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                    <span class="btn-text">Send Reset Link</span>
-                    <span class="btn-loader hidden"><i class="fas fa-spinner fa-spin"></i> Sending...</span>
-                </button>
+                <!-- Step 2: OTP Only (hidden initially) -->
+                <div id="forgotStepOtp" style="display:none">
+                    <div class="mb-4">
+                        <label for="reset_otp" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">OTP Code</label>
+                        <input type="text" id="reset_otp" name="otp" required maxlength="6" inputmode="numeric" pattern="[0-9]{6}"
+                               class="block w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-center tracking-widest text-lg"
+                               placeholder="000000">
+                    </div>
+                    <button type="submit" class="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                        <span class="btn-text">Verify OTP</span>
+                        <span class="btn-loader hidden"><i class="fas fa-spinner fa-spin"></i> Verifying...</span>
+                    </button>
+                    <p class="text-center mt-3 text-xs text-gray-500 dark:text-gray-400">
+                        <button type="button" id="forgotBackBtn" class="text-blue-600 hover:underline text-sm">Back to email</button>
+                    </p>
+                </div>
+                
+                <!-- Step 3: New Password (hidden initially) -->
+                <div id="forgotStepPassword" style="display:none">
+                    <div class="mb-4">
+                        <label for="reset_password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New password</label>
+                        <input type="password" id="reset_password" name="password" required minlength="8"
+                               class="block w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                               placeholder="At least 8 characters">
+                    </div>
+                    <div class="mb-4">
+                        <label for="reset_confirm" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirm password</label>
+                        <input type="password" id="reset_confirm" name="confirm_password" required minlength="8"
+                               class="block w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                               placeholder="Repeat new password">
+                    </div>
+                    <button type="submit" class="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                        <span class="btn-text">Reset Password</span>
+                        <span class="btn-loader hidden"><i class="fas fa-spinner fa-spin"></i> Resetting...</span>
+                    </button>
+                    <p class="text-center mt-3">
+                        <button type="button" id="forgotBackToOtpBtn" class="text-sm text-blue-600 hover:underline">Back to OTP</button>
+                    </p>
+                </div>
                 
                 <p class="text-center text-sm text-gray-500 dark:text-gray-400 mt-4">
                     Remember your password?
@@ -551,118 +594,7 @@ $themeAttr = htmlspecialchars($theme, ENT_QUOTES, 'UTF-8');
                 window.DreamBDApp.init();
             }
             
-            // Navbar dropdown toggle with animation
-            const userDropdownToggle = document.getElementById('userDropdownToggle');
-            const userDropdownMenu = document.getElementById('userDropdownMenu');
-            const hideUserDropdown = () => {
-                if (!userDropdownMenu) return;
-                userDropdownMenu.classList.add('opacity-0', 'scale-95');
-                setTimeout(() => userDropdownMenu.classList.add('hidden'), 200);
-            };
-            if (userDropdownToggle && userDropdownMenu) {
-                userDropdownToggle.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const isHidden = userDropdownMenu.classList.contains('hidden');
-                    if (isHidden) {
-                        userDropdownMenu.classList.remove('hidden', 'opacity-0', 'scale-95');
-                        userDropdownMenu.classList.add('opacity-100', 'scale-100');
-                    } else {
-                        hideUserDropdown();
-                    }
-                });
-                userDropdownMenu.addEventListener('click', (e) => {
-                    if (e.target.closest('a, button')) {
-                        hideUserDropdown();
-                    }
-                });
-                document.addEventListener('click', (e) => {
-                    if (!userDropdownMenu.classList.contains('hidden') &&
-                        !userDropdownMenu.contains(e.target) &&
-                        e.target !== userDropdownToggle &&
-                        !userDropdownToggle.contains(e.target)) {
-                        hideUserDropdown();
-                    }
-                });
-            }
-            
-            // Dialog handlers
-            const siteDialogBackdrop = document.getElementById('siteDialogBackdrop');
-            const settingsDialog = document.getElementById('globalSettingsDialog');
-            const logoutDialog = document.getElementById('logoutConfirmDialog');
-            let siteDialogScrollY = 0;
-            
-            const closeAllDialogs = () => {
-                if (settingsDialog) {
-                    settingsDialog.hidden = true;
-                    settingsDialog.classList.add('hidden');
-                    settingsDialog.classList.remove('grid', 'flex');
-                }
-                if (logoutDialog) {
-                    logoutDialog.hidden = true;
-                    logoutDialog.classList.add('hidden');
-                    logoutDialog.classList.remove('grid', 'flex');
-                }
-                if (siteDialogBackdrop) {
-                    siteDialogBackdrop.hidden = true;
-                    siteDialogBackdrop.classList.add('hidden');
-                }
-                document.documentElement.classList.remove('dialog-open');
-                document.body.classList.remove('dialog-open');
-                document.body.style.position = '';
-                document.body.style.width = '';
-                document.body.style.top = '';
-                window.scrollTo(0, siteDialogScrollY);
-            };
-
-            const openSiteDialog = (dialog) => {
-                siteDialogScrollY = window.scrollY || document.documentElement.scrollTop || 0;
-                closeAllDialogs();
-                if (dialog) {
-                    dialog.hidden = false;
-                    dialog.classList.remove('hidden', 'flex');
-                    dialog.classList.add('grid');
-                    dialog.scrollTop = 0;
-                }
-                if (siteDialogBackdrop) {
-                    siteDialogBackdrop.hidden = false;
-                    siteDialogBackdrop.classList.remove('hidden');
-                }
-                document.documentElement.classList.add('dialog-open');
-                document.body.classList.add('dialog-open');
-                document.body.style.position = 'fixed';
-                document.body.style.width = '100%';
-                document.body.style.top = `-${siteDialogScrollY}px`;
-            };
-            
-            // Open settings dialog
-            document.querySelectorAll('[data-open-global-settings]').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    hideUserDropdown();
-                    openSiteDialog(settingsDialog);
-                });
-            });
-            
-            // Open logout dialog
-            document.querySelectorAll('[data-open-logout-dialog]').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    hideUserDropdown();
-                    openSiteDialog(logoutDialog);
-                });
-            });
-            
-            // Close dialog buttons
-            document.querySelectorAll('[data-close-site-dialog]').forEach(btn => {
-                btn.addEventListener('click', closeAllDialogs);
-            });
-            
-            // Close on backdrop click
-            if (siteDialogBackdrop) {
-                siteDialogBackdrop.addEventListener('click', closeAllDialogs);
-            }
+            // Dialog handling is managed by navbar.js via document delegation
             
             // Theme choice buttons in settings
             document.querySelectorAll('[data-theme-choice]').forEach(btn => {

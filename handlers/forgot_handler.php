@@ -22,9 +22,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $response['message'] = 'Please enter a valid email address';
             $response['errors']['email'] = 'Please enter a valid email address';
         } else {
-            $result = $auth->sendPasswordResetEmail($email);
-            $response['success'] = true;
-            $response['message'] = 'If that email is registered, we\'ve sent a password reset link.';
+            $result = $auth->sendPasswordResetOtp($email);
+            if ($result['success']) {
+                $_SESSION['reset_email'] = $email;
+                $response['success'] = true;
+                $response['message'] = 'OTP sent to your email.';
+            } else {
+                $response['message'] = $result['message'] ?? 'Failed to send OTP.';
+                $response['errors']['global'] = $response['message'];
+            }
         }
     }
 }

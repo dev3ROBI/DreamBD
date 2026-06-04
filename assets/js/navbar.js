@@ -323,11 +323,13 @@ const DreamBDNavbar = {
 
             if (openSettings) {
                 event.preventDefault();
+                this.hideUserDropdown();
                 showDialog(el.settingsDialog);
                 return;
             }
             if (openLogout) {
                 event.preventDefault();
+                this.hideUserDropdown();
                 showDialog(el.logoutDialog);
                 return;
             }

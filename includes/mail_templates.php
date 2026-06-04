@@ -1,7 +1,7 @@
 <?php
 
 class MailTemplates {
-    private static $appName = 'DreamBD';
+    private static $appName = 'RobiCodes';
     private static $appUrl = 'http://localhost/Dream';
 
     private static function baseTemplate(string $title, string $content): string {
@@ -20,8 +20,8 @@ class MailTemplates {
 {$content}
 </td></tr>
 <tr><td style="background:#f9fafb;padding:24px 32px;text-align:center;border-top:1px solid #e5e7eb">
-<p style="margin:0 0 8px;font-size:13px;color:#6b7280">Need help? Contact us at support@dreambd.com</p>
-<p style="margin:0;font-size:12px;color:#9ca3af">&copy; 2026 DreamBD. All rights reserved.</p>
+<p style="margin:0 0 8px;font-size:13px;color:#6b7280">Need help? Contact us at <a href="mailto:support@robicodes.xyz" style="color:#3b82f6;text-decoration:none">support@robicodes.xyz</a></p>
+<p style="margin:0;font-size:12px;color:#9ca3af">&copy; 2026 RobiCodes. All rights reserved.</p>
 </td></tr>
 </table>
 </td></tr>
@@ -35,7 +35,7 @@ HTML;
         $content = <<<HTML
 <p style="font-size:16px;color:#374151;margin:0 0 24px">Hi <strong>{$username}</strong>,</p>
 <p style="font-size:15px;color:#4b5563;margin:0 0 24px;line-height:1.6">
-Welcome to DreamBD! Please verify your email address by clicking the button below.
+Welcome to RobiCodes! Please verify your email address by clicking the button below.
 </p>
 <table cellpadding="0" cellspacing="0" style="margin:0 0 24px"><tr><td style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);border-radius:12px;padding:0">
 <a href="{$verifyUrl}" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none">Verify Email Address</a>
@@ -47,27 +47,28 @@ HTML;
         return self::baseTemplate('Verify Your Email', $content);
     }
 
-    public static function resetPassword(string $username, string $resetUrl): string {
+    public static function resetPasswordOtp(string $username, string $otp): string {
         $content = <<<HTML
 <p style="font-size:16px;color:#374151;margin:0 0 24px">Hi <strong>{$username}</strong>,</p>
 <p style="font-size:15px;color:#4b5563;margin:0 0 24px;line-height:1.6">
-We received a request to reset your password. Click the button below to set a new one.
+We received a request to reset your password. Use the OTP below to set a new one.
 </p>
-<table cellpadding="0" cellspacing="0" style="margin:0 0 24px"><tr><td style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);border-radius:12px;padding:0">
-<a href="{$resetUrl}" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none">Reset Password</a>
-</td></tr></table>
-<p style="font-size:14px;color:#6b7280;margin:0 0 8px">Or copy this link:</p>
-<p style="font-size:13px;color:#3b82f6;margin:0;word-break:break-all">{$resetUrl}</p>
-<p style="font-size:14px;color:#6b7280;margin:24px 0 0;line-height:1.6">This link expires in 1 hour. If you didn't request this, please ignore this email.</p>
+<div style="background:#f3f4f6;border-radius:12px;padding:24px;text-align:center;margin:0 0 24px">
+<span style="font-size:36px;font-weight:700;letter-spacing:8px;color:#3b82f6;font-family:monospace">{$otp}</span>
+</div>
+<p style="font-size:14px;color:#6b7280;margin:0 0 24px;line-height:1.6">
+Enter this code on the password reset page. It expires in 10 minutes.
+</p>
+<p style="font-size:14px;color:#6b7280;margin:0;line-height:1.6">If you didn't request this, please ignore this email.</p>
 HTML;
-        return self::baseTemplate('Reset Your Password', $content);
+        return self::baseTemplate('Password Reset OTP', $content);
     }
 
     public static function welcomeVerified(string $username): string {
         $content = <<<HTML
 <p style="font-size:16px;color:#374151;margin:0 0 24px">Hi <strong>{$username}</strong>,</p>
 <p style="font-size:15px;color:#4b5563;margin:0 0 24px;line-height:1.6">
-Your email has been verified successfully! You now have full access to all DreamBD features.
+Your email has been verified successfully! You now have full access to all RobiCodes features.
 </p>
 <p style="font-size:15px;color:#4b5563;margin:0 0 24px;line-height:1.6">
 Connect with friends, join tournaments, and explore the community.</p>

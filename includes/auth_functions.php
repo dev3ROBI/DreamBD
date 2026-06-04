@@ -546,7 +546,7 @@ class Auth {
             require_once __DIR__ . '/mailer.php';
             $mailer = Mailer::getInstance();
             $body = MailTemplates::verifyEmail($user['username'], $verifyUrl);
-            $result = $mailer->send($user['email'], 'Verify your DreamBD email', $body);
+            $result = $mailer->send($user['email'], 'Verify your email', $body, 'verify@robicodes.xyz', 'RobiCodes Verification');
 
             if ($result['success']) {
                 $this->logSecurityEvent($user_id, 'verification_sent', ['email' => $user['email']]);
@@ -581,7 +581,7 @@ class Auth {
             require_once __DIR__ . '/mailer.php';
             $mailer = Mailer::getInstance();
             $body = MailTemplates::welcomeVerified($user['username']);
-            $mailer->send($user['email'], 'Welcome to DreamBD!', $body);
+            $mailer->send($user['email'], 'Email verified!', $body, 'noreply@robicodes.xyz', 'RobiCodes');
 
             return ['success' => true, 'message' => 'Email verified successfully!'];
         } catch (PDOException $e) {
@@ -590,50 +590,71 @@ class Auth {
         }
     }
 
-    public function sendPasswordResetEmail(string $email): array {
+    public function sendPasswordResetOtp(string $email): array {
         try {
             $stmt = $this->db->prepare("SELECT id, username, email FROM users WHERE email = ? LIMIT 1");
             $stmt->execute([$email]);
             $user = $stmt->fetch();
 
             if (!$user) {
-                return ['success' => false, 'message' => 'If that email is registered, we\'ve sent a reset link.'];
+                return ['success' => false, 'message' => 'If that email is registered, an OTP has been sent.'];
             }
 
-            $token = bin2hex(random_bytes(32));
-            $expires = date('Y-m-d H:i:s', time() + 3600);
+            $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            $expires = date('Y-m-d H:i:s', time() + 600);
 
             $stmt = $this->db->prepare("UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE id = ?");
-            $stmt->execute([$token, $expires, $user['id']]);
-
-            $resetUrl = (getenv('APP_URL') ?: 'http://localhost/Dream') . '/index.php?page=reset_password&token=' . $token;
+            $stmt->execute([$otp, $expires, $user['id']]);
 
             require_once __DIR__ . '/mail_templates.php';
             require_once __DIR__ . '/mailer.php';
             $mailer = Mailer::getInstance();
-            $body = MailTemplates::resetPassword($user['username'], $resetUrl);
-            $result = $mailer->send($user['email'], 'Reset your DreamBD password', $body);
+            $body = MailTemplates::resetPasswordOtp($user['username'], $otp);
+            $result = $mailer->send($user['email'], 'Your password reset OTP', $body, 'reset@robicodes.xyz', 'RobiCodes Account');
 
             if ($result['success']) {
-                $this->logSecurityEvent($user['id'], 'password_reset_requested', ['email' => $user['email']]);
+                $this->logSecurityEvent($user['id'], 'password_reset_otp_sent', ['email' => $user['email']]);
+                return ['success' => true, 'message' => 'OTP sent to your email.'];
             }
-            return ['success' => false, 'message' => 'If that email is registered, we\'ve sent a reset link.'];
+
+            return ['success' => false, 'message' => $result['message'] ?? 'Failed to send OTP. Please try again.'];
         } catch (PDOException $e) {
-            error_log("Password reset email error: " . $e->getMessage());
-            return ['success' => false, 'message' => 'Failed to send reset email'];
+            error_log("Password reset OTP error: " . $e->getMessage());
+            return ['success' => false, 'message' => 'Failed to send OTP'];
         }
     }
 
-    public function resetPassword(string $token, string $new_password): array {
+    public function validateResetOtp(string $email, string $otp): array {
         try {
-            $stmt = $this->db->prepare("SELECT id, username, email, reset_token_expires FROM users WHERE reset_token = ? LIMIT 1");
-            $stmt->execute([$token]);
+            $stmt = $this->db->prepare("SELECT id, username, reset_token, reset_token_expires FROM users WHERE email = ? LIMIT 1");
+            $stmt->execute([$email]);
             $user = $stmt->fetch();
 
-            if (!$user) return ['success' => false, 'message' => 'Invalid reset link'];
+            if (!$user) return ['success' => false, 'message' => 'User not found'];
+            if ($user['reset_token'] !== $otp) return ['success' => false, 'message' => 'Invalid OTP'];
+            if (strtotime($user['reset_token_expires']) < time()) return ['success' => false, 'message' => 'OTP has expired.'];
+
+            return ['success' => true, 'message' => 'OTP verified'];
+        } catch (PDOException $e) {
+            error_log("OTP validation error: " . $e->getMessage());
+            return ['success' => false, 'message' => 'Verification failed'];
+        }
+    }
+
+    public function resetPasswordWithOtp(string $email, string $otp, string $new_password): array {
+        try {
+            $stmt = $this->db->prepare("SELECT id, username, email, reset_token, reset_token_expires FROM users WHERE email = ? LIMIT 1");
+            $stmt->execute([$email]);
+            $user = $stmt->fetch();
+
+            if (!$user) return ['success' => false, 'message' => 'User not found'];
+
+            if ($user['reset_token'] !== $otp) {
+                return ['success' => false, 'message' => 'Invalid OTP'];
+            }
 
             if (strtotime($user['reset_token_expires']) < time()) {
-                return ['success' => false, 'message' => 'Reset link has expired. Request a new one.'];
+                return ['success' => false, 'message' => 'OTP has expired. Request a new one.'];
             }
 
             if (strlen($new_password) < 8) {

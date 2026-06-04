@@ -20,6 +20,7 @@ class AuthHandler {
         this.initPasswordToggles();
         this.initModals();
         this.initPageEnhancements();
+        this.initForgotPasswordBackBtn();
     }
     
     initPageEnhancements() {
@@ -109,6 +110,29 @@ class AuthHandler {
                 if (activeModal) {
                     this.closeModal(activeModal.id);
                 }
+            }
+        });
+    }
+
+    initForgotPasswordBackBtn() {
+        document.addEventListener('click', (e) => {
+            const btnBack = e.target.closest('#forgotBackBtn');
+            const btnBackOtp = e.target.closest('#forgotBackToOtpBtn');
+            if (!btnBack && !btnBackOtp) return;
+            e.preventDefault();
+            const stepEmail = document.getElementById('forgotStepEmail');
+            const stepOtp = document.getElementById('forgotStepOtp');
+            const stepPassword = document.getElementById('forgotStepPassword');
+            const desc = document.getElementById('forgotDesc');
+            if (btnBack && stepEmail && stepOtp) {
+                stepOtp.style.display = 'none';
+                stepEmail.style.display = 'block';
+                if (desc) desc.textContent = 'Enter your email to receive an OTP';
+            }
+            if (btnBackOtp && stepOtp && stepPassword) {
+                stepPassword.style.display = 'none';
+                stepOtp.style.display = 'block';
+                if (desc) desc.textContent = 'Enter the OTP sent to your email';
             }
         });
     }
@@ -344,6 +368,18 @@ class AuthHandler {
     closeModal(modalId) {
         const modal = document.getElementById(modalId);
         if (!modal) return;
+
+        // Reset forgot password steps
+        if (modalId === 'forgotPasswordModal') {
+            const stepEmail = document.getElementById('forgotStepEmail');
+            const stepOtp = document.getElementById('forgotStepOtp');
+            const stepPassword = document.getElementById('forgotStepPassword');
+            const desc = document.getElementById('forgotDesc');
+            if (stepOtp) stepOtp.style.display = 'none';
+            if (stepPassword) stepPassword.style.display = 'none';
+            if (stepEmail) stepEmail.style.display = 'block';
+            if (desc) desc.textContent = 'Enter your email to receive an OTP';
+        }
         
         modal.classList.remove('active');
         document.body.style.overflow = '';
@@ -385,6 +421,15 @@ class AuthHandler {
             if (loader) loader.classList.remove('hidden');
         }
         
+        // Copy forgot password email to hidden field before submit
+        if (form.id === 'forgotPasswordForm') {
+            const visibleEmail = form.querySelector('[name="email_visible"]');
+            const hiddenEmail = form.querySelector('#forgotEmailHidden');
+            if (visibleEmail && hiddenEmail) {
+                hiddenEmail.value = visibleEmail.value;
+            }
+        }
+
         try {
             const response = await fetch(formAction, {
                 method: 'POST',
@@ -406,20 +451,42 @@ class AuthHandler {
             }
             
             if (result.success) {
-                this.showAlert(form, result.message || 'Success!', 'success');
+                const stepEmail = form.querySelector('#forgotStepEmail');
+                const stepOtp = form.querySelector('#forgotStepOtp');
+                const stepPassword = form.querySelector('#forgotStepPassword');
+                const forgotDesc = form.closest('.auth-modal')?.querySelector('#forgotDesc');
 
-                if (typeof grecaptcha !== 'undefined') {
-                    grecaptcha.reset();
+                // Step 1 → 2: OTP sent successfully
+                if (stepEmail && stepOtp && stepEmail.style.display !== 'none') {
+                    stepEmail.style.display = 'none';
+                    stepOtp.style.display = 'block';
+                    if (forgotDesc) forgotDesc.textContent = 'Enter the OTP sent to your email';
+                    this.clearAlerts(form);
                 }
-
-                if (result.redirect) {
-                    setTimeout(function() {
-                        window.location.href = result.redirect;
-                    }, 800);
+                // Step 2 → 3: OTP verified
+                else if (stepOtp && stepPassword && !stepEmail || stepOtp && stepPassword && stepOtp.style.display !== 'none') {
+                    stepOtp.style.display = 'none';
+                    stepPassword.style.display = 'block';
+                    if (forgotDesc) forgotDesc.textContent = 'Choose a new password';
+                    this.clearAlerts(form);
                 }
+                // Step 3 or other forms: success
+                else {
+                    this.showAlert(form, result.message || 'Success!', 'success');
 
-                if (result.clearForm) {
-                    form.reset();
+                    if (typeof grecaptcha !== 'undefined') {
+                        grecaptcha.reset();
+                    }
+
+                    if (result.redirect) {
+                        setTimeout(function() {
+                            window.location.href = result.redirect;
+                        }, 800);
+                    }
+
+                    if (result.clearForm) {
+                        form.reset();
+                    }
                 }
                 
             } else {
@@ -458,8 +525,9 @@ class AuthHandler {
         const errorElements = form.querySelectorAll('.dynamic-error');
         errorElements.forEach(el => el.remove());
         
-        // Check each required field
+        // Check each required field (skip hidden containers)
         requiredInputs.forEach(input => {
+            if (input.closest('[style*="display:none"], [style*="display: none"]')) return;
             const value = input.value.trim();
             
             if (!value) {
@@ -633,6 +701,11 @@ class AuthHandler {
             }, 5000);
         }
     }
+
+    clearAlerts(form) {
+        const alerts = form.querySelectorAll('.auth-alert');
+        alerts.forEach(a => a.remove());
+    }
 }
 
 // Password strength checker function
@@ -694,9 +767,14 @@ window.resendVerificationEmail = async function(e) {
     }
     try {
         const csrfToken = document.getElementById('body')?.getAttribute('data-csrf-token') || '';
+        const form = document.getElementById('loginForm');
+        const emailInput = form ? form.querySelector('[name="identifier"]') : null;
+        const email = emailInput ? emailInput.value.trim() : '';
+
         const formData = new FormData();
         formData.append('csrf_token', csrfToken);
-        
+        if (email) formData.append('email', email);
+
         const response = await fetch('handlers/resend_verify_handler.php', {
             method: 'POST',
             body: formData,
