@@ -29,7 +29,10 @@ if (
 }
 
 $user_id = $_SESSION['user_id'] ?? null;
-if (!$user_id) {
+$action = $requestData['action'] ?? ($_GET['action'] ?? '');
+$publicReadActions = ['get_post_details'];
+
+if (!$user_id && !in_array($action, $publicReadActions, true)) {
     $response['message'] = 'Not authenticated';
     error_log("profile_handlers.php - Not authenticated. SESSION: " . print_r($_SESSION, true));
     echo json_encode($response);
@@ -44,8 +47,6 @@ try {
     echo json_encode($response);
     exit;
 }
-
-$action = $requestData['action'] ?? ($_GET['action'] ?? '');
 
 switch ($action) {
     case 'upload_avatar':
@@ -81,7 +82,7 @@ switch ($action) {
         break;
     
     case 'get_post_details':
-        handleGetPostDetails($db, $user_id);
+        handleGetPostDetails($db, (int) ($user_id ?? 0));
         break;
 
     case 'react_post':

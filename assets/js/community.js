@@ -1,5 +1,11 @@
 // ===== COMMUNITY INTERACTION HANDLER =====
 
+function escapeHtml(text) {
+    const d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
+}
+
 (function() {
     // 1. Global Event Delegation (Attached only once to document)
     if (!window.communityGlobalListenerAttached) {
@@ -658,12 +664,6 @@
         return article;
     }
 
-    function escapeHtml(text) {
-        const d = document.createElement('div');
-        d.textContent = text;
-        return d.innerHTML;
-    }
-
     // Listen for pageChanged to handle post/comment params after AJAX nav
     if (!window.__communityPageChangedAttached) {
         window.__communityPageChangedAttached = true;
@@ -798,56 +798,98 @@ function openPostModal(postId) {
     const overlay = document.createElement('div');
     overlay.className = 'gp-modal-overlay active';
     overlay.id = 'postDetailOverlay';
+    const isLoggedIn = document.body.dataset.loggedIn === '1';
+    const closePostModal = () => {
+        overlay.remove();
+        document.body.style.overflow = '';
+    };
     overlay.innerHTML = `
-        <div class="gp-modal-box gp-modal-box--premium" style="max-width:680px;width:100%;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;max-height:90vh;">
-            <div class="gp-modal-header--premium" style="padding:12px 16px;border-bottom:1px solid var(--comm-border);display:flex;justify-content:space-between;align-items:center;background:var(--comm-surface);">
-                <h2 style="font-size:20px;font-weight:700;margin:0;text-align:center;flex:1;color:var(--comm-text-primary);">Post Details</h2>
-                <button onclick="document.getElementById('postDetailOverlay').remove()" class="gp-modal-close-btn" style="background:var(--comm-border);border:none;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--comm-text-secondary);">
-                    <i class="fas fa-times" style="font-size:20px;"></i>
+        <div class="gp-modal-box gp-modal-box--premium post-detail-modal">
+            <div class="gp-modal-header--premium post-detail-header">
+                <h2>Post Details</h2>
+                <button type="button" class="gp-modal-close-btn post-detail-close" aria-label="Close post details">
+                    <i class="fas fa-times"></i>
                 </button>
             </div>
-            <div class="gp-modal-body--premium" style="flex:1;overflow-y:auto;background:var(--comm-surface);">
+            <div class="gp-modal-body--premium post-detail-body">
                 <div id="postDetailContent">
-                    <div style="padding:100px 0;text-align:center;color:var(--comm-text-secondary);">
-                        <i class="fas fa-circle-notch fa-spin" style="font-size:32px;margin-bottom:12px;"></i>
+                    <div class="post-detail-loading">
+                        <i class="fas fa-circle-notch fa-spin"></i>
                         <div>Loading post...</div>
                     </div>
                 </div>
             </div>
-            <div class="modal-comment-box">
-                <img src="assets/avatars/default.png" id="modal-user-avatar" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">
-                <div class="modal-comment-input-wrap">
-                    <input type="text" class="modal-comment-input" placeholder="Write a comment..." id="modalCommentInput" data-replying-to="0">
-                    <button class="modal-comment-send" id="modalCommentSend" disabled><i class="fas fa-paper-plane"></i></button>
+            ${isLoggedIn ? `
+                <div class="modal-comment-box">
+                    <img src="assets/avatars/default.png" id="modal-user-avatar" alt="" class="modal-comment-avatar">
+                    <div class="modal-comment-main">
+                        <div class="modal-reply-context hidden" id="modalReplyContext">
+                            <span id="modalReplyText"></span>
+                            <button type="button" id="modalReplyCancel" aria-label="Cancel reply"><i class="fas fa-times"></i></button>
+                        </div>
+                        <div class="modal-comment-input-wrap">
+                            <input type="text" class="modal-comment-input" placeholder="Write a comment..." id="modalCommentInput" data-replying-to="0">
+                            <button class="modal-comment-send" id="modalCommentSend" disabled><i class="fas fa-paper-plane"></i></button>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            ` : `
+                <div class="modal-comment-box modal-comment-box--guest">
+                    <span>Log in to comment or reply.</span>
+                    <a href="index.php?page=login">Sign in</a>
+                </div>
+            `}
         </div>
     `;
     
     const modalRoot = document.getElementById('modalRoot') || document.body;
     modalRoot.appendChild(overlay);
     
-    const currentAvatar = document.querySelector('.community-composer-top img, .home-feed-composer-avatar img')?.src;
-    if (currentAvatar) document.getElementById('modal-user-avatar').src = currentAvatar;
+    document.body.style.overflow = 'hidden';
+    overlay.querySelector('.post-detail-close')?.addEventListener('click', closePostModal);
 
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    const currentAvatar = document.querySelector('.community-composer-top img, .home-feed-composer-avatar img')?.src;
+    if (currentAvatar && document.getElementById('modal-user-avatar')) document.getElementById('modal-user-avatar').src = currentAvatar;
+
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closePostModal(); });
     
     const commentInput = document.getElementById('modalCommentInput');
     const sendBtn = document.getElementById('modalCommentSend');
+    const fetchPost = (canInteract) => {
+        fetch(`handlers/profile_handlers.php?action=get_post_details&post_id=${postId}`)
+            .then(r => { if (!r.ok) throw new Error('Server returned ' + r.status); return r.json(); })
+            .then(res => {
+                if (!res.success) {
+                    document.getElementById('postDetailContent').innerHTML = `<div class="post-detail-empty">${escapeHtml(res.message || 'Post not found.')}</div>`;
+                    return;
+                }
+                renderModalContent(res.post, { canInteract });
+                if (targetCommentId) setTimeout(() => scrollToComment(targetCommentId), 200);
+            })
+            .catch(err => {
+                console.error('openPostModal error:', err);
+                const el = document.getElementById('postDetailContent');
+                if (el) el.innerHTML = '<div class="post-detail-empty">Error loading post.</div>';
+            });
+    };
+    if (!commentInput || !sendBtn) {
+        fetchPost(false);
+        return;
+    }
     
     commentInput.addEventListener('input', () => {
         sendBtn.disabled = !commentInput.value.trim();
         if (commentInput.dataset.replyingTo !== "0" && !commentInput.value.startsWith('@')) {
-            commentInput.dataset.replyingTo = "0";
-            commentInput.placeholder = "Write a comment...";
+            clearReplyTarget();
         }
     });
+    document.getElementById('modalReplyCancel')?.addEventListener('click', clearReplyTarget);
     
     const handleSubmission = () => {
         if (sendBtn.disabled) return;
         const parentId = parseInt(commentInput.dataset.replyingTo || 0);
         submitComment(postId, parentId);
-        commentInput.dataset.replyingTo = "0";
+        clearReplyTarget();
     };
 
     sendBtn.addEventListener('click', handleSubmission);
@@ -858,20 +900,7 @@ function openPostModal(postId) {
         }
     });
 
-    fetch(`handlers/profile_handlers.php?action=get_post_details&post_id=${postId}`)
-        .then(r => r.json())
-        .then(res => {
-            if (!res.success) { document.getElementById('postDetailContent').innerHTML = '<div style="padding:40px; text-align:center">Post not found.</div>'; return; }
-            renderModalContent(res.post);
-            // Scroll to target comment if specified
-            if (targetCommentId) {
-                setTimeout(() => scrollToComment(targetCommentId), 200);
-            }
-        })
-        .catch(err => {
-            
-            document.getElementById('postDetailContent').innerHTML = '<div style="padding:40px; text-align:center">Error loading post.</div>';
-        });
+    fetchPost(true);
 }
 
 function scrollToComment(commentId) {
@@ -886,7 +915,8 @@ function scrollToComment(commentId) {
     setTimeout(() => { el.style.background = ''; }, 2000);
 }
 
-function renderModalContent(p) {
+function renderModalContent(p, options = {}) {
+    const canInteract = options.canInteract !== false;
     const content = document.getElementById('postDetailContent');
     const ownerName = p.full_name || p.username;
     document.querySelector('#postDetailOverlay h2').textContent = ownerName + "'s Post";
@@ -894,65 +924,67 @@ function renderModalContent(p) {
     content.innerHTML = `
         <div class="community-post-header">
             <div class="community-post-author">
-                <img src="assets/avatars/${p.avatar || 'default.png'}" onerror="this.src='assets/avatars/default.png'">
+                <img src="assets/avatars/${escapeAttr(p.avatar || 'default.png')}" onerror="this.src='assets/avatars/default.png'">
                 <div class="community-author-info">
-                    <strong>${ownerName}</strong>
-                    <span class="community-post-time">${p.created_at_formatted || 'Just now'}</span>
+                    <strong>${escapeHtml(ownerName)}</strong>
+                    <span class="community-post-time">${escapeHtml(p.created_at_formatted || 'Just now')}</span>
                 </div>
             </div>
         </div>
-        <div class="community-post-content" style="padding: 8px 16px;">
-            <p style="font-size: 16px; line-height: 1.4; color: var(--comm-text-primary);">${p.content.replace(/\n/g, '<br>')}</p>
+        <div class="community-post-content post-detail-copy">
+            <p>${formatModalText(p.content || '')}</p>
         </div>
         ${p.image_path ? `
-            <div class="community-post-image" style="background: #000; display: flex; justify-content: center; margin-top: 8px;">
-                <img src="assets/posts/${p.image_path}" style="max-width: 100%; max-height: 500px; display: block;">
+            <div class="community-post-image post-detail-image">
+                <img src="assets/posts/${escapeAttr(p.image_path)}" alt="">
             </div>
         ` : ''}
         
-        <div class="community-post-stats" style="margin: 0 16px; padding: 12px 0; border-bottom: 1px solid var(--comm-border);">
+        <div class="community-post-stats post-detail-stats">
             <div class="community-stat-left">
                 <div class="community-reaction-icons">
-                    <span class="rxn-like" style="background:#1877f2;"><i class="fas fa-thumbs-up"></i></span>
-                    <span class="rxn-love" style="background:#f33e58;"><i class="fas fa-heart"></i></span>
+                    <span class="rxn-like"><i class="fas fa-thumbs-up"></i></span>
+                    <span class="rxn-love"><i class="fas fa-heart"></i></span>
                 </div>
-                <span class="community-stat-count">${p.like_count || 0}</span>
+                <span class="community-stat-count">${Number(p.like_count || 0)}</span>
             </div>
             <div class="community-stat-right">
-                <span id="modal-comment-count">${(p.comments || []).length} comments</span>
+                <span id="modal-comment-count">${Number(p.comment_count || (p.comments || []).length || 0)} comments</span>
             </div>
         </div>
 
-        <div style="padding: 16px;">
-            <div id="commentsList" style="display: flex; flex-direction: column; gap: 12px;">
-                ${(p.comments || []).map(c => renderCommentHtml(c)).join('')}
-                ${(p.comments || []).length === 0 ? '<div id="noCommentsMsg" style="text-align:center; color:var(--comm-text-secondary); font-size:14px; padding: 20px;">No comments yet.</div>' : ''}
+        <div class="post-detail-comments-wrap">
+            <div id="commentsList" class="post-detail-comments-list">
+                ${(p.comments || []).map(c => renderCommentHtml(c, { canInteract, depth: 0 })).join('')}
+                ${(p.comments || []).length === 0 ? '<div id="noCommentsMsg" class="post-detail-empty">No comments yet.</div>' : ''}
             </div>
         </div>
     `;
 }
 
-function renderCommentHtml(c) {
+function renderCommentHtml(c, options = {}) {
+    const canInteract = options.canInteract !== false;
+    const depth = Math.min(Number(options.depth || 0), 4);
     const isLiked = c.viewer_reaction === 'like';
     return `
-        <div class="community-comment" data-comment-id="${c.id}" style="display: flex; gap: 8px;">
-            <img src="assets/avatars/${c.avatar || 'default.png'}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" onerror="this.src='assets/avatars/default.png'">
-            <div class="community-comment-bubble-wrap" style="flex: 1;">
+        <div class="community-comment post-detail-comment" data-comment-id="${Number(c.id)}" data-depth="${depth}">
+            <img src="assets/avatars/${escapeAttr(c.avatar || 'default.png')}" class="post-detail-comment-avatar" alt="" onerror="this.src='assets/avatars/default.png'">
+            <div class="community-comment-bubble-wrap post-detail-comment-main">
                 <div class="community-comment-bubble">
-                    <div style="font-weight: 600; font-size: 13px; color: var(--comm-text-primary);">${c.full_name || c.username}</div>
-                    <div style="font-size: 15px; line-height: 1.3; color: var(--comm-text-primary);">${c.comment_text}</div>
+                    <div class="post-detail-comment-name">${escapeHtml(c.full_name || c.username || 'User')}</div>
+                    <div class="post-detail-comment-text">${formatModalText(c.comment_text || '')}</div>
                 </div>
                 <div class="community-comment-actions">
-                    <span class="comment-like-btn ${isLiked ? 'active' : ''}" style="cursor:pointer; ${isLiked ? 'color:#1877f2; font-weight:700;' : ''}">Like</span>
-                    <span class="comment-reply-trigger" data-username="${c.username}" style="cursor:pointer">Reply</span>
-                    <span style="font-weight: 400; color: var(--comm-text-secondary);">${c.created_at_formatted || 'Just now'}</span>
-                    <span class="comment-reaction-count-wrap" style="margin-left:auto; display: ${c.reaction_count > 0 ? 'flex' : 'none'}; align-items: center; gap: 4px; background: var(--comm-surface); padding: 1px 4px; border-radius: 10px; box-shadow: var(--comm-shadow);">
-                        <i class="fas fa-thumbs-up" style="color:#1877f2; font-size:10px"></i> 
+                    ${canInteract ? `<span class="comment-like-btn ${isLiked ? 'active' : ''}">Like</span>` : ''}
+                    ${canInteract ? `<span class="comment-reply-trigger" data-username="${escapeAttr(c.username || c.full_name || 'user')}">Reply</span>` : ''}
+                    <span class="post-detail-comment-time">${escapeHtml(c.created_at_formatted || 'Just now')}</span>
+                    <span class="comment-reaction-count-wrap" style="display: ${Number(c.reaction_count || 0) > 0 ? 'flex' : 'none'};">
+                        <i class="fas fa-thumbs-up"></i> 
                         <span class="comment-reaction-count">${c.reaction_count}</span>
                     </span>
                 </div>
-                <div class="comment-replies-list" id="replies-${c.id}" style="margin-top: 8px; display: flex; flex-direction: column; gap: 8px;">
-                    ${(c.replies || []).map(r => renderCommentHtml(r)).join('')}
+                <div class="comment-replies-list" id="replies-${Number(c.id)}">
+                    ${(c.replies || []).map(r => renderCommentHtml(r, { canInteract, depth: depth + 1 })).join('')}
                 </div>
             </div>
         </div>
@@ -979,14 +1011,14 @@ async function submitComment(postId, parentId = 0) {
     fd.append('csrf_token', csrfToken);
 
     input.value = '';
-    input.placeholder = "Write a comment...";
+    clearReplyTarget();
 
     try {
         const response = await fetch('handlers/profile_handlers.php', { method: 'POST', body: fd });
         const data = await response.json();
         if (data.success) {
             const comment = data.comment;
-            const html = renderCommentHtml(comment);
+            const html = renderCommentHtml(comment, { canInteract: true, depth: parentId > 0 ? 1 : 0 });
             
             // Critical fix: ensure we append to the correct container
             const list = parentId > 0 ? document.getElementById(`replies-${parentId}`) : document.getElementById('commentsList');
@@ -994,6 +1026,7 @@ async function submitComment(postId, parentId = 0) {
                 const noMsg = document.getElementById('noCommentsMsg');
                 if (noMsg) noMsg.remove();
                 list.insertAdjacentHTML('beforeend', html);
+                list.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
             
             // Update counts in modal
@@ -1071,7 +1104,32 @@ function focusReply(commentId, username) {
     input.value = `@${username} `;
     input.placeholder = `Replying to @${username}...`;
     input.dataset.replyingTo = commentId;
+    const context = document.getElementById('modalReplyContext');
+    const text = document.getElementById('modalReplyText');
+    if (context && text) {
+        text.textContent = `Replying to ${username}`;
+        context.classList.remove('hidden');
+    }
     input.dispatchEvent(new Event('input'));
+}
+
+function clearReplyTarget() {
+    const input = document.getElementById('modalCommentInput');
+    if (!input) return;
+    input.dataset.replyingTo = "0";
+    input.placeholder = "Write a comment...";
+    const context = document.getElementById('modalReplyContext');
+    const text = document.getElementById('modalReplyText');
+    if (context) context.classList.add('hidden');
+    if (text) text.textContent = '';
+}
+
+function formatModalText(text) {
+    return escapeHtml(text).replace(/\n/g, '<br>');
+}
+
+function escapeAttr(text) {
+    return escapeHtml(String(text)).replace(/`/g, '&#096;');
 }
 
 // === STATUS MODAL HELPER ===

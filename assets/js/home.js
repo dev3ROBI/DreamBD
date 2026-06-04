@@ -160,6 +160,9 @@ const maybeInitHomePage = (force = false) => {
     if (document.querySelector('.home-facebook-layout, .home-hero-slider')) initHomePage(force);
 };
 
+window.initHomePage = initHomePage;
+window.maybeInitHomePage = maybeInitHomePage;
+
 if (!window.__homePageListenersAttached) {
     window.__homePageListenersAttached = true;
     document.addEventListener('DOMContentLoaded', () => maybeInitHomePage());

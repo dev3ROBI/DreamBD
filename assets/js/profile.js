@@ -1157,6 +1157,12 @@ function tryInitProfile() {
     }
 }
 
+window.initProfileManager = initProfileManager;
+window.tryInitProfile = tryInitProfile;
+window.resetProfileInitAttempts = function() {
+    profileInitAttempts = 0;
+};
+
 // Init strategies
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
     setTimeout(tryInitProfile, 100);

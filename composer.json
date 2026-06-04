@@ -1,0 +1,11 @@
+{
+    "name": "dreambd/app",
+    "description": "DreamBD Social Platform",
+    "type": "project",
+    "require": {
+        "phpmailer/phpmailer": "^6.9"
+    },
+    "config": {
+        "vendor-dir": "vendor"
+    }
+}

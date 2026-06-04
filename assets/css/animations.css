@@ -538,6 +538,33 @@
 }
 
 /* Page skeleton variants */
+.page-skeleton[data-skeleton-type="home"] .skeleton-container {
+    max-width: none;
+    padding-inline: 0;
+    gap: 0;
+}
+.page-skeleton[data-skeleton-type="home"] .sk-hero {
+    border-radius: 0 0 32px 32px;
+    min-height: min(72vh, 720px);
+    box-shadow: var(--shadow-xl);
+}
+.page-skeleton[data-skeleton-type="home"] .sk-banner {
+    height: min(72vh, 720px);
+}
+.page-skeleton[data-skeleton-type="home"] .sk-hero-content {
+    width: min(980px, calc(100% - 2rem));
+    margin: -58vh auto 0;
+    padding: clamp(1.2rem, 4vw, 2.4rem);
+    border-radius: 32px;
+    background: rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(14px);
+}
+.page-skeleton[data-skeleton-type="home"] .sk-tabs,
+.page-skeleton[data-skeleton-type="home"] .sk-feed {
+    width: min(1180px, calc(100% - 2rem));
+    margin: var(--space-lg) auto 0;
+}
+
 .page-skeleton[data-skeleton-type="messages"] .sk-hero { display: none; }
 .page-skeleton[data-skeleton-type="messages"] .sk-tabs { display: none; }
 .page-skeleton[data-skeleton-type="messages"] .sk-post {
@@ -552,6 +579,19 @@
 .page-skeleton[data-skeleton-type="messages"] .sk-post-head { flex: 1; }
 
 .page-skeleton[data-skeleton-type="profile"] .sk-banner { height: 240px; }
+
+.page-skeleton[data-skeleton-type="notifications"] .sk-hero,
+.page-skeleton[data-skeleton-type="notifications"] .sk-tabs,
+.page-skeleton[data-skeleton-type="search"] .sk-hero,
+.page-skeleton[data-skeleton-type="search"] .sk-tabs { display: none; }
+.page-skeleton[data-skeleton-type="notifications"] .sk-post,
+.page-skeleton[data-skeleton-type="search"] .sk-post {
+    min-height: 82px;
+}
+.page-skeleton[data-skeleton-type="notifications"] .sk-post-thumb,
+.page-skeleton[data-skeleton-type="notifications"] .sk-post-actions,
+.page-skeleton[data-skeleton-type="search"] .sk-post-thumb,
+.page-skeleton[data-skeleton-type="search"] .sk-post-actions { display: none; }
 
 .page-skeleton[data-skeleton-type="community"] .sk-post-thumb { height: 220px; }
 
@@ -571,6 +611,58 @@
 .page-skeleton[data-skeleton-type="tournaments"] .sk-tabs { display: none; }
 .page-skeleton[data-skeleton-type="tournaments"] .sk-hero { display: none; }
 
+.page-skeleton[data-skeleton-type="balance"] .sk-banner,
+.page-skeleton[data-skeleton-type="p2p"] .sk-banner,
+.page-skeleton[data-skeleton-type="agent-dashboard"] .sk-banner {
+    height: 190px;
+    border-radius: 28px;
+}
+.page-skeleton[data-skeleton-type="balance"] .sk-hero,
+.page-skeleton[data-skeleton-type="p2p"] .sk-hero,
+.page-skeleton[data-skeleton-type="agent-dashboard"] .sk-hero {
+    border-radius: 28px;
+}
+.page-skeleton[data-skeleton-type="balance"] .sk-feed,
+.page-skeleton[data-skeleton-type="p2p"] .sk-feed,
+.page-skeleton[data-skeleton-type="agent-dashboard"] .sk-feed {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+.page-skeleton[data-skeleton-type="balance"] .sk-post-thumb,
+.page-skeleton[data-skeleton-type="p2p"] .sk-post-thumb,
+.page-skeleton[data-skeleton-type="agent-dashboard"] .sk-post-thumb { height: 110px; }
+
+.page-skeleton[data-skeleton-type="login"] .sk-tabs,
+.page-skeleton[data-skeleton-type="register"] .sk-tabs,
+.page-skeleton[data-skeleton-type="rules"] .sk-tabs,
+.page-skeleton[data-skeleton-type="faq"] .sk-tabs,
+.page-skeleton[data-skeleton-type="how-it-works"] .sk-tabs { display: none; }
+.page-skeleton[data-skeleton-type="login"] .skeleton-container,
+.page-skeleton[data-skeleton-type="register"] .skeleton-container {
+    max-width: 560px;
+}
+.page-skeleton[data-skeleton-type="login"] .sk-hero,
+.page-skeleton[data-skeleton-type="register"] .sk-hero {
+    border-radius: 28px;
+}
+.page-skeleton[data-skeleton-type="login"] .sk-post-thumb,
+.page-skeleton[data-skeleton-type="register"] .sk-post-thumb { display: none; }
+.page-skeleton[data-skeleton-type="rules"] .sk-hero,
+.page-skeleton[data-skeleton-type="faq"] .sk-hero,
+.page-skeleton[data-skeleton-type="how-it-works"] .sk-hero { display: none; }
+.page-skeleton[data-skeleton-type="rules"] .sk-post-thumb,
+.page-skeleton[data-skeleton-type="faq"] .sk-post-thumb,
+.page-skeleton[data-skeleton-type="how-it-works"] .sk-post-thumb { height: 90px; }
+
+.page-skeleton[data-skeleton-type="cart"] .sk-hero,
+.page-skeleton[data-skeleton-type="tournament-room"] .sk-hero,
+.page-skeleton[data-skeleton-type="agent_submit_results"] .sk-hero { display: none; }
+.page-skeleton[data-skeleton-type="cart"] .sk-post,
+.page-skeleton[data-skeleton-type="tournament-room"] .sk-post,
+.page-skeleton[data-skeleton-type="agent_submit_results"] .sk-post {
+    min-height: 120px;
+}
+
 /* Skeleton responsive */
 @media (max-width: 480px) {
     .skeleton-container { padding: var(--space-sm) var(--space-md); gap: var(--space-md); }
@@ -581,6 +673,18 @@
     .sk-post-thumb { height: 130px; }
     .sk-tabs { gap: 0.25rem; }
     .sk-tab { height: 34px; }
+    .page-skeleton[data-skeleton-type="home"] .sk-hero {
+        min-height: 620px;
+        border-radius: 0 0 24px 24px;
+    }
+    .page-skeleton[data-skeleton-type="home"] .sk-banner {
+        height: 620px;
+    }
+    .page-skeleton[data-skeleton-type="home"] .sk-hero-content {
+        margin-top: -500px;
+        width: calc(100% - 2rem);
+        border-radius: 24px;
+    }
 }
 
 /* Smooth visibility transitions for skeleton */

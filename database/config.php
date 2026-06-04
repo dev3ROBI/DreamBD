@@ -55,11 +55,15 @@ class DatabaseConfig {
         return getenv('ENCRYPTION_KEY') ?: 'R1B5KpP+F9k8eZ9rP2sA7m7Y0Z1E2M9F0KJXc3nq8y4='; 
     }
     
-    // SMTP Configuration
-    public static function getSmtpHost() { return getenv('SMTP_HOST') ?: 'smtp.gmail.com'; }
+    // SMTP Configuration (Brevo)
+    public static function getSmtpHost() { return getenv('SMTP_HOST') ?: 'smtp-relay.brevo.com'; }
     public static function getSmtpPort() { return getenv('SMTP_PORT') ?: 587; }
-    public static function getSmtpUser() { return getenv('SMTP_USER') ?: 'noreply@dreambd.com'; }
+    public static function getSmtpUser() { return getenv('SMTP_USER') ?: 'ad8803001@smtp-brevo.com'; }
     public static function getSmtpPass() { return getenv('SMTP_PASS') ?: ''; }
+
+    // reCAPTCHA Configuration
+    const RECAPTCHA_SITE_KEY = '6LewAA0tAAAAAHYT_EzWeqK2p6rZ8Rl07XqJVkXu';
+    const RECAPTCHA_SECRET_KEY = '6LewAA0tAAAAAIFjaFow-sAzq7OfNVucnVwzHGSm';
 }
 
 class Database {
@@ -275,6 +279,12 @@ function ensureTournamentFeatureSchema(PDO $db): void {
     }
 }
 
+// Composer autoload
+$composerAutoload = __DIR__ . '/../vendor/autoload.php';
+if (file_exists($composerAutoload)) {
+    require_once $composerAutoload;
+}
+
 // Global connection testing and auto-schema
 try {
     $db = Database::getInstance()->getConnection();
@@ -317,7 +327,11 @@ try {
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(30) AFTER full_name",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT AFTER phone",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login DATETIME AFTER status",
-            "ALTER TABLE slider_content ADD COLUMN IF NOT EXISTS slider_type ENUM('features','tournament','leaderboard','ads') DEFAULT 'features' AFTER badge"
+            "ALTER TABLE slider_content ADD COLUMN IF NOT EXISTS slider_type ENUM('features','tournament','leaderboard','ads') DEFAULT 'features' AFTER badge",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verification_token VARCHAR(64) DEFAULT NULL AFTER email_verified",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verification_expires DATETIME DEFAULT NULL AFTER email_verification_token",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token VARCHAR(64) DEFAULT NULL AFTER email_verification_expires",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires DATETIME DEFAULT NULL AFTER reset_token"
         ];
         foreach ($migrations as $sql) {
             try { $db->exec($sql); } catch (PDOException $e) {}

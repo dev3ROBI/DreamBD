@@ -168,7 +168,7 @@ try {
 } catch (Throwable $e) {}
 ?>
 
-<div class="home-page home-social-home" data-home-page data-csrf-token="<?php echo htmlspecialchars($homeCsrfToken); ?>">
+<div class="home-page home-social-home" data-home-page data-csrf-token="<?php echo htmlspecialchars($homeCsrfToken); ?>" data-viewer-id="<?php echo (int) ($viewerId ?? 0); ?>">
     <?php if ($sliderEnabled && $homeSlides): ?>
     <section class="home-hero-slider home-hero-slider--social">
         <div class="home-slider-container">

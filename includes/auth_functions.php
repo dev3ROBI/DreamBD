@@ -128,9 +128,11 @@ class Auth {
                 
                 $this->db->commit();
                 
+                $this->sendVerificationEmail((int) $user_id);
+                
                 return [
                     'success' => true,
-                    'message' => 'Registration successful! You can now log in.'
+                    'message' => 'Registration successful! Please check your email to verify your account.'
                 ];
                 
             } catch (PDOException $e) {
@@ -198,6 +200,13 @@ class Auth {
                 return ['success' => false, 'errors' => $errors];
             }
             
+            // Check if email is verified
+            if (!$user['email_verified']) {
+                $errors['global'] = 'Please verify your email before logging in.';
+                $errors['email_verified'] = 'false';
+                return ['success' => false, 'errors' => $errors];
+            }
+
             // Reset login attempts on successful login
             $this->resetLoginAttempts($user['id']);
             
@@ -514,6 +523,139 @@ class Auth {
     private function getLocationFromIP($ip) {
         // Simple implementation
         return "Unknown";
+    }
+
+    public function sendVerificationEmail(int $user_id): array {
+        try {
+            $stmt = $this->db->prepare("SELECT id, username, email, email_verified FROM users WHERE id = ?");
+            $stmt->execute([$user_id]);
+            $user = $stmt->fetch();
+
+            if (!$user) return ['success' => false, 'message' => 'User not found'];
+            if ($user['email_verified']) return ['success' => false, 'message' => 'Email already verified'];
+
+            $token = bin2hex(random_bytes(32));
+            $expires = date('Y-m-d H:i:s', time() + 86400);
+
+            $stmt = $this->db->prepare("UPDATE users SET email_verification_token = ?, email_verification_expires = ? WHERE id = ?");
+            $stmt->execute([$token, $expires, $user_id]);
+
+            $verifyUrl = (getenv('APP_URL') ?: 'http://localhost/Dream') . '/index.php?page=verify&token=' . $token;
+
+            require_once __DIR__ . '/mail_templates.php';
+            require_once __DIR__ . '/mailer.php';
+            $mailer = Mailer::getInstance();
+            $body = MailTemplates::verifyEmail($user['username'], $verifyUrl);
+            $result = $mailer->send($user['email'], 'Verify your DreamBD email', $body);
+
+            if ($result['success']) {
+                $this->logSecurityEvent($user_id, 'verification_sent', ['email' => $user['email']]);
+            }
+            return $result;
+        } catch (PDOException $e) {
+            error_log("Verification email error: " . $e->getMessage());
+            return ['success' => false, 'message' => 'Failed to send verification email'];
+        }
+    }
+
+    public function verifyEmail(string $token): array {
+        try {
+            $stmt = $this->db->prepare("SELECT id, username, email, email_verified, email_verification_expires FROM users WHERE email_verification_token = ? LIMIT 1");
+            $stmt->execute([$token]);
+            $user = $stmt->fetch();
+
+            if (!$user) return ['success' => false, 'message' => 'Invalid verification link'];
+
+            if ($user['email_verified']) return ['success' => true, 'message' => 'Email already verified'];
+
+            if (strtotime($user['email_verification_expires']) < time()) {
+                return ['success' => false, 'message' => 'Verification link has expired. Request a new one.'];
+            }
+
+            $stmt = $this->db->prepare("UPDATE users SET email_verified = 1, email_verification_token = NULL, email_verification_expires = NULL WHERE id = ?");
+            $stmt->execute([$user['id']]);
+
+            $this->logSecurityEvent($user['id'], 'email_verified', ['email' => $user['email']]);
+
+            require_once __DIR__ . '/mail_templates.php';
+            require_once __DIR__ . '/mailer.php';
+            $mailer = Mailer::getInstance();
+            $body = MailTemplates::welcomeVerified($user['username']);
+            $mailer->send($user['email'], 'Welcome to DreamBD!', $body);
+
+            return ['success' => true, 'message' => 'Email verified successfully!'];
+        } catch (PDOException $e) {
+            error_log("Verify email error: " . $e->getMessage());
+            return ['success' => false, 'message' => 'Verification failed. Please try again.'];
+        }
+    }
+
+    public function sendPasswordResetEmail(string $email): array {
+        try {
+            $stmt = $this->db->prepare("SELECT id, username, email FROM users WHERE email = ? LIMIT 1");
+            $stmt->execute([$email]);
+            $user = $stmt->fetch();
+
+            if (!$user) {
+                return ['success' => false, 'message' => 'If that email is registered, we\'ve sent a reset link.'];
+            }
+
+            $token = bin2hex(random_bytes(32));
+            $expires = date('Y-m-d H:i:s', time() + 3600);
+
+            $stmt = $this->db->prepare("UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE id = ?");
+            $stmt->execute([$token, $expires, $user['id']]);
+
+            $resetUrl = (getenv('APP_URL') ?: 'http://localhost/Dream') . '/index.php?page=reset_password&token=' . $token;
+
+            require_once __DIR__ . '/mail_templates.php';
+            require_once __DIR__ . '/mailer.php';
+            $mailer = Mailer::getInstance();
+            $body = MailTemplates::resetPassword($user['username'], $resetUrl);
+            $result = $mailer->send($user['email'], 'Reset your DreamBD password', $body);
+
+            if ($result['success']) {
+                $this->logSecurityEvent($user['id'], 'password_reset_requested', ['email' => $user['email']]);
+            }
+            return ['success' => false, 'message' => 'If that email is registered, we\'ve sent a reset link.'];
+        } catch (PDOException $e) {
+            error_log("Password reset email error: " . $e->getMessage());
+            return ['success' => false, 'message' => 'Failed to send reset email'];
+        }
+    }
+
+    public function resetPassword(string $token, string $new_password): array {
+        try {
+            $stmt = $this->db->prepare("SELECT id, username, email, reset_token_expires FROM users WHERE reset_token = ? LIMIT 1");
+            $stmt->execute([$token]);
+            $user = $stmt->fetch();
+
+            if (!$user) return ['success' => false, 'message' => 'Invalid reset link'];
+
+            if (strtotime($user['reset_token_expires']) < time()) {
+                return ['success' => false, 'message' => 'Reset link has expired. Request a new one.'];
+            }
+
+            if (strlen($new_password) < 8) {
+                return ['success' => false, 'message' => 'Password must be at least 8 characters'];
+            }
+
+            $password_hash = password_hash($new_password, PASSWORD_BCRYPT, ['cost' => 12]);
+
+            $stmt = $this->db->prepare("UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expires = NULL, login_attempts = 0, locked_until = NULL WHERE id = ?");
+            $stmt->execute([$password_hash, $user['id']]);
+
+            $this->logSecurityEvent($user['id'], 'password_reset_completed', ['email' => $user['email']]);
+
+            return ['success' => true, 'message' => 'Password reset successfully! You can now log in.'];
+        } catch (PDOException $e) {
+            error_log("Reset password error: " . $e->getMessage());
+            return ['success' => false, 'message' => 'Reset failed. Please try again.'];
+        }
+    }
+
+    public function resendVerification(int $user_id): array {
+        return $this->sendVerificationEmail($user_id);
     }
 
     private function normalizePhone($phone) {

@@ -10,7 +10,10 @@ class DreamBDApp {
     }
 
     async init() {
-        if (this.isInitialized) return;
+        if (this.isInitialized) {
+            await this.refreshPage();
+            return;
+        }
         
         
         
@@ -78,6 +81,25 @@ class DreamBDApp {
             try {
                 await initScript();
             } catch (error) {}
+        }
+    }
+
+    async refreshPage(pageName = null) {
+        const urlParams = new URLSearchParams(window.location.search);
+        this.currentPage = pageName || this.currentPage || urlParams.get('page') || 'home';
+
+        await this.initPageComponents();
+        this.initFormValidation();
+        this.initAnimations();
+
+        if (typeof window.initCommunity === 'function') {
+            window.initCommunity();
+        }
+        if (window.AuthHandler && typeof window.AuthHandler.initPageEnhancements === 'function') {
+            window.AuthHandler.initPageEnhancements();
+        }
+        if (window.DreamBDNavbar && typeof window.DreamBDNavbar.init === 'function') {
+            window.DreamBDNavbar.init();
         }
     }
 
@@ -960,8 +982,8 @@ class DreamBDApp {
         // Update current page
         this.currentPage = pageData.page;
         
-        // Reinitialize page-specific components
-        this.initPageComponents();
+        // Reinitialize page-specific components and injected-page enhancements
+        this.refreshPage(pageData.page);
         
         // Dispatch custom event
         this.dispatchEvent('pageContentLoaded', pageData);

@@ -14,6 +14,7 @@ class AjaxNavigation {
     init() {
         const urlParams = new URLSearchParams(window.location.search);
         this.currentPage = urlParams.get('page') || 'home';
+        this.fullReloadPages = true;
         
         this.setupNavigation();
         this.setupHistory();
@@ -49,26 +50,20 @@ class AjaxNavigation {
         }
     }
 
+    requiresFullReload(page) {
+        return true;
+    }
+
     setupNavigation() {
         document.addEventListener('click', (e) => {
             if (e.defaultPrevented) return;
             const link = e.target.closest('a');
             if (!link) return;
             if (this.shouldSkipLink(link)) return;
-            if (link.hasAttribute('data-no-ajax')) return;
-
             const href = link.getAttribute('href');
             const explicitPage = link.getAttribute('data-page');
             const page = explicitPage || this.extractPageFromHref(href);
-            if (!page) return;
-
-            e.preventDefault();
-
-            const now = Date.now();
-            if (now - this.lastNavigationTime < 300) return;
-            this.lastNavigationTime = now;
-
-            this.addToNavigationQueue(page, href, true);
+            this.showSkeleton(page || 'default');
         });
 
         document.addEventListener('submit', (e) => {
@@ -118,7 +113,7 @@ class AjaxNavigation {
             const page = urlParams.get('page') || 'home';
             if (page !== this.currentPage) {
                 this.showSkeleton(page);
-                this.addToNavigationQueue(page, window.location.href, false);
+                window.location.href = window.location.href;
             }
         });
 
@@ -152,11 +147,12 @@ class AjaxNavigation {
         document.documentElement.style.overflow = '';
     }
 
-    executeScripts(container) {
+    async executeScripts(container) {
         if (!container) return;
         
         const scripts = container.querySelectorAll('script');
-        scripts.forEach(oldScript => {
+        for (const oldScript of scripts) {
+            await new Promise((resolve) => {
             const newScript = document.createElement('script');
             
             // Copy attributes
@@ -168,6 +164,8 @@ class AjaxNavigation {
                 // For external scripts
                 newScript.src = oldScript.src;
                 newScript.async = false; // Maintain execution order
+                newScript.onload = resolve;
+                newScript.onerror = resolve;
             } else {
                 // For inline scripts, wrap in a way that handles DOMContentLoaded
                 let content = oldScript.textContent;
@@ -197,9 +195,43 @@ class AjaxNavigation {
                     })();`;
                 }
                 newScript.textContent = content;
+                resolve();
             }
             
             oldScript.parentNode.replaceChild(newScript, oldScript);
+            });
+        }
+    }
+
+    runPageInitializers(page) {
+        const initTasks = [
+            () => window.DreamBD?.refreshPage?.(page),
+            () => window.DreamBDNavbar?.init?.(),
+            () => window.initCommunity?.(),
+            () => window.AuthHandler?.initPageEnhancements?.()
+        ];
+
+        if (page === 'home') {
+            initTasks.push(() => window.maybeInitHomePage?.(true));
+        }
+
+        if (page === 'profile') {
+            initTasks.push(() => {
+                if (typeof window.tryInitProfile === 'function') {
+                    window.resetProfileInitAttempts?.();
+                    window.tryInitProfile();
+                } else if (typeof window.initProfileManager === 'function') {
+                    window.initProfileManager();
+                }
+            });
+        }
+
+        initTasks.forEach((task) => {
+            try {
+                task();
+            } catch (error) {
+                console.error('Page initializer failed:', error);
+            }
         });
     }
 
@@ -208,6 +240,11 @@ class AjaxNavigation {
         const contentArea = document.getElementById('pageContent');
 
         try {
+            if (this.requiresFullReload(page)) {
+                window.location.href = href || `index.php?page=${page}`;
+                return;
+            }
+
             if (!navigator.onLine) {
                 throw new Error('No internet connection');
             }
@@ -265,7 +302,7 @@ class AjaxNavigation {
                 });
                 
                 // Execute scripts in the new content
-                this.executeScripts(contentArea);
+                await this.executeScripts(contentArea);
 
                 // Dispatch events AFTER scripts are executed
                 setTimeout(() => {
@@ -274,15 +311,6 @@ class AjaxNavigation {
                         navigationId: navigationId,
                         data: data
                     });
-                    
-                    this.dispatchPageEvent('pageChanged', {
-                        page: page,
-                        data: data,
-                        timestamp: Date.now(),
-                        navigationId: navigationId
-                    });
-                    
-                    this.initializePageScripts();
                 }, 50);
             }
 
@@ -310,6 +338,7 @@ class AjaxNavigation {
                     navigationId: navigationId
                 });
                 this.initializePageScripts();
+                this.runPageInitializers(page);
                 this.updateBrowserPerformance();
                 contentArea.classList.remove('content-entering');
                 contentArea.classList.add('content-entered');
@@ -508,11 +537,13 @@ class AjaxNavigation {
     }
 
     navigate(page, href = `?page=${page}`) {
-        return this.addToNavigationQueue(page, href, true);
+        this.showSkeleton(page);
+        window.location.href = href || `index.php?page=${page}`;
     }
 
     reload() {
-        this.addToNavigationQueue(this.currentPage, window.location.href, false);
+        this.showSkeleton(this.currentPage);
+        window.location.reload();
     }
 
     getCurrentPage() {

@@ -635,21 +635,17 @@ function getCommentReactionSummary(PDO $pdo, int $commentId): array {
 function getPostDetails(PDO $pdo, int $postId, int $viewerId): ?array {
     $stmt = $pdo->prepare("
         SELECT
-            p.*,
+            p.id, p.user_id, p.content, p.image_path, p.privacy, p.created_at, p.updated_at,
             u.username,
             u.full_name,
             u.avatar,
-            COUNT(DISTINCT pl.id) AS like_count,
-            COUNT(DISTINCT pc.id) AS comment_count,
-            COUNT(DISTINCT ps.id) AS share_count,
-            MAX(CASE WHEN pl.user_id = ? THEN pl.reaction_type ELSE NULL END) AS viewer_reaction
+            (SELECT COUNT(DISTINCT pl2.id) FROM post_likes pl2 WHERE pl2.post_id = p.id) AS like_count,
+            (SELECT COUNT(DISTINCT pc2.id) FROM post_comments pc2 WHERE pc2.post_id = p.id) AS comment_count,
+            (SELECT COUNT(DISTINCT ps2.id) FROM post_shares ps2 WHERE ps2.post_id = p.id) AS share_count,
+            (SELECT pl3.reaction_type FROM post_likes pl3 WHERE pl3.post_id = p.id AND pl3.user_id = ? LIMIT 1) AS viewer_reaction
         FROM posts p
         INNER JOIN users u ON u.id = p.user_id
-        LEFT JOIN post_likes pl ON pl.post_id = p.id
-        LEFT JOIN post_comments pc ON pc.post_id = p.id
-        LEFT JOIN post_shares ps ON ps.post_id = p.id
         WHERE p.id = ?
-        GROUP BY p.id
         LIMIT 1
     ");
     $stmt->execute([$viewerId, $postId]);

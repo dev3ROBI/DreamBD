@@ -6,8 +6,8 @@ const DreamBDNavbar = {
         this._el = {
             menuToggle: document.getElementById('mobileMenuToggle'),
             mobileMenu: document.getElementById('mobileMenu'),
-            mobileClose: document.getElementById('mobileMenuClose'),
-            mobileOverlay: document.getElementById('mobileBlurOverlay'),
+            mobileClose: document.getElementById('mobileMenuClose') || document.getElementById('closeMenu'),
+            mobileOverlay: document.getElementById('mobileBlurOverlay') || document.getElementById('mobileOverlay'),
             siteDialogBackdrop: document.getElementById('siteDialogBackdrop'),
             settingsDialog: document.getElementById('globalSettingsDialog'),
             logoutDialog: document.getElementById('logoutConfirmDialog'),
@@ -27,6 +27,72 @@ const DreamBDNavbar = {
 
         var el = this._el;
         if (!el.menuToggle || !el.mobileMenu) return;
+
+        var isOpen = function() {
+            return el.mobileMenu.classList.contains('is-open') || el.mobileMenu.classList.contains('active');
+        };
+
+        var closeMobileMenu = function() {
+            el.mobileMenu.classList.remove('is-open', 'active');
+            el.mobileMenu.classList.add('is-closing');
+            el.mobileOverlay?.classList.remove('is-visible', 'active');
+            el.mobileOverlay?.classList.add('is-closing');
+            el.menuToggle.setAttribute('aria-expanded', 'false');
+            document.body.classList.remove('dream-mobile-menu-open');
+            document.body.style.overflow = '';
+
+            window.setTimeout(function() {
+                el.mobileMenu.classList.remove('is-closing');
+                el.mobileOverlay?.classList.remove('is-closing');
+            }, 220);
+        };
+
+        var openMobileMenu = function() {
+            el.mobileMenu.classList.remove('is-closing');
+            el.mobileMenu.classList.add('is-open', 'active');
+            el.mobileOverlay?.classList.remove('is-closing');
+            el.mobileOverlay?.classList.add('is-visible', 'active');
+            el.menuToggle.setAttribute('aria-expanded', 'true');
+            document.body.classList.add('dream-mobile-menu-open');
+            document.body.style.overflow = 'hidden';
+        };
+
+        var toggleMobileMenu = function() {
+            if (isOpen()) closeMobileMenu();
+            else openMobileMenu();
+        };
+
+        var hideAllDialogs = function() {
+            [el.settingsDialog, el.logoutDialog].forEach(function(dialog) {
+                if (!dialog) return;
+                dialog.hidden = true;
+                dialog.classList.add('hidden');
+                dialog.classList.remove('grid', 'flex');
+            });
+            if (el.siteDialogBackdrop) {
+                el.siteDialogBackdrop.hidden = true;
+                el.siteDialogBackdrop.classList.add('hidden');
+            }
+            document.documentElement.classList.remove('dialog-open');
+            document.body.classList.remove('dialog-open');
+            document.body.style.position = '';
+            document.body.style.width = '';
+            document.body.style.top = '';
+        };
+
+        var showDialog = function(dialog) {
+            hideAllDialogs();
+            if (!dialog) return;
+            dialog.hidden = false;
+            dialog.classList.remove('hidden', 'flex');
+            dialog.classList.add('grid');
+            if (el.siteDialogBackdrop) {
+                el.siteDialogBackdrop.hidden = false;
+                el.siteDialogBackdrop.classList.remove('hidden');
+            }
+            document.documentElement.classList.add('dialog-open');
+            document.body.classList.add('dialog-open');
+        };
 
         // --- Search System ---
         this._search = {
@@ -432,3 +498,5 @@ const DreamBDNavbar = {
 document.addEventListener('DOMContentLoaded', function() {
     DreamBDNavbar.init();
 });
+
+window.DreamBDNavbar = DreamBDNavbar;

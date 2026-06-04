@@ -15,7 +15,7 @@ $isLoggedIn = $auth->isLoggedIn();
 $user_name = $isLoggedIn ? ($_SESSION['full_name'] ?? $_SESSION['username'] ?? null) : null;
 
 $page = $_GET['page'] ?? 'home';
-$allowed_pages = ['home', 'community', 'products', 'tournaments', 'tournament-room', 'how-it-works', 'cart', 'login', 'register', 'rules', 'faq', 'profile', 'messages', 'notifications', 'search', 'agent-dashboard', 'balance', 'p2p', 'admin', 'agent_submit_results'];
+$allowed_pages = ['home', 'community', 'products', 'tournaments', 'tournament-room', 'how-it-works', 'cart', 'login', 'register', 'rules', 'faq', 'profile', 'messages', 'notifications', 'search', 'agent-dashboard', 'balance', 'p2p', 'admin', 'agent_submit_results', 'verify', 'reset_password'];
 $page = in_array($page, $allowed_pages) ? $page : 'home';
 
 $is_ajax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && 
@@ -109,6 +109,9 @@ $themeAttr = htmlspecialchars($theme, ENT_QUOTES, 'UTF-8');
     
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <!-- Google reCAPTCHA v2 -->
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
     
     <!-- Custom CSS -->
     <link rel="stylesheet" href="<?php echo dream_asset('assets/css/style.css'); ?>">
@@ -129,7 +132,7 @@ $themeAttr = htmlspecialchars($theme, ENT_QUOTES, 'UTF-8');
         });
     </script>
 </head>
-<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300" id="body" data-csrf-token="<?php echo htmlspecialchars($csrf_token); ?>">
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300" id="body" data-csrf-token="<?php echo htmlspecialchars($csrf_token); ?>" data-logged-in="<?php echo $isLoggedIn ? '1' : '0'; ?>">
     
     <!-- Navigation -->
     <?php include 'includes/navbar.php'; ?>
@@ -481,45 +484,39 @@ $themeAttr = htmlspecialchars($theme, ENT_QUOTES, 'UTF-8');
     </div>
     
     <!-- Forgot Password Modal -->
-    <div class="auth-modal hidden fixed inset-0 z-50 items-center justify-center" id="forgotPasswordModal">
-        <div class="modal-content bg-white dark:bg-gray-900 rounded-3xl p-8 max-w-md w-full mx-4 relative">
-            <button class="modal-close absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" data-modal-close="forgotPassword" aria-label="Close modal">
-                <i class="fas fa-times text-xl"></i>
+    <div class="auth-modal hidden fixed inset-0 z-50 items-center justify-center" id="forgotPasswordModal" style="display:none">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 max-w-sm w-full mx-4 relative">
+            <button class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" data-modal-close="forgotPassword" aria-label="Close modal">
+                <i class="fas fa-times"></i>
             </button>
             
-            <div class="modal-header text-center mb-6">
-                <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl mb-4">
-                    <i class="fas fa-key text-2xl text-white"></i>
+            <div class="text-center mb-5">
+                <div class="inline-flex items-center justify-center w-11 h-11 bg-blue-600 rounded-full mb-3">
+                    <i class="fas fa-key text-base text-white"></i>
                 </div>
-                <h2 class="modal-title text-2xl font-bold text-gray-900 dark:text-white">Reset Password</h2>
-                <p class="modal-subtitle text-gray-600 dark:text-gray-400 mt-2">Enter your email and we'll send you a link to reset your password</p>
+                <h2 class="text-lg font-bold text-gray-900 dark:text-white">Reset Password</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Enter your email and we'll send you a reset link</p>
             </div>
             
-            <form method="POST" action="handlers/forgot_password_handler.php" class="auth-form space-y-5" id="forgotPasswordForm" data-ajax-form="true" novalidate>
+            <form method="POST" action="handlers/forgot_handler.php" id="forgotPasswordForm" data-ajax-form="true" novalidate>
                 <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
                 
-                <div class="form-group">
-                    <div class="relative group">
-                        <i class="fas fa-envelope absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors text-lg z-10"></i>
-                        <input type="email" id="reset_email" name="email" 
-                               class="w-full min-h-[52px] pl-12 pr-4 py-3 text-base bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-all" 
-                               placeholder="your@email.com" autocomplete="email" required>
-                    </div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Enter the email associated with your account</div>
+                <div class="mb-4">
+                    <label for="reset_email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email address</label>
+                    <input type="email" id="reset_email" name="email" required autocomplete="email"
+                           class="block w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                           placeholder="you@example.com">
                 </div>
                 
-                <button type="submit" class="w-full relative overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold py-3 px-6 rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 hover:-translate-y-1 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 transition-all duration-300 text-base group">
-                    <span class="btn-text group-hover:tracking-wide transition-all">Send Reset Link</span>
-                    <div class="btn-loader hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                        <div class="w-6 h-6 border-2 border-white/30 rounded-full border-t-white animate-spin"></div>
-                    </div>
+                <button type="submit" class="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                    <span class="btn-text">Send Reset Link</span>
+                    <span class="btn-loader hidden"><i class="fas fa-spinner fa-spin"></i> Sending...</span>
                 </button>
                 
-                <div class="auth-footer text-center">
-                    <p class="text-gray-600 dark:text-gray-400">Remember your password?
-                        <a href="index.php?page=login" class="text-blue-500 hover:underline font-medium">Sign in here</a>
-                    </p>
-                </div>
+                <p class="text-center text-sm text-gray-500 dark:text-gray-400 mt-4">
+                    Remember your password?
+                    <a href="index.php?page=login" class="text-blue-600 hover:underline font-medium">Sign in</a>
+                </p>
             </form>
         </div>
     </div>

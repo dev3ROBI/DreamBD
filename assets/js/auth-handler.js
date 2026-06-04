@@ -3,58 +3,23 @@
 class AuthHandler {
     constructor() {
         this.isInitialized = false;
-        // Don't call init() in constructor - wait for DOM ready
     }
     
-    async init() {
+    init() {
         if (this.isInitialized) return;
         this.isInitialized = true;
         
-        
-        
         // Handle all auth form submissions
         document.addEventListener('submit', (e) => {
             const form = e.target;
             if (!form || !form.hasAttribute('data-ajax-form')) return;
-            
             e.preventDefault();
             this.handleAuthFormSubmit(form);
         });
         
-        // Handle password toggles (event delegation - works for AJAX loaded content)
         this.initPasswordToggles();
-        
-        // Handle modals
         this.initModals();
-        
-        // Initialize page-specific enhancements
         this.initPageEnhancements();
-        
-        
-    }
-
-    init() {
-        
-        
-        // Handle all auth form submissions
-        document.addEventListener('submit', (e) => {
-            const form = e.target;
-            if (!form || !form.hasAttribute('data-ajax-form')) return;
-            
-            e.preventDefault();
-            this.handleAuthFormSubmit(form);
-        });
-        
-        // Handle password toggles (event delegation - works for AJAX loaded content)
-        this.initPasswordToggles();
-        
-        // Handle modals
-        this.initModals();
-        
-        // Initialize page-specific enhancements
-        this.initPageEnhancements();
-        
-        
     }
     
     initPageEnhancements() {
@@ -152,34 +117,18 @@ class AuthHandler {
         const passwordInput = document.getElementById('password');
         if (!passwordInput) return;
         
-        const strengthMeter = document.getElementById('passwordStrength');
         const strengthFill = document.getElementById('strengthFill');
         const strengthText = document.getElementById('strengthText');
-        const container = passwordInput.closest('[class*="has-error"]') || passwordInput.parentElement?.parentElement;
-        
-        if (!strengthMeter) return;
+        if (!strengthFill || !strengthText) return;
         
         passwordInput.addEventListener('input', function() {
             const password = this.value;
             const strength = checkPasswordStrength(password);
             
-            // Update container classes
-            if (container) {
-                const classes = container.className.split(' ').filter(c => !c.match(/^bg-\w+-\d+\/10$|^border-\w+-\d+$/));
-                container.className = classes.join(' ') + ' ' + strength.bgClass;
-            }
-            
-            // Update meter
-            if (strengthFill) {
-                strengthFill.className = 'h-full rounded-full transition-all duration-300 ' + strength.fillClass;
-                strengthFill.style.width = strength.percent + '%';
-            }
-            
-            // Update text
-            if (strengthText) {
-                strengthText.className = 'font-semibold transition-colors duration-300 ' + strength.textClass;
-                strengthText.textContent = strength.label;
-            }
+            strengthFill.style.width = strength.percent + '%';
+            strengthFill.className = 'h-full rounded-full transition-all duration-300 ' + strength.fillClass;
+            strengthText.textContent = strength.label;
+            strengthText.style.color = strength.color;
         });
     }
     
@@ -187,7 +136,6 @@ class AuthHandler {
         const passwordInput = document.getElementById('password');
         const confirmInput = document.getElementById('confirm_password');
         const matchDiv = document.getElementById('passwordMatch');
-        const matchIcon = document.getElementById('matchIcon');
         const matchText = document.getElementById('matchText');
         
         if (!confirmInput || !matchDiv) return;
@@ -204,13 +152,9 @@ class AuthHandler {
             matchDiv.classList.remove('hidden');
             
             if (pass === confirm && pass.length > 0) {
-                matchIcon.className = 'fas fa-check-circle text-green-500';
-                matchText.className = 'text-green-600 dark:text-green-400';
-                matchText.textContent = 'Passwords match';
+                matchText.innerHTML = '<span class="text-green-600 dark:text-green-400"><i class="fas fa-check-circle"></i> Passwords match</span>';
             } else {
-                matchIcon.className = 'fas fa-times-circle text-red-500';
-                matchText.className = 'text-red-500';
-                matchText.textContent = 'Passwords do not match';
+                matchText.innerHTML = '<span class="text-red-500"><i class="fas fa-times-circle"></i> Passwords do not match</span>';
             }
         };
         
@@ -377,23 +321,20 @@ class AuthHandler {
         const modal = document.getElementById(modalId);
         if (!modal) return;
         
-        // Prevent body scroll
         document.body.style.overflow = 'hidden';
         
-        // Show modal overlay
         const overlay = document.getElementById('modalOverlay');
         if (overlay) {
-            overlay.style.display = 'block';
+            overlay.classList.remove('hidden');
             overlay.classList.add('active');
         }
         
-        // Show modal
+        modal.classList.remove('hidden');
         modal.style.display = 'flex';
         setTimeout(() => {
             modal.classList.add('active');
         }, 10);
         
-        // Focus first input
         const firstInput = modal.querySelector('input');
         if (firstInput) {
             setTimeout(() => firstInput.focus(), 50);
@@ -405,34 +346,44 @@ class AuthHandler {
         if (!modal) return;
         
         modal.classList.remove('active');
-        
-        // Allow body scroll
         document.body.style.overflow = '';
         
-        // Hide modal overlay if no other modals are active
         const activeModals = document.querySelectorAll('.auth-modal.active');
         if (activeModals.length === 0) {
             const overlay = document.getElementById('modalOverlay');
             if (overlay) {
-                overlay.style.display = 'none';
+                overlay.classList.add('hidden');
                 overlay.classList.remove('active');
             }
         }
         
         setTimeout(() => {
-            modal.style.display = 'none';
+            modal.classList.add('hidden');
+            modal.style.display = '';
         }, 300);
     }
     
     async handleAuthFormSubmit(form) {
-        // Validate form first
-        if (!this.validateForm(form)) {
-            return;
+        if (!this.validateForm(form)) return;
+
+        const recaptchaError = form.querySelector('#recaptchaError');
+        if (recaptchaError) {
+            recaptchaError.textContent = '';
+            recaptchaError.classList.add('hidden');
         }
         
         const formData = new FormData(form);
         const submitBtn = form.querySelector('[type="submit"]');
         const formAction = form.getAttribute('action') || form.action;
+        
+        // Loading state
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            const text = submitBtn.querySelector('.btn-text');
+            const loader = submitBtn.querySelector('.btn-loader');
+            if (text) text.classList.add('hidden');
+            if (loader) loader.classList.remove('hidden');
+        }
         
         try {
             const response = await fetch(formAction, {
@@ -455,24 +406,30 @@ class AuthHandler {
             }
             
             if (result.success) {
-                // Show success message
                 this.showAlert(form, result.message || 'Success!', 'success');
-                
-                // Handle redirect — always full reload so navbar updates
+
+                if (typeof grecaptcha !== 'undefined') {
+                    grecaptcha.reset();
+                }
+
                 if (result.redirect) {
                     setTimeout(function() {
                         window.location.href = result.redirect;
                     }, 800);
                 }
-                
-                // Clear form if needed
+
                 if (result.clearForm) {
                     form.reset();
                 }
                 
             } else {
-                // Show error message
-                this.showAlert(form, result.message || 'An error occurred', 'error');
+                // Check for email verification error
+                if (result.email_verified === false) {
+                    // Show special alert with resend button
+                    this.showVerificationAlert(form, result.message || 'Please verify your email');
+                } else {
+                    this.showAlert(form, result.message || 'An error occurred', 'error');
+                }
                 
                 // Show field errors
                 if (result.errors) {
@@ -481,12 +438,16 @@ class AuthHandler {
             }
             
         } catch (error) {
-            
-            
-            
-            
-            // Show error message
-            this.showAlert(form, 'Network error. Please try again. Check console for details.', 'error');
+            this.showAlert(form, 'Network error. Please try again.', 'error');
+        }
+        
+        // Restore button
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            const text = submitBtn.querySelector('.btn-text');
+            const loader = submitBtn.querySelector('.btn-loader');
+            if (text) text.classList.remove('hidden');
+            if (loader) loader.classList.add('hidden');
         }
     }
     
@@ -494,8 +455,7 @@ class AuthHandler {
         let isValid = true;
         const requiredInputs = form.querySelectorAll('[required]');
         
-        // Clear previous errors
-        const errorElements = form.querySelectorAll('.form-error');
+        const errorElements = form.querySelectorAll('.dynamic-error');
         errorElements.forEach(el => el.remove());
         
         // Check each required field
@@ -567,43 +527,79 @@ class AuthHandler {
     }
     
     showFieldError(input, message) {
-        const fieldGroup = input.closest('[class*="has-error"]') || input.closest('.relative')?.parentElement || input.parentElement;
+        const wrapper = input.closest('div')?.parentElement || input.parentElement;
 
-        // Remove existing dynamic error
-        const existingError = fieldGroup.parentElement?.querySelector('.dynamic-error');
-        if (existingError) {
-            existingError.remove();
-        }
-        
-        // Add error styling to input
+        const existingError = wrapper.querySelector('.dynamic-error');
+        if (existingError) existingError.remove();
+
         input.classList.add('border-red-500', 'bg-red-50', 'dark:bg-red-900/10');
-        input.classList.remove('border-gray-200', 'dark:border-gray-700', 'border-blue-500');
-        
-        // Create error message matching Tailwind design
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'flex items-center gap-1.5 text-red-500 text-xs mt-2 pl-1 animate-[slideIn_0.3s_ease-out] dynamic-error';
-        errorDiv.innerHTML = `<i class="fas fa-exclamation-circle text-[10px] animate-pulse"></i> ${message}`;
+        input.classList.remove('border-gray-300', 'dark:border-gray-600', 'border-blue-500', 'focus:border-transparent');
 
-        // Insert after the input's parent (which contains the input and hint)
-        const inputParent = input.parentElement;
-        const hintBlock = inputParent.parentElement?.querySelector('.text-xs.text-gray-500');
-        
-        if (hintBlock && hintBlock.parentElement === inputParent.parentElement) {
-            hintBlock.insertAdjacentElement('afterend', errorDiv);
+        const errorP = document.createElement('p');
+        errorP.className = 'mt-1 text-xs text-red-500 dynamic-error';
+        errorP.textContent = message;
+
+        const hint = wrapper.querySelector('.text-xs.text-gray-400');
+        if (hint && hint.parentElement === wrapper) {
+            hint.insertAdjacentElement('afterend', errorP);
         } else {
-            inputParent.parentElement?.appendChild(errorDiv);
+            input.insertAdjacentElement('afterend', errorP);
         }
     }
     
     showFieldErrors(form, errors) {
         Object.entries(errors).forEach(([fieldName, errorMessage]) => {
-            const field = form.querySelector(`[name="${fieldName}"]`);
-            if (field) {
-                this.showFieldError(field, errorMessage);
+            if (fieldName === 'recaptcha') {
+                const errorDiv = form.querySelector('#recaptchaError');
+                if (errorDiv) {
+                    errorDiv.textContent = errorMessage;
+                    errorDiv.classList.remove('hidden');
+                }
+            } else {
+                const field = form.querySelector(`[name="${fieldName}"]`);
+                if (field) {
+                    this.showFieldError(field, errorMessage);
+                }
             }
         });
     }
     
+    showVerificationAlert(form, message) {
+        const existingAlerts = form.querySelectorAll('.auth-alert');
+        existingAlerts.forEach(alert => alert.remove());
+
+        const div = document.createElement('div');
+        div.className = 'auth-alert flex items-start gap-2 p-3 mb-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-sm';
+        div.innerHTML = `
+            <i class="fas fa-envelope text-amber-500 mt-0.5 flex-shrink-0"></i>
+            <div class="flex-1">
+                <span class="text-amber-700 dark:text-amber-300">${message}</span>
+                <button type="button" class="mt-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 underline" onclick="resendVerificationEmail(event)">Resend verification email</button>
+            </div>
+            <button type="button" onclick="this.parentElement.remove()" class="text-amber-400 hover:text-amber-600 flex-shrink-0"><i class="fas fa-times"></i></button>
+        `;
+        form.insertBefore(div, form.firstChild);
+    }
+
+    showAlert(form, message, type = 'success') {
+        const existingAlerts = form.querySelectorAll('.auth-alert');
+        existingAlerts.forEach(alert => alert.remove());
+
+        const isSuccess = type === 'success';
+        const div = document.createElement('div');
+        div.className = `auth-alert flex items-start gap-2 p-3 mb-4 border rounded-lg text-sm ${isSuccess ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'}`;
+        div.innerHTML = `
+            <i class="fas fa-${isSuccess ? 'check-circle' : 'exclamation-circle'} text-${isSuccess ? 'green' : 'red'}-500 mt-0.5 flex-shrink-0"></i>
+            <span class="text-${isSuccess ? 'green' : 'red'}-700 dark:text-${isSuccess ? 'green' : 'red'}-300 flex-1">${message}</span>
+            <button type="button" onclick="this.parentElement.remove()" class="text-${isSuccess ? 'green' : 'red'}-400 hover:text-${isSuccess ? 'green' : 'red'}-600 flex-shrink-0"><i class="fas fa-times"></i></button>
+        `;
+        form.insertBefore(div, form.firstChild);
+
+        if (isSuccess) {
+            setTimeout(() => { div.style.opacity = '0'; div.style.transition = 'opacity 0.3s'; setTimeout(() => div.remove(), 300); }, 5000);
+        }
+    }
+
     showAlert(form, message, type = 'success') {
         // Remove existing alerts
         const existingAlerts = form.querySelectorAll('.auth-alert');
@@ -646,9 +642,8 @@ function checkPasswordStrength(password) {
             level: 'none', 
             percent: 0, 
             label: 'None',
-            bgClass: 'bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-800',
-            fillClass: 'bg-gray-300 dark:bg-gray-700',
-            textClass: 'text-gray-500 dark:text-gray-400'
+            fillClass: 'bg-gray-300 dark:bg-gray-600',
+            color: '#9ca3af'
         };
     }
 
@@ -663,35 +658,63 @@ function checkPasswordStrength(password) {
         level: 'weak', 
         percent: 25, 
         label: 'Weak',
-        bgClass: 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-800',
         fillClass: 'bg-red-500',
-        textClass: 'text-red-500'
+        color: '#ef4444'
     };
     if (score <= 2) return { 
         level: 'fair', 
         percent: 50, 
         label: 'Fair',
-        bgClass: 'bg-yellow-50 dark:bg-yellow-900/10 border-yellow-100 dark:border-yellow-800',
         fillClass: 'bg-yellow-500',
-        textClass: 'text-yellow-600'
+        color: '#eab308'
     };
     if (score <= 3) return { 
         level: 'good', 
         percent: 75, 
         label: 'Good',
-        bgClass: 'bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-800',
         fillClass: 'bg-blue-500',
-        textClass: 'text-blue-600'
+        color: '#3b82f6'
     };
     return { 
         level: 'strong', 
         percent: 100, 
         label: 'Strong',
-        bgClass: 'bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-800',
         fillClass: 'bg-green-500',
-        textClass: 'text-green-600'
+        color: '#22c55e'
     };
 }
+
+// Global function to resend verification email
+window.resendVerificationEmail = async function(e) {
+    if (e) e.preventDefault();
+    const btn = e ? e.currentTarget : null;
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Sending...';
+    }
+    try {
+        const csrfToken = document.getElementById('body')?.getAttribute('data-csrf-token') || '';
+        const formData = new FormData();
+        formData.append('csrf_token', csrfToken);
+        
+        const response = await fetch('handlers/resend_verify_handler.php', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        const result = await response.json();
+        if (btn) {
+            btn.textContent = result.success ? 'Verification sent!' : 'Failed - Try Again';
+            btn.disabled = false;
+            if (result.success) {
+                btn.style.color = '#10b981';
+                setTimeout(() => { if (btn.parentElement) btn.parentElement.remove(); }, 3000);
+            }
+        }
+    } catch (err) {
+        if (btn) { btn.textContent = 'Try Again'; btn.disabled = false; }
+    }
+};
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {

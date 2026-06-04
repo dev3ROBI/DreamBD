@@ -1972,18 +1972,8 @@ $displayName = htmlspecialchars(explode(' ', $user_name ?? 'User')[0] ?? 'User')
     top: -5px;
     right: -5px;
   }
-  .dream-profile-chip {
-    padding: 2px;
-    gap: 0;
-    border-radius: 50%;
-  }
-  .dream-profile-chip span,
-  .dream-profile-chip i.fa-chevron-down {
+  #userDropdown {
     display: none !important;
-  }
-  .dream-profile-avatar {
-    width: 32px;
-    height: 32px;
   }
   .dream-auth-cta {
     padding: 0.5rem 0.7rem;

@@ -193,6 +193,24 @@ class Security {
         return $base64UrlHeader . "." . $base64UrlPayload . "." . $base64UrlSignature;
     }
     
+    public function validateRecaptcha($response): bool {
+        if (empty($response)) return false;
+        $verify = @file_get_contents('https://www.google.com/recaptcha/api/siteverify', false, stream_context_create([
+            'http' => [
+                'method' => 'POST',
+                'header' => 'Content-Type: application/x-www-form-urlencoded',
+                'content' => http_build_query([
+                    'secret' => DatabaseConfig::RECAPTCHA_SECRET_KEY,
+                    'response' => $response,
+                    'remoteip' => $_SERVER['REMOTE_ADDR'] ?? ''
+                ])
+            ]
+        ]));
+        if ($verify === false) return false;
+        $data = json_decode($verify, true);
+        return !empty($data['success']);
+    }
+
     public function validateJWT($jwt) {
         $parts = explode('.', $jwt);
         if (count($parts) !== 3) {
