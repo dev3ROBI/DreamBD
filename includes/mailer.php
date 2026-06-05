@@ -1,13 +1,15 @@
 <?php
 
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
+
 class Mailer {
     private static $instance = null;
-    private $apiKey;
     private $from;
     private $fromName;
 
     private function __construct() {
-        $this->apiKey = DatabaseConfig::getSmtpPass();
         $this->from = env('SMTP_FROM', 'noreply@robicodes.xyz');
         $this->fromName = env('SMTP_FROM_NAME', 'RobiCodes Support');
     }
@@ -18,47 +20,39 @@ class Mailer {
     }
 
     public function send(string $to, string $subject, string $body, ?string $from = null, ?string $fromName = null): array {
-        $payload = json_encode([
-            'sender' => ['name' => $fromName ?? $this->fromName, 'email' => $from ?? $this->from],
-            'to' => [['email' => $to]],
-            'subject' => $subject,
-            'htmlContent' => $body,
-        ]);
+        $mail = new PHPMailer(true);
 
-        $ch = curl_init('https://api.brevo.com/v3/smtp/email');
-        $caPath = __DIR__ . '/../cacert.pem';
-        $caOpts = file_exists($caPath)
-            ? [CURLOPT_CAINFO => realpath($caPath)]
-            : [];
-        curl_setopt_array($ch, $caOpts + [
-            CURLOPT_HTTPHEADER => [
-                'api-key: ' . $this->apiKey,
-                'Content-Type: application/json',
-                'Accept: application/json',
-            ],
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $payload,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 30,
-        ]);
+        try {
+            $mail->isSMTP();
+            $mail->Host = DatabaseConfig::getSmtpHost();
+            $mail->SMTPAuth = true;
+            $mail->Username = DatabaseConfig::getSmtpUser();
+            $mail->Password = DatabaseConfig::getSmtpPass();
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $error = curl_error($ch);
-        curl_close($ch);
+            $port = (int) DatabaseConfig::getSmtpPort();
+            $mail->Port = $port;
 
-        if ($error) {
-            error_log("Mailer cURL Error: " . $error);
-            return ['success' => false, 'message' => 'Network error: ' . $error];
-        }
+            if ($port === 465) {
+                $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+            } elseif ($port === 587) {
+                $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+            } else {
+                $mail->SMTPSecure = false;
+                $mail->SMTPAutoTLS = false;
+            }
 
-        if ($httpCode >= 200 && $httpCode < 300) {
+            $mail->setFrom($from ?? $this->from, $fromName ?? $this->fromName);
+            $mail->addAddress($to);
+            $mail->isHTML(true);
+            $mail->Subject = $subject;
+            $mail->Body = $body;
+            $mail->AltBody = strip_tags(str_replace(['<br>', '<br/>', '<br />'], "\n", $body));
+
+            $mail->send();
             return ['success' => true, 'message' => 'Email sent successfully'];
+        } catch (Exception $e) {
+            error_log("Mailer Error: " . $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage()];
         }
-
-        $data = json_decode($response, true);
-        $msg = $data['message'] ?? 'HTTP ' . $httpCode;
-        error_log("Mailer API Error: $msg — Response: " . substr($response, 0, 500));
-        return ['success' => false, 'message' => $msg];
     }
 }

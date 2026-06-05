@@ -774,14 +774,29 @@ function renderProfileActionButtons($isOwnProfile, $friendshipStatus, $profileId
                             <div class="settings-surface-header"><h3><i class="fas fa-share-nodes text-purple-500 mr-1"></i> Social Links</h3><p>Connect your social profiles</p></div>
                             <?php $socialLinks = ['facebook' => 'fab fa-facebook', 'twitter' => 'fab fa-twitter', 'instagram' => 'fab fa-instagram', 'github' => 'fab fa-github', 'discord' => 'fab fa-discord', 'youtube' => 'fab fa-youtube']; ?>
                             <?php $savedSocial = !empty($profileUser['preferences']) ? (json_decode($profileUser['preferences'], true)['social'] ?? []) : []; ?>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <?php foreach ($socialLinks as $platform => $icon): ?>
-                                <div class="form-group mb-0">
-                                    <label class="form-label flex items-center gap-1.5"><i class="<?php echo $icon; ?> text-xs" style="color:<?php echo match($platform) { 'facebook'=>'#1877f2', 'twitter'=>'#1da1f2', 'instagram'=>'#e4405f', 'github'=>'#333', 'discord'=>'#5865f2', 'youtube'=>'#ff0000', default=>'#666' }; ?>"></i> <?php echo ucfirst($platform); ?></label>
-                                    <input type="url" name="social[<?php echo $platform; ?>]" class="form-input" value="<?php echo htmlspecialchars($savedSocial[$platform] ?? ''); ?>" placeholder="https://<?php echo $platform; ?>.com/">
-                                </div>
-                                <?php endforeach; ?>
-                            </div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <?php 
+    // Define color mapping array (works on any PHP version)
+    $socialColors = [
+        'facebook' => '#1877f2',
+        'twitter'  => '#1da1f2',
+        'instagram'=> '#e4405f',
+        'github'   => '#333',
+        'discord'  => '#5865f2',
+        'youtube'  => '#ff0000',
+    ];
+    foreach ($socialLinks as $platform => $icon): 
+        $color = isset($socialColors[$platform]) ? $socialColors[$platform] : '#666';
+    ?>
+    <div class="form-group mb-0">
+        <label class="form-label flex items-center gap-1.5">
+            <i class="<?php echo $icon; ?> text-xs" style="color: <?php echo $color; ?>"></i> 
+            <?php echo ucfirst($platform); ?>
+        </label>
+        <input type="url" name="social[<?php echo $platform; ?>]" class="form-input" value="<?php echo htmlspecialchars($savedSocial[$platform] ?? ''); ?>" placeholder="https://<?php echo $platform; ?>.com/">
+    </div>
+    <?php endforeach; ?>
+</div>
                         </div>
                     </div>
                     <div class="settings-submit-row"><button type="submit" class="btn btn-primary"><i class="fas fa-check mr-1"></i> Save Changes</button></div>
