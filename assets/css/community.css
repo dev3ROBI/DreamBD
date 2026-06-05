@@ -1262,24 +1262,24 @@
 
 .community-stat-left { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .community-reaction-icons { display: flex; align-items: center; }
-.community-reaction-icons span {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
+.community-reaction-icons .reaction-chip {
+    font-size: 16px;
+    line-height: 1;
+    display: inline-block;
+    background: none;
+}
+.community-reaction-icons .reaction-stack {
     display: flex;
     align-items: center;
-    justify-content: center;
-    font-size: 10px;
-    color: #fff;
-    border: 2px solid #fff;
-    margin-left: -5px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    gap: 0;
+    margin-right: 6px;
 }
-.community-reaction-icons span:first-child { margin-left: 0; z-index: 3; }
-.community-reaction-icons span:nth-child(2) { z-index: 2; }
-.community-reaction-icons .rxn-like { background: #1877f2; }
-.community-reaction-icons .rxn-love { background: #f33e58; }
-.community-reaction-icons .rxn-haha { background: #f7b928; }
+.community-reaction-icons .like-count {
+    font-size: 15px;
+    color: var(--comm-text-secondary);
+    margin-left: 6px;
+    vertical-align: middle;
+}
 
 .community-stat-count { font-size: 15px; color: var(--comm-text-secondary); }
 
@@ -1454,6 +1454,26 @@
     padding-left: 12px;
     margin-top: 8px;
 }
+
+.view-all-replies-wrap {
+    margin-top: 6px;
+}
+
+.view-all-replies-btn {
+    background: none;
+    border: none;
+    color: var(--comm-primary, #1877f2);
+    cursor: pointer;
+    font-size: 13px;
+    padding: 0;
+    text-decoration: none;
+}
+
+.view-all-replies-btn:hover {
+    text-decoration: underline;
+}
+
+
 
 /* Right Sidebar Refinement */
 .community-right-sidebar { display: flex; flex-direction: column; gap: 16px; position: sticky; top: 80px; }
@@ -1779,7 +1799,7 @@
 [data-theme="dark"] .report-post-header h2 { color: var(--comm-text-primary); }
 
 [data-theme="dark"] .community-post-image { background: #3a3b3c; }
-[data-theme="dark"] .community-reaction-icons span { border-color: var(--comm-surface); }
+[data-theme="dark"] .community-reaction-icons .like-count { color: var(--comm-text-secondary); }
 
 [data-theme="dark"] .community-btn-action:hover { background: rgba(255,255,255,0.05); }
 [data-theme="dark"] .post-menu-trigger:hover { background: rgba(255,255,255,0.05); color: var(--comm-text-primary); }
@@ -1912,7 +1932,6 @@
 .comment-replies-list {
     display: flex;
     flex-direction: column;
-    gap: 12px;
 }
 
 .comment-replies-list {

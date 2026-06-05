@@ -139,8 +139,9 @@ $themeAttr = htmlspecialchars($theme, ENT_QUOTES, 'UTF-8');
     
     <!-- Main Content -->
     <main id="mainContent" class="main-content min-h-screen">
-        <div id="pageSkeleton" class="page-skeleton" aria-hidden="true">
+        <div id="pageSkeleton" class="page-skeleton" aria-hidden="true" hidden>
             <div class="skeleton-container">
+                <!-- Hero/Banner block -->
                 <div class="sk-hero">
                     <div class="sk-banner"></div>
                     <div class="sk-hero-content">
@@ -151,12 +152,94 @@ $themeAttr = htmlspecialchars($theme, ENT_QUOTES, 'UTF-8');
                         </div>
                     </div>
                 </div>
+
+                <!-- Tabs block -->
                 <div class="sk-tabs">
                     <div class="sk-tab"></div>
                     <div class="sk-tab"></div>
                     <div class="sk-tab"></div>
                     <div class="sk-tab"></div>
                 </div>
+
+                <!-- Sidebar + Main layout (messages) -->
+                <div class="sk-layout-split">
+                    <div class="sk-sidebar">
+                        <div class="sk-sidebar-item"></div>
+                        <div class="sk-sidebar-item"></div>
+                        <div class="sk-sidebar-item"></div>
+                        <div class="sk-sidebar-item"></div>
+                    </div>
+                    <div class="sk-main-area">
+                        <div class="sk-chat-header">
+                            <div class="sk-line sk-line-md"></div>
+                        </div>
+                        <div class="sk-chat-bubble sk-chat-bubble-left"></div>
+                        <div class="sk-chat-bubble sk-chat-bubble-right"></div>
+                        <div class="sk-chat-bubble sk-chat-bubble-left"></div>
+                        <div class="sk-chat-input">
+                            <div class="sk-line sk-line-xl"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats cards grid (balance, p2p, agent-dashboard) -->
+                <div class="sk-stat-grid">
+                    <div class="sk-stat-card">
+                        <div class="sk-line sk-line-sm"></div>
+                        <div class="sk-line sk-line-lg sk-mt-2"></div>
+                        <div class="sk-line sk-line-xs sk-mt-1"></div>
+                    </div>
+                    <div class="sk-stat-card">
+                        <div class="sk-line sk-line-sm"></div>
+                        <div class="sk-line sk-line-lg sk-mt-2"></div>
+                        <div class="sk-line sk-line-xs sk-mt-1"></div>
+                    </div>
+                    <div class="sk-stat-card">
+                        <div class="sk-line sk-line-sm"></div>
+                        <div class="sk-line sk-line-lg sk-mt-2"></div>
+                        <div class="sk-line sk-line-xs sk-mt-1"></div>
+                    </div>
+                </div>
+
+                <!-- Form skeleton (login, register) -->
+                <div class="sk-form-card">
+                    <div class="sk-form-header">
+                        <div class="sk-line sk-line-lg sk-mx-auto"></div>
+                        <div class="sk-line sk-line-sm sk-mx-auto sk-mt-2"></div>
+                    </div>
+                    <div class="sk-form-body">
+                        <div class="sk-form-field"></div>
+                        <div class="sk-form-field"></div>
+                        <div class="sk-form-field sk-form-field-lg"></div>
+                    </div>
+                </div>
+
+                <!-- Notification items -->
+                <div class="sk-notif-list">
+                    <div class="sk-notif-item">
+                        <div class="sk-avatar sk-avatar-sm"></div>
+                        <div class="sk-notif-text">
+                            <div class="sk-line sk-line-md"></div>
+                            <div class="sk-line sk-line-xs"></div>
+                        </div>
+                    </div>
+                    <div class="sk-notif-item">
+                        <div class="sk-avatar sk-avatar-sm"></div>
+                        <div class="sk-notif-text">
+                            <div class="sk-line sk-line-md"></div>
+                            <div class="sk-line sk-line-xs"></div>
+                        </div>
+                    </div>
+                    <div class="sk-notif-item">
+                        <div class="sk-avatar sk-avatar-sm"></div>
+                        <div class="sk-notif-text">
+                            <div class="sk-line sk-line-md"></div>
+                            <div class="sk-line sk-line-xs"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feed posts -->
                 <div class="sk-feed">
                     <div class="sk-post">
                         <div class="sk-post-head">

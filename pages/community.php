@@ -222,10 +222,8 @@ if ($viewerId) {
                 <div class="community-post-stats">
                     <div class="community-stat-left" title="View reactions">
                         <div class="community-reaction-icons">
-                            <span class="rxn-like"><i class="fas fa-thumbs-up"></i></span>
-                            <span class="rxn-love"><i class="fas fa-heart"></i></span>
+                            <?= renderReactionSummaryHtml($post['reaction_summary'] ?? [], (int) ($post['like_count'] ?? 0)) ?>
                         </div>
-                        <span class="community-stat-count"><?= (int) $post['like_count'] ?></span>
                     </div>
                     <div class="community-stat-right">
                         <span class="community-comment-trigger" data-post-id="<?= (int) $post['id'] ?>"><?= (int) $post['comment_count'] ?> comments</span> • 

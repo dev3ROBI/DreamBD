@@ -527,8 +527,9 @@ function getSuggestedFriends(PDO $pdo, int $userId, int $limit = 6) {
     return $suggestions;
 }
 
-function getPostComments(PDO $pdo, int $postId, int $limit = 5, int $viewerId = 0, int $postOwnerId = 0) {
+function getPostComments(PDO $pdo, int $postId, int $limit = 10, int $viewerId = 0, int $postOwnerId = 0, int $offset = 0) {
     $limit = max(1, $limit);
+    $offset = max(0, $offset);
     
     // 1. Fetch Root Comments (latest first)
     $stmt = $pdo->prepare("
@@ -537,9 +538,9 @@ function getPostComments(PDO $pdo, int $postId, int $limit = 5, int $viewerId = 
         INNER JOIN users u ON u.id = pc.user_id
         WHERE pc.post_id = ? AND (pc.parent_comment_id IS NULL OR pc.parent_comment_id = 0)
         ORDER BY pc.created_at DESC
-        LIMIT ?
+        LIMIT ? OFFSET ?
     ");
-    $stmt->execute([$postId, $limit]);
+    $stmt->execute([$postId, $limit, $offset]);
     $rootComments = $stmt->fetchAll() ?: [];
     
     if (empty($rootComments)) return [];
@@ -652,7 +653,7 @@ function getPostDetails(PDO $pdo, int $postId, int $viewerId): ?array {
     $post = $stmt->fetch();
     
     if ($post) {
-        hydratePostSocial($pdo, $post, $viewerId, 50);
+        hydratePostSocial($pdo, $post, $viewerId, 10);
         $post['created_at_formatted'] = formatTimeAgo($post['created_at']);
     }
     
@@ -1391,19 +1392,22 @@ function formatPresenceStatus($lastActiveAt, $isOnline): string {
 }
 
 function renderReactionSummaryHtml(array $summary, int $totalCount): string {
-    $topReactions = array_slice($summary, 0, 3);
+    $topReactions = array_slice($summary, 0, 2);
     $icons = '';
+    $emojiMap = ['like'=>'👍', 'love'=>'❤️', 'care'=>'🥰', 'haha'=>'😆', 'wow'=>'😮', 'sad'=>'😢', 'angry'=>'😡'];
 
     foreach ($topReactions as $reaction) {
-        $meta = $reaction['meta'] ?? getReactionMeta($reaction['type'] ?? 'like');
-        $icons .= '<span class="reaction-chip ' . htmlspecialchars($meta['class']) . '" title="' . htmlspecialchars($meta['label']) . '"><i class="fas fa-' . htmlspecialchars($meta['icon']) . '"></i></span>';
+        $type = $reaction['type'] ?? 'like';
+        $meta = $reaction['meta'] ?? getReactionMeta($type);
+        $emoji = $emojiMap[$type] ?? '👍';
+        $icons .= '<span class="reaction-chip ' . htmlspecialchars($meta['class']) . '" title="' . htmlspecialchars($meta['label']) . '">' . $emoji . '</span>';
     }
 
-    if ($icons === '') {
-        $icons = '<span class="reaction-chip reaction-like" title="Like"><i class="fas fa-thumbs-up"></i></span>';
+    if ($icons === '' && $totalCount > 0) {
+        $icons = '<span class="reaction-chip reaction-like" title="Like">👍</span>';
     }
 
-    return '<span class="reaction-stack">' . $icons . '</span><span class="like-count">' . (int) $totalCount . '</span>';
+    return '<span class="reaction-stack">' . $icons . '</span>' . ($totalCount > 0 ? '<span class="like-count">' . (int) $totalCount . '</span>' : '');
 }
 
 function renderCommentReactionButtonInner(?string $reaction): string {

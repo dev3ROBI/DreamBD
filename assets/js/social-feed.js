@@ -208,7 +208,7 @@ if (typeof window.SocialFeed === 'undefined') {
             }
 
             this.updateCount(button, '.share-count', data.share_count, '<i class="fas fa-share"></i> {value}');
-            const shareUrl = `${window.location.origin}${window.location.pathname}?page=community#post-${postId}`;
+            const shareUrl = `${window.location.origin}${window.location.pathname}?page=community&post=${postId}`;
             if (navigator.share) {
                 navigator.share({ title: 'DreamBD Post', url: shareUrl }).catch(() => {});
             } else if (navigator.clipboard?.writeText) {
@@ -561,25 +561,26 @@ if (typeof window.SocialFeed === 'undefined') {
             return;
         }
 
-        const top = summary.slice(0, 3).map((reaction) => {
+        const emojiMap = {like:'👍', love:'❤️', care:'🥰', haha:'😆', wow:'😮', sad:'😢', angry:'😡'};
+        const top = summary.slice(0, 2).map((reaction) => {
             const meta = this.getReactionDisplayMeta(reaction.type);
-            return `<span class="reaction-chip ${meta.class}" title="${meta.label}"><i class="fas fa-${meta.icon}"></i></span>`;
+            return `<span class="reaction-chip ${meta.class}" title="${meta.label}">${emojiMap[reaction.type] || '👍'}</span>`;
         }).join('');
 
-        const markup = `${top || '<span class="reaction-chip reaction-like"><i class="fas fa-thumbs-up"></i></span>'}<span class="like-count">${totalCount}</span>`;
-        wrappers.forEach((wrapper) => {
-            wrapper.innerHTML = wrapper.classList.contains('home-post-likes')
-                ? `<span class="reaction-stack">${markup.replace(`<span class="like-count">${totalCount}</span>`, '')}</span><span class="like-count">${totalCount}</span>`
-                : `<span class="reaction-stack">${markup.replace(`<span class="like-count">${totalCount}</span>`, '')}</span><span class="like-count">${totalCount}</span>`;
-        });
+        const chips = top || (totalCount > 0 ? '<span class="reaction-chip reaction-like" title="Like">👍</span>' : '');
+        const countMarkup = totalCount > 0 ? `<span class="like-count">${totalCount}</span>` : '';
+        const stack = chips ? `<span class="reaction-stack">${chips}</span>` : '';
+        const markup = stack + countMarkup;
+        wrappers.forEach((wrapper) => { wrapper.innerHTML = markup; });
     }
 
     insertComment(container, comment, form = null) {
         if (!container) return;
 
         const markup = this.renderComment(comment, container);
-        if (Number(comment.parent_comment_id || 0) > 0) {
-            const parent = container.querySelector(`.social-comment-card[data-comment-id="${comment.parent_comment_id}"] .social-comment-replies`);
+        const effectiveParent = Number(comment.parent_comment_id || 0);
+        if (effectiveParent > 0) {
+            const parent = container.querySelector(`.social-comment-card[data-comment-id="${effectiveParent}"] .social-comment-replies`);
             if (parent) {
                 parent.insertAdjacentHTML('beforeend', markup);
                 return;
@@ -617,9 +618,10 @@ if (typeof window.SocialFeed === 'undefined') {
             return '';
         }
 
-        const top = summary.slice(0, 3).map((reaction) => {
+        const emojiMap = {like:'👍', love:'❤️', care:'🥰', haha:'😆', wow:'😮', sad:'😢', angry:'😡'};
+        const top = summary.slice(0, 2).map((reaction) => {
             const meta = this.getReactionDisplayMeta(reaction.type);
-            return `<span class="reaction-chip ${meta.class}" title="${meta.label}"><i class="fas fa-${meta.icon}"></i></span>`;
+            return `<span class="reaction-chip ${meta.class}" title="${meta.label}">${emojiMap[reaction.type] || '👍'}</span>`;
         }).join('');
 
         return `<span class="reaction-stack">${top}</span><span class="like-count">${totalCount}</span>`;

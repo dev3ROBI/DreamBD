@@ -213,6 +213,10 @@ switch ($action) {
         handleDeleteComment($db, $user_id);
         break;
 
+    case 'get_more_comments':
+        handleGetMoreComments($db, $user_id);
+        break;
+
     case 'update_comment':
         handleUpdateComment($db, $user_id);
         break;
@@ -1191,6 +1195,25 @@ function handleAddComment($db, $userId) {
     $parentId = (int) ($_POST['parent_comment_id'] ?? 0);
     if (!$postId || !$comment) { echo json_encode(['success' => false, 'message' => 'Missing fields']); exit; }
 
+    // Max 2 levels deep: if replying to a depth-2+ comment, flatten to the depth-1 ancestor
+    if ($parentId > 0) {
+        $chain = [];
+        $currentId = $parentId;
+        $stmt = $db->prepare("SELECT id, parent_comment_id FROM post_comments WHERE id = ?");
+        for ($i = 0; $i < 20; $i++) {
+            $stmt->execute([$currentId]);
+            $target = $stmt->fetch();
+            if (!$target) break;
+            $chain[] = (int) $target['id'];
+            if (empty($target['parent_comment_id'])) break;
+            $currentId = (int) $target['parent_comment_id'];
+        }
+        // chain = [target, depth-1, root]; if >= 3 entries, flatten to depth-1 ancestor
+        if (count($chain) >= 3) {
+            $parentId = $chain[count($chain) - 2];
+        }
+    }
+
     $stmt = $db->prepare("INSERT INTO post_comments (post_id, user_id, comment_text, parent_comment_id) VALUES (?, ?, ?, ?)");
     $stmt->execute([$postId, $userId, $comment, $parentId ?: null]);
     $commentId = (int) $db->lastInsertId();
@@ -1509,10 +1532,42 @@ function handleReactPost($db, $userId, $data) {
         }
     }
 
+    // Build reaction summary for live icon update
+    $rawSummary = getReactionSummary($db, $postId);
+    $summary = [];
+    foreach ($rawSummary as $type => $count) {
+        $summary[] = ['type' => $type, 'count' => $count, 'meta' => getReactionMeta($type)];
+    }
+
     echo json_encode([
         'success' => true,
         'count' => $totalCount,
-        'viewer_reaction' => $newReaction
+        'like_count' => $totalCount,
+        'liked' => !empty($newReaction),
+        'viewer_reaction' => $newReaction,
+        'reaction_summary' => $summary
     ]);
+    exit;
+}
+
+function handleGetMoreComments($db, $userId) {
+    $postId = (int) ($_GET['post_id'] ?? 0);
+    $offset = (int) ($_GET['offset'] ?? 0);
+    if ($postId <= 0) {
+        echo json_encode(['success' => false, 'message' => 'Invalid post ID']);
+        exit;
+    }
+
+    $stmt = $db->prepare("SELECT user_id FROM posts WHERE id = ?");
+    $stmt->execute([$postId]);
+    $post = $stmt->fetch();
+    if (!$post) {
+        echo json_encode(['success' => false, 'message' => 'Post not found']);
+        exit;
+    }
+
+    $comments = getPostComments($db, $postId, 10, (int) $userId, (int) $post['user_id'], $offset);
+
+    echo json_encode(['success' => true, 'comments' => $comments]);
     exit;
 }

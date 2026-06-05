@@ -5127,15 +5127,7 @@
 .home-reaction-sad { background: linear-gradient(135deg, #bae6fd, #f0f9ff); }
 .home-reaction-angry { background: linear-gradient(135deg, #fecaca, #fff1f2); }
 
-.reaction-care {
-    background: linear-gradient(135deg, #f59e0b, #f97316);
-    color: #fff;
-}
 
-.reaction-angry {
-    background: linear-gradient(135deg, #ef4444, #b91c1c);
-    color: #fff;
-}
 
 .home-post-actions--facebook {
     border-top: 1px solid rgba(226, 232, 240, 0.95);
@@ -8382,7 +8374,7 @@ body.gp-modal-open .header.scrolled {
 .dark .gp-modal-box--premium { background:#1e293b }
 .gp-modal-header--premium { display:flex; justify-content:space-between; align-items:center; padding:1rem 1.5rem; border-bottom:1px solid #e2e8f0; flex-shrink:0 }
 .dark .gp-modal-header--premium { border-color:#334155 }
-.gp-modal-body--premium { padding:1.25rem 1.5rem 1.5rem; flex:1; overflow-y:auto; overflow-x:hidden; -ms-overflow-style:none; scrollbar-width:none }
+.gp-modal-body--premium { padding:4px; flex:1; overflow-y:auto; overflow-x:hidden; -ms-overflow-style:none; scrollbar-width:none }
 .gp-modal-body--premium::-webkit-scrollbar { display:none }
 .ba-pay-note--addmoney { display:flex; align-items:center; gap:8px; background:linear-gradient(135deg,#fef3c7,#fde68a); border:1px solid #fcd34d; border-radius:12px; padding:10px 14px; margin-bottom:16px; font-size:12px; font-weight:700; color:#92400e; text-align:center; justify-content:center }
 .dark .ba-pay-note--addmoney { background:rgba(251,191,36,.1); border-color:rgba(245,158,11,.3); color:#fbbf24 }

@@ -63,7 +63,12 @@ class AjaxNavigation {
             const href = link.getAttribute('href');
             const explicitPage = link.getAttribute('data-page');
             const page = explicitPage || this.extractPageFromHref(href);
+            if (!page) return;
+            e.preventDefault();
             this.showSkeleton(page || 'default');
+            setTimeout(() => {
+                window.location.href = href || `index.php?page=${page}`;
+            }, 120);
         });
 
         document.addEventListener('submit', (e) => {
@@ -113,7 +118,9 @@ class AjaxNavigation {
             const page = urlParams.get('page') || 'home';
             if (page !== this.currentPage) {
                 this.showSkeleton(page);
-                window.location.href = window.location.href;
+                setTimeout(() => {
+                    window.location.reload();
+                }, 80);
             }
         });
 

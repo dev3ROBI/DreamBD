@@ -52,8 +52,11 @@ function escapeHtml(text) {
                 }
 
                 if (action === 'share') {
-                    
-                    // Implement share count increment or native share here if needed
+                    e.preventDefault();
+                    const postCard = actionBtn.closest('.community-post-card');
+                    if (!postCard) return;
+                    const postId = postCard.dataset.postId;
+                    await sharePost(postId, actionBtn);
                     return;
                 }
             }
@@ -81,7 +84,7 @@ function escapeHtml(text) {
                 return;
             }
 
-            // E. Comment Reply Button (In Modal)
+            // E1. Comment Reply Button (In Modal)
             const commentReplyBtn = e.target.closest('.comment-reply-trigger');
             if (commentReplyBtn) {
                 const commentId = commentReplyBtn.closest('.community-comment')?.dataset.commentId;
@@ -89,6 +92,22 @@ function escapeHtml(text) {
                 if (commentId && username) {
                     e.preventDefault();
                     focusReply(commentId, username);
+                }
+                return;
+            }
+
+            // E2. View All Replies Button
+            const viewAllBtn = e.target.closest('.view-all-replies-btn');
+            if (viewAllBtn) {
+                e.preventDefault();
+                const commentId = viewAllBtn.dataset.commentId;
+                if (commentId) {
+                    const list = document.getElementById(`replies-${commentId}`);
+                    if (list) {
+                        const wrap = list.querySelector('.reply-hidden-wrap');
+                        if (wrap) wrap.style.display = '';
+                        viewAllBtn.closest('.view-all-replies-wrap')?.remove();
+                    }
                 }
                 return;
             }
@@ -605,6 +624,7 @@ function escapeHtml(text) {
             : '';
 
         const isOwner = p.user_id && window.__communityViewerId && parseInt(p.user_id) === parseInt(window.__communityViewerId);
+        const reactionIconsHtml = buildReactionIconsHtml(p.reaction_summary, Number(p.like_count || 0));
 
         article.innerHTML = `
             <div class="community-post-header">
@@ -634,14 +654,10 @@ function escapeHtml(text) {
             ${imageHtml}
             <div class="community-post-stats">
                 <div class="community-stat-left" title="View reactions">
-                    <div class="community-reaction-icons">
-                        <span class="rxn-like"><i class="fas fa-thumbs-up"></i></span>
-                        <span class="rxn-love"><i class="fas fa-heart"></i></span>
-                    </div>
-                    <span class="community-stat-count">0</span>
+                    <div class="community-reaction-icons">${reactionIconsHtml}</div>
                 </div>
                 <div class="community-stat-right">
-                    <span class="community-comment-trigger" data-post-id="${p.id}">0 comments</span> • <span>0 shares</span>
+                    <span class="community-comment-trigger" data-post-id="${p.id}">${Number(p.comment_count || 0)} comments</span> • <span>${Number(p.share_count || 0)} shares</span>
                 </div>
             </div>
             <div class="community-post-actions">
@@ -742,6 +758,7 @@ async function submitReaction(postId, reaction) {
                 btn.innerHTML = `<i class="far fa-thumbs-up"></i> Like`;
             }
             if (countEl) countEl.textContent = data.count;
+            if (data.reaction_summary) updateStatsReactionIcons(postCard, data.reaction_summary, data.count);
         } else {
             // Revert on failure
             countEl.textContent = prevCount;
@@ -761,6 +778,49 @@ async function submitReaction(postId, reaction) {
 function getEmoji(reaction) {
     const map = {like:'👍', love:'❤️', care:'🥰', haha:'😆', wow:'😮', sad:'😢', angry:'😡'};
     return map[reaction] || '👍';
+}
+
+function buildReactionIconsHtml(summary, totalCount) {
+    const top = (summary || []).slice(0, 2);
+    const emojiMap = {like:'👍', love:'❤️', care:'🥰', haha:'😆', wow:'😮', sad:'😢', angry:'😡'};
+    let icons = top.map(r => `<span class="reaction-chip reaction-${r.type}" title="${r.meta?.label || r.type}">${emojiMap[r.type] || '👍'}</span>`).join('');
+    if (!icons && totalCount > 0) icons = '<span class="reaction-chip reaction-like" title="Like">👍</span>';
+    return `<span class="reaction-stack">${icons}</span>${totalCount > 0 ? `<span class="like-count">${totalCount}</span>` : ''}`;
+}
+
+function updateStatsReactionIcons(postCard, summary, count) {
+    const wrap = postCard.querySelector('.community-reaction-icons');
+    if (wrap) wrap.innerHTML = buildReactionIconsHtml(summary, count);
+    const countEl = postCard.querySelector('.community-stat-count');
+    if (countEl) countEl.textContent = count;
+}
+
+async function sharePost(postId, btn) {
+    const pageEl = document.querySelector('[data-community-page]') || document.querySelector('[data-home-page]') || document.querySelector('[data-profile-page]');
+    const csrfToken = pageEl?.dataset.csrfToken || document.body.dataset.csrfToken;
+
+    const fd = new FormData();
+    fd.append('action', 'share_post');
+    fd.append('post_id', postId);
+    fd.append('csrf_token', csrfToken);
+
+    try {
+        const response = await fetch('handlers/profile_handlers.php', { method: 'POST', body: fd });
+        const data = await response.json();
+        if (data.success) {
+            const shareUrl = `${window.location.origin}${window.location.pathname}?page=community&post=${postId}`;
+            if (navigator.share) {
+                navigator.share({ title: 'DreamBD Post', url: shareUrl }).catch(() => {});
+            } else if (navigator.clipboard?.writeText) {
+                navigator.clipboard.writeText(shareUrl).catch(() => {});
+            }
+            const postCard = btn.closest('.community-post-card');
+            if (postCard) {
+                const shareCountEl = postCard.querySelector('.community-stat-right span:last-child');
+                if (shareCountEl) shareCountEl.textContent = data.share_count + ' shares';
+            }
+        }
+    } catch (err) {}
 }
 
 async function loadCommunityContacts() {
@@ -786,10 +846,41 @@ async function loadCommunityContacts() {
     } catch (err) {}
 }
 
+let _commentOffset = 10;
+let _loadingMoreComments = false;
+
+function setupCommentInfiniteScroll(postId) {
+    const body = document.querySelector('.post-detail-body');
+    if (!body) return;
+    
+    body.addEventListener('scroll', async function handler() {
+        if (_loadingMoreComments) return;
+        if (this.scrollTop + this.clientHeight >= this.scrollHeight - 400) {
+            _loadingMoreComments = true;
+            try {
+                const r = await fetch(`handlers/profile_handlers.php?action=get_more_comments&post_id=${postId}&offset=${_commentOffset}`);
+                const data = await r.json();
+                if (data.success && data.comments.length > 0) {
+                    const list = document.getElementById('commentsList');
+                    if (list) {
+                        data.comments.forEach(c => {
+                            list.insertAdjacentHTML('beforeend', renderCommentHtml(c, { canInteract: true, depth: 0 }));
+                        });
+                        _commentOffset += data.comments.length;
+                    }
+                }
+            } catch (e) {}
+            _loadingMoreComments = false;
+        }
+    });
+}
+
 function openPostModal(postId) {
     
     const existing = document.getElementById('postDetailOverlay');
     if (existing) existing.remove();
+    _commentOffset = 10;
+    _loadingMoreComments = false;
 
     // Check if we need to scroll to a specific comment
     const params = new URLSearchParams(window.location.search);
@@ -864,6 +955,7 @@ function openPostModal(postId) {
                     return;
                 }
                 renderModalContent(res.post, { canInteract });
+                setupCommentInfiniteScroll(postId);
                 if (targetCommentId) setTimeout(() => scrollToComment(targetCommentId), 200);
             })
             .catch(err => {
@@ -942,11 +1034,7 @@ function renderModalContent(p, options = {}) {
         
         <div class="community-post-stats post-detail-stats">
             <div class="community-stat-left">
-                <div class="community-reaction-icons">
-                    <span class="rxn-like"><i class="fas fa-thumbs-up"></i></span>
-                    <span class="rxn-love"><i class="fas fa-heart"></i></span>
-                </div>
-                <span class="community-stat-count">${Number(p.like_count || 0)}</span>
+                <div class="community-reaction-icons">${buildReactionIconsHtml(p.reaction_summary, Number(p.like_count || 0))}</div>
             </div>
             <div class="community-stat-right">
                 <span id="modal-comment-count">${Number(p.comment_count || (p.comments || []).length || 0)} comments</span>
@@ -966,6 +1054,10 @@ function renderCommentHtml(c, options = {}) {
     const canInteract = options.canInteract !== false;
     const depth = Math.min(Number(options.depth || 0), 4);
     const isLiked = c.viewer_reaction === 'like';
+    const replies = c.replies || [];
+    const showAll = replies.length <= 2;
+    const visibleReplies = showAll ? replies : replies.slice(0, 2);
+    const hiddenReplies = showAll ? [] : replies.slice(2);
     return `
         <div class="community-comment post-detail-comment" data-comment-id="${Number(c.id)}" data-depth="${depth}">
             <img src="assets/avatars/${escapeAttr(c.avatar || 'default.png')}" class="post-detail-comment-avatar" alt="" onerror="this.src='assets/avatars/default.png'">
@@ -984,7 +1076,9 @@ function renderCommentHtml(c, options = {}) {
                     </span>
                 </div>
                 <div class="comment-replies-list" id="replies-${Number(c.id)}">
-                    ${(c.replies || []).map(r => renderCommentHtml(r, { canInteract, depth: depth + 1 })).join('')}
+                    ${visibleReplies.map(r => renderCommentHtml(r, { canInteract, depth: depth + 1 })).join('')}
+                    ${hiddenReplies.length > 0 ? `<div class="reply-hidden-wrap" style="display:none">${hiddenReplies.map(r => renderCommentHtml(r, { canInteract, depth: depth + 1 })).join('')}</div>` : ''}
+                    ${!showAll ? `<div class="view-all-replies-wrap"><button type="button" class="view-all-replies-btn" data-comment-id="${Number(c.id)}">View all ${replies.length} replies</button></div>` : ''}
                 </div>
             </div>
         </div>
@@ -1018,10 +1112,15 @@ async function submitComment(postId, parentId = 0) {
         const data = await response.json();
         if (data.success) {
             const comment = data.comment;
-            const html = renderCommentHtml(comment, { canInteract: true, depth: parentId > 0 ? 1 : 0 });
+            const effectiveParent = Number(comment.parent_comment_id || 0);
+            let depth = 0;
+            if (effectiveParent > 0) {
+                const parentEl = document.querySelector(`.community-comment[data-comment-id="${effectiveParent}"]`);
+                depth = parentEl ? Math.min(Number(parentEl.dataset.depth || 0) + 1, 4) : 1;
+            }
+            const html = renderCommentHtml(comment, { canInteract: true, depth });
             
-            // Critical fix: ensure we append to the correct container
-            const list = parentId > 0 ? document.getElementById(`replies-${parentId}`) : document.getElementById('commentsList');
+            const list = effectiveParent > 0 ? document.getElementById(`replies-${effectiveParent}`) : document.getElementById('commentsList');
             if (list) {
                 const noMsg = document.getElementById('noCommentsMsg');
                 if (noMsg) noMsg.remove();
