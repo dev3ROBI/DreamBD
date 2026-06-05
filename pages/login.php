@@ -94,8 +94,10 @@ if (isset($_GET['reset']) && $_GET['reset'] === 'true') {
                     </div>
 
                     <!-- reCAPTCHA -->
-                    <div class="g-recaptcha" data-sitekey="<?php echo DatabaseConfig::RECAPTCHA_SITE_KEY; ?>"></div>
-                    <div id="recaptchaError" class="text-xs text-red-500 hidden"></div>
+                    <div class="recaptcha-wrap">
+                        <div class="g-recaptcha" data-sitekey="<?php echo DatabaseConfig::RECAPTCHA_SITE_KEY; ?>"></div>
+                        <div id="recaptchaError" class="text-xs text-red-500 hidden"></div>
+                    </div>
 
                     <!-- Options -->
                     <div class="flex items-center justify-between">

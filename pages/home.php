@@ -11,7 +11,7 @@ $communityOverview = getCommunityOverview($db, $viewerId ? (int) $viewerId : nul
 $homeSecurity = new Security();
 $homeCsrfToken = $homeSecurity->generateCSRFToken();
 $userDisplayName = $_SESSION['full_name'] ?? $_SESSION['username'] ?? 'Guest';
-$suggestedFriends = getHomePeopleSuggestions($db, $viewerId ? (int) $viewerId : null, 6);
+$suggestedFriends = getHomePeopleSuggestions($db, $viewerId ? (int) $viewerId : null, 10);
 $topPlayers = getHomeTopPlayers($db, 3);
 $featuredTournament = getFeaturedTournamentSummary($db);
 $homeSearchQuery = trim((string) ($_GET['q'] ?? ''));
@@ -692,8 +692,10 @@ try {
                 </div>
                 <div class="home-suggestions-list home-suggestions-list--rail" data-home-suggestions data-csrf-token="<?php echo htmlspecialchars($homeCsrfToken); ?>">
                     <?php if ($suggestedFriends): ?>
+                        <?php $skey = 0; ?>
                         <?php foreach ($suggestedFriends as $suggested): ?>
-                            <div class="home-suggestion-card-v2" data-suggestion-card="<?php echo (int) $suggested['id']; ?>">
+                            <?php $skey++; ?>
+                            <div class="home-suggestion-card-v2 <?php echo $skey > 5 ? 'home-suggestion-extra' : ''; ?>" data-suggestion-card="<?php echo (int) $suggested['id']; ?>">
                                 <a href="index.php?page=profile&user=<?php echo (int) $suggested['id']; ?>" data-no-ajax class="home-suggestion-avatar-wrap">
                                     <img src="assets/avatars/<?php echo htmlspecialchars($suggested['avatar'] ?: 'default.png'); ?>" alt="" onerror="this.src='assets/avatars/default.png'">
                                 </a>
@@ -707,6 +709,9 @@ try {
                                 <button class="home-suggestion-dismiss" type="button" data-dismiss-user-id="<?php echo (int) $suggested['id']; ?>" title="Dismiss suggestion"><i class="fas fa-xmark"></i></button>
                             </div>
                         <?php endforeach; ?>
+                        <?php if (count($suggestedFriends) > 5): ?>
+                            <button type="button" class="home-suggestion-see-more" onclick="this.closest('[data-home-suggestions]').querySelectorAll('.home-suggestion-extra').forEach(function(el){el.classList.remove('home-suggestion-extra')});this.remove()">See more</button>
+                        <?php endif; ?>
                     <?php else: ?>
                         <div class="home-suggestion-empty">
                             <i class="fas fa-user-group"></i>

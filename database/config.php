@@ -23,6 +23,18 @@ function loadEnv($path) {
 // Load environment variables if .env exists
 loadEnv(__DIR__ . '/../.env');
 
+/**
+ * Robust env() — checks getenv(), $_ENV, $_SERVER in order.
+ * Works even if putenv()/getenv() are restricted on some hosts.
+ */
+if (!function_exists('env')) {
+    function env(string $key, $default = null) {
+        $val = getenv($key);
+        if ($val !== false && $val !== '') return $val;
+        return $_ENV[$key] ?? $_SERVER[$key] ?? $default;
+    }
+}
+
 if (!function_exists('dream_asset')) {
     function dream_asset(string $path): string {
         $normalized = ltrim($path, '/');
@@ -34,10 +46,10 @@ if (!function_exists('dream_asset')) {
 
 class DatabaseConfig {
     // Database Configuration
-    public static function getHost() { return getenv('DB_HOST') ?: 'localhost'; }
-    public static function getName() { return getenv('DB_NAME') ?: 'dream'; }
-    public static function getUser() { return getenv('DB_USER') ?: 'root'; }
-    public static function getPass() { return getenv('DB_PASS') ?: ''; }
+    public static function getHost() { return env('DB_HOST', 'localhost'); }
+    public static function getName() { return env('DB_NAME', 'dream'); }
+    public static function getUser() { return env('DB_USER', 'root'); }
+    public static function getPass() { return env('DB_PASS', ''); }
     const DB_CHARSET = 'utf8mb4';
     
     // Security Configuration
@@ -47,19 +59,19 @@ class DatabaseConfig {
     
     // JWT Configuration
     public static function getJwtSecret() { 
-        return getenv('JWT_SECRET') ?: '7535d3f26d41e280fd659f0793e2d77fee6b165b7001f505a62e67c93864bd5b'; 
+        return env('JWT_SECRET', '7535d3f26d41e280fd659f0793e2d77fee6b165b7001f505a62e67c93864bd5b'); 
     }
     
     // Encryption Configuration
     public static function getEncryptionKey() { 
-        return getenv('ENCRYPTION_KEY') ?: 'R1B5KpP+F9k8eZ9rP2sA7m7Y0Z1E2M9F0KJXc3nq8y4='; 
+        return env('ENCRYPTION_KEY', 'R1B5KpP+F9k8eZ9rP2sA7m7Y0Z1E2M9F0KJXc3nq8y4='); 
     }
     
     // SMTP Configuration (Brevo)
-    public static function getSmtpHost() { return getenv('SMTP_HOST') ?: 'smtp-relay.brevo.com'; }
-    public static function getSmtpPort() { return getenv('SMTP_PORT') ?: 587; }
-    public static function getSmtpUser() { return getenv('SMTP_USER') ?: 'ad8803001@smtp-brevo.com'; }
-    public static function getSmtpPass() { return getenv('SMTP_PASS') ?: ''; }
+    public static function getSmtpHost() { return env('SMTP_HOST', 'smtp-relay.brevo.com'); }
+    public static function getSmtpPort() { return env('SMTP_PORT', 587); }
+    public static function getSmtpUser() { return env('SMTP_USER', 'ad8803001@smtp-brevo.com'); }
+    public static function getSmtpPass() { return env('SMTP_PASS', ''); }
 
     // reCAPTCHA Configuration
     const RECAPTCHA_SITE_KEY = '6LewAA0tAAAAAHYT_EzWeqK2p6rZ8Rl07XqJVkXu';
@@ -321,26 +333,36 @@ try {
             try { $db->exec($sql); } catch (PDOException $e) { error_log("Initial Schema: " . $e->getMessage()); }
         }
 
-        // Add missing columns if they don't exist (Migration style)
-        $migrations = [
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT AFTER phone",
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login DATETIME AFTER status",
-            "ALTER TABLE slider_content ADD COLUMN IF NOT EXISTS slider_type ENUM('features','tournament','leaderboard','ads') DEFAULT 'features' AFTER badge",
-        ];
-        foreach ($migrations as $sql) {
-            try { $db->exec($sql); } catch (PDOException $e) {}
-        }
     }
 
     // Always-run column migrations for existing databases
     $alwaysRun = [
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS uuid CHAR(36) AFTER id",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(30) AFTER full_name",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT AFTER phone",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS location VARCHAR(150) AFTER bio",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS website VARCHAR(255) AFTER location",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS cover_image VARCHAR(255) DEFAULT 'default.jpg' AFTER avatar",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS preferences LONGTEXT AFTER website",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS login_attempts INT DEFAULT 0 AFTER role",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until DATETIME AFTER login_attempts",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login DATETIME AFTER status",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_ip VARCHAR(45) AFTER last_login",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified TINYINT(1) NOT NULL DEFAULT 0 AFTER status",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verification_token VARCHAR(64) DEFAULT NULL AFTER email_verified",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verification_expires DATETIME DEFAULT NULL AFTER email_verification_token",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token VARCHAR(64) DEFAULT NULL AFTER email_verification_expires",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires DATETIME DEFAULT NULL AFTER reset_token",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS agent_verified_at DATETIME AFTER balance",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS coins INT UNSIGNED DEFAULT 0 AFTER agent_verified_at",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS nickname VARCHAR(50) AFTER coins",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS skill_level VARCHAR(30) AFTER nickname",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS favorite_game VARCHAR(80) AFTER skill_level",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS discord VARCHAR(60) AFTER favorite_game",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS gold_coins INT UNSIGNED DEFAULT 0 AFTER discord",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS silver_coins INT UNSIGNED DEFAULT 0 AFTER gold_coins",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS bronze_coins INT UNSIGNED DEFAULT 0 AFTER silver_coins",
+        "ALTER TABLE slider_content ADD COLUMN IF NOT EXISTS slider_type ENUM('features','tournament','leaderboard','ads') DEFAULT 'features' AFTER badge",
     ];
     foreach ($alwaysRun as $sql) {
         try { $db->exec($sql); } catch (Throwable $e) {}

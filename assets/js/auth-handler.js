@@ -490,6 +490,11 @@ class AuthHandler {
                 }
                 
             } else {
+                // Reset reCAPTCHA on failure
+                if (typeof grecaptcha !== 'undefined') {
+                    grecaptcha.reset();
+                }
+
                 // Check for email verification error
                 if (result.email_verified === false) {
                     // Show special alert with resend button

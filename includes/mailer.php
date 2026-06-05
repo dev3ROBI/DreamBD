@@ -8,8 +8,8 @@ class Mailer {
 
     private function __construct() {
         $this->apiKey = DatabaseConfig::getSmtpPass();
-        $this->from = getenv('SMTP_FROM') ?: 'noreply@robicodes.xyz';
-        $this->fromName = getenv('SMTP_FROM_NAME') ?: 'RobiCodes Support';
+        $this->from = env('SMTP_FROM', 'noreply@robicodes.xyz');
+        $this->fromName = env('SMTP_FROM_NAME', 'RobiCodes Support');
     }
 
     public static function getInstance() {
@@ -26,10 +26,10 @@ class Mailer {
         ]);
 
         $ch = curl_init('https://api.brevo.com/v3/smtp/email');
-        $caPath = 'D:\xampp\php\cacert.pem';
+        $caPath = __DIR__ . '/../cacert.pem';
         $caOpts = file_exists($caPath)
             ? [CURLOPT_CAINFO => realpath($caPath)]
-            : [CURLOPT_SSL_VERIFYPEER => false];
+            : [];
         curl_setopt_array($ch, $caOpts + [
             CURLOPT_HTTPHEADER => [
                 'api-key: ' . $this->apiKey,

@@ -410,6 +410,22 @@ function getFriendRequests(PDO $pdo, int $userId, int $limit = 10) {
     return $stmt->fetchAll();
 }
 
+function getSentFriendRequests(PDO $pdo, int $userId, int $limit = 10) {
+    $limit = max(1, $limit);
+    $sql = "
+        SELECT f.id, f.created_at, u.id AS user_id, u.username, u.full_name, u.avatar, u.bio
+        FROM friendships f
+        INNER JOIN users u ON u.id = f.addressee_id
+        WHERE f.requester_id = ?
+          AND f.status = 'pending'
+        ORDER BY f.created_at DESC
+        LIMIT ?
+    ";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$userId, $limit]);
+    return $stmt->fetchAll();
+}
+
 function getSuggestedFriends(PDO $pdo, int $userId, int $limit = 6) {
     $limit = max(1, $limit);
     

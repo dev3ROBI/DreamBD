@@ -27,6 +27,7 @@ try {
     $posts = getProfilePosts($db, $profileId, $viewerId, 10);
     $friends = getFriendsList($db, $profileId, 24);
     $friendRequests = $profileId === $viewerId ? getFriendRequests($db, $viewerId, 12) : [];
+    $sentRequests = $profileId === $viewerId ? getSentFriendRequests($db, $viewerId, 12) : [];
     // Get user photos
     $userPhotos = [];
     try {
@@ -535,6 +536,7 @@ function renderProfileActionButtons($isOwnProfile, $friendshipStatus, $profileId
                         <button class="fb-tab active" data-friends-view="all"><strong><?php echo $stats['friends']; ?></strong> Friends</button>
                         <?php if ($isOwnProfile): ?>
                         <button class="fb-tab" data-friends-view="requests"><strong><?php echo count($friendRequests); ?></strong> Requests</button>
+                        <button class="fb-tab" data-friends-view="sent"><strong><?php echo count($sentRequests); ?></strong> Sent</button>
                         <button class="fb-tab" data-friends-view="suggestions"><strong><?php echo count($suggestedFriends); ?></strong> Suggestions</button>
                         <?php endif; ?>
                     </div>
@@ -581,6 +583,24 @@ function renderProfileActionButtons($isOwnProfile, $friendshipStatus, $profileId
                             <?php $ri++; endforeach; ?>
                         <?php else: ?>
                         <div class="fb-empty"><i class="fas fa-user-clock text-2xl mb-3 block opacity-30"></i><p>No pending requests</p></div>
+                        <?php endif; ?>
+                    </div>
+                    <div class="friends-view-panel" data-friends-panel="sent">
+                        <?php if ($sentRequests): ?>
+                            <?php $si = 0; foreach ($sentRequests as $sr): ?>
+                            <div class="fb-request-card" data-request-card="<?php echo (int) $sr['user_id']; ?>" style="animation:fbFadeIn 0.3s ease both;animation-delay:<?php echo min($si, 10) * 0.08; ?>s">
+                                <img src="assets/avatars/<?php echo htmlspecialchars($sr['avatar'] ?? 'default.png'); ?>" alt="" class="fb-request-avatar" onerror="this.src='assets/avatars/default.png'">
+                                <div class="fb-request-info">
+                                    <strong><a href="index.php?page=profile&user=<?php echo (int) $sr['user_id']; ?>" data-no-ajax class="fb-friend-name"><?php echo htmlspecialchars($sr['full_name'] ?: $sr['username']); ?></a></strong>
+                                    <span>Request sent</span>
+                                </div>
+                                <div class="fb-request-actions">
+                                    <button class="fb-btn fb-btn-secondary friend-toggle-btn" data-action="cancel_friend_request" data-target-user-id="<?php echo (int) $sr['user_id']; ?>">Cancel</button>
+                                </div>
+                            </div>
+                            <?php $si++; endforeach; ?>
+                        <?php else: ?>
+                        <div class="fb-empty"><i class="fas fa-paper-plane text-2xl mb-3 block opacity-30"></i><p>No sent requests</p></div>
                         <?php endif; ?>
                     </div>
                     <div class="friends-view-panel" data-friends-panel="suggestions">

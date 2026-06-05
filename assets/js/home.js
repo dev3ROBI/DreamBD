@@ -16,6 +16,7 @@ class HomePage {
             this.initSlider();
             this.initStatsCounter();
             this.initPostMenus();
+            this.initFriendActions();
             this.isInitialized = true;
             document.dispatchEvent(new CustomEvent('homePageReady'));
         } catch (e) {}
@@ -146,6 +147,28 @@ class HomePage {
             } else if (!e.target.closest('.home-post-menu-dropdown')) {
                 document.querySelectorAll('.home-post-menu-dropdown.show').forEach(m => m.classList.remove('show'));
             }
+        });
+    }
+
+    initFriendActions() {
+        document.addEventListener('click', async (e) => {
+            const btn = e.target.closest('.friend-toggle-btn[data-action="send_friend_request"]');
+            if (!btn) return;
+            e.preventDefault();
+            const userId = btn.dataset.targetUserId;
+            const csrfToken = document.querySelector('[data-home-suggestions]')?.dataset.csrfToken || document.body.dataset.csrfToken;
+            const fd = new FormData();
+            fd.append('action', 'send_friend_request');
+            fd.append('target_user_id', userId);
+            fd.append('csrf_token', csrfToken);
+            try {
+                const r = await fetch('handlers/profile_handlers.php', { method: 'POST', body: fd });
+                const d = await r.json();
+                if (d.success) {
+                    const card = btn.closest('[data-suggestion-card]');
+                    if (card) card.remove();
+                }
+            } catch (err) {}
         });
     }
 }

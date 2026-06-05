@@ -204,13 +204,23 @@ $themeAttr = htmlspecialchars($theme, ENT_QUOTES, 'UTF-8');
                 <!-- Form skeleton (login, register) -->
                 <div class="sk-form-card">
                     <div class="sk-form-header">
-                        <div class="sk-line sk-line-lg sk-mx-auto"></div>
+                        <div class="sk-avatar sk-avatar-md sk-mx-auto"></div>
+                        <div class="sk-line sk-line-lg sk-mx-auto sk-mt-3"></div>
                         <div class="sk-line sk-line-sm sk-mx-auto sk-mt-2"></div>
                     </div>
                     <div class="sk-form-body">
                         <div class="sk-form-field"></div>
                         <div class="sk-form-field"></div>
-                        <div class="sk-form-field sk-form-field-lg"></div>
+                        <div class="sk-form-field sk-form-field--recaptcha"></div>
+                        <div class="sk-form-field sk-form-field--half">
+                            <div class="sk-line sk-line-sm" style="width:45%"></div>
+                            <div class="sk-line sk-line-sm" style="width:40%"></div>
+                        </div>
+                        <div class="sk-form-field sk-form-field--btn"></div>
+                    </div>
+                    <div class="sk-form-footer">
+                        <div class="sk-divider"></div>
+                        <div class="sk-line sk-line-md sk-mx-auto"></div>
                     </div>
                 </div>
 

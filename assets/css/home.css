@@ -9868,6 +9868,31 @@ body, .p2p-input, .gp-b-transfer-input, .gp-modal-input, .ba-input, .gp-preset-b
     border-top: 1px solid var(--comm-border);
 }
 
+.home-suggestion-extra {
+    display: none;
+}
+
+.home-suggestion-see-more {
+    display: block;
+    width: 100%;
+    padding: 10px 0;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--comm-primary, #1877f2);
+    background: none;
+    border: none;
+    cursor: pointer;
+    border-top: 1px solid var(--comm-border);
+    margin-top: 4px;
+    transition: background 0.15s;
+}
+
+.home-suggestion-see-more:hover {
+    background: var(--bg-secondary);
+    border-radius: 0 0 8px 8px;
+}
+
 .home-suggestion-avatar-wrap {
     flex-shrink: 0;
     width: 44px;
@@ -9962,6 +9987,14 @@ body, .p2p-input, .gp-b-transfer-input, .gp-modal-input, .ba-input, .gp-preset-b
 
 [data-theme="dark"] .home-suggestion-card-v2 + .home-suggestion-card-v2 {
     border-top-color: var(--comm-border);
+}
+
+[data-theme="dark"] .home-suggestion-see-more {
+    border-top-color: var(--comm-border);
+}
+
+[data-theme="dark"] .home-suggestion-see-more:hover {
+    background: rgba(255,255,255,0.05);
 }
 
 /* ===== MOBILE: HIDE RAILS, KEEP PULSE ===== */

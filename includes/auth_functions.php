@@ -540,7 +540,7 @@ class Auth {
             $stmt = $this->db->prepare("UPDATE users SET email_verification_token = ?, email_verification_expires = ? WHERE id = ?");
             $stmt->execute([$token, $expires, $user_id]);
 
-            $verifyUrl = (getenv('APP_URL') ?: 'http://localhost/Dream') . '/index.php?page=verify&token=' . $token;
+            $verifyUrl = env('APP_URL', 'http://localhost/Dream') . '/index.php?page=verify&token=' . $token;
 
             require_once __DIR__ . '/mail_templates.php';
             require_once __DIR__ . '/mailer.php';

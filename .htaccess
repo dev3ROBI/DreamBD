@@ -1,0 +1,29 @@
+# Protect .env file from direct access
+<Files .env>
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+<Files .env.example>
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+# Protect .htaccess itself
+<Files .htaccess>
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+# Prevent directory listing
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Block access to vendor directory (composer packages)
+    RewriteRule ^vendor/ - [F,L]
+
+    # Block access to .git directory
+    RewriteRule ^\.git - [F,L]
+</IfModule>

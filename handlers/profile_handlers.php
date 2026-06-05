@@ -132,6 +132,10 @@ switch ($action) {
     case 'remove_friend':
         handleRemoveFriend($db, $user_id, $requestData);
         break;
+
+    case 'cancel_friend_request':
+        handleCancelFriendRequest($db, $user_id, $requestData);
+        break;
     
     case 'respond_friend_request':
         handleRespondFriendRequest($db, $user_id, $requestData);
@@ -548,6 +552,18 @@ function handleRemoveFriend($db, $userId, $data) {
     $stmt = $db->prepare("DELETE FROM friendships WHERE (requester_id = ? AND addressee_id = ?) OR (requester_id = ? AND addressee_id = ?)");
     $stmt->execute([$userId, $targetId, $targetId, $userId]);
     echo json_encode(['success' => true, 'message' => 'Removed', 'friendship_status' => 'not_friends']);
+    exit;
+}
+
+function handleCancelFriendRequest($db, $userId, $data) {
+    $targetId = (int) ($data['target_user_id'] ?? 0);
+    if ($targetId <= 0) {
+        echo json_encode(['success' => false, 'message' => 'Invalid user']);
+        exit;
+    }
+    $stmt = $db->prepare("DELETE FROM friendships WHERE requester_id = ? AND addressee_id = ? AND status = 'pending'");
+    $stmt->execute([$userId, $targetId]);
+    echo json_encode(['success' => true, 'message' => 'Request cancelled', 'friendship_status' => 'not_friends']);
     exit;
 }
 
