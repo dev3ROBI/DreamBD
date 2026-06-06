@@ -95,6 +95,32 @@
     }
 }
 
+/* ===== AUTH MODAL ANIMATIONS ===== */
+.auth-modal {
+    opacity: 0;
+    transform: scale(0.92) translateY(10px);
+    transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    pointer-events: none;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 1001;
+}
+.auth-modal.active {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    pointer-events: auto;
+}
+.auth-modal.active > div {
+    animation: authModalContentIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes authModalContentIn {
+    from { opacity: 0; transform: translateY(20px) scale(0.96); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }

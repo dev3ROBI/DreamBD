@@ -449,46 +449,7 @@ try {
             }
             break;
 
-        // ─── P2P: Create Offer (merchants only) ───
-        case 'create_p2p_offer':
-            if (!$userId) { $response['message'] = 'Please log in.'; break; }
-            $userRole = $_SESSION['role'] ?? 'user';
-            if ($userRole !== 'merchant' && $userRole !== 'admin') { $response['message'] = 'Only merchants can create P2P offers.'; break; }
-            $type = trim($req['type'] ?? '');
-            $coinType = trim($req['coin_type'] ?? 'bronze');
-            $price = abs((float)($req['price'] ?? 0));
-            $quantity = abs((int)($req['quantity'] ?? 0));
-            $minAmt = abs((int)($req['min_amount'] ?? 1));
-            $maxAmt = abs((int)($req['max_amount'] ?? 0));
-            if (!in_array($type, ['buy','sell'])) { $response['message'] = 'Invalid type.'; break; }
-            if (!in_array($coinType, ['bronze','silver','gold'])) { $response['message'] = 'Invalid coin type.'; break; }
-            if ($price < 1) { $response['message'] = 'Price must be at least ৳1.'; break; }
-            if ($quantity < 1) { $response['message'] = 'Quantity must be at least 1.'; break; }
-            try {
-                $stmt = $db->prepare("INSERT INTO p2p_offers (agent_id, type, coin_type, price_per_coin, quantity, remaining, min_amount, max_amount) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$userId, $type, $coinType, $price, $quantity, $quantity, $minAmt, $maxAmt]);
-                $response = ['success' => true, 'message' => 'P2P offer created!'];
-            } catch (Throwable $e) {
-                $response['message'] = 'Server error.';
-            }
-            break;
 
-        // ─── P2P: Cancel Offer ───
-        case 'cancel_p2p_offer':
-            if (!$userId) { $response['message'] = 'Please log in.'; break; }
-            $offerId = (int)($req['offer_id'] ?? 0);
-            try {
-                $stmt = $db->prepare("UPDATE p2p_offers SET status = 'cancelled' WHERE id = ? AND agent_id = ? AND status = 'active'");
-                $stmt->execute([$offerId, $userId]);
-                if ($stmt->rowCount()) {
-                    $response = ['success' => true, 'message' => 'Offer cancelled.'];
-                } else {
-                    $response['message'] = 'Offer not found or already inactive.';
-                }
-            } catch (Throwable $e) {
-                $response['message'] = 'Server error.';
-            }
-            break;
 
         // ─── P2P: Execute Trade (buy from sell offer) ───
         case 'p2p_buy':

@@ -23,7 +23,61 @@ $action = $req['action'] ?? ($_GET['action'] ?? '');
 try {
     $db = Database::getInstance()->getConnection();
 
+    // ─── AUTO-CANCEL PENDING TRADES OLDER THAN 15 MINS ───
+    try {
+        $stmt = $db->prepare("SELECT id, offer_id, seller_id, coin_type, quantity FROM p2p_trades WHERE status = 'pending' AND created_at < NOW() - INTERVAL 15 MINUTE FOR UPDATE");
+        $stmt->execute();
+        $expiredTrades = $stmt->fetchAll();
+        foreach ($expiredTrades as $et) {
+            $coinCol = $et['coin_type'] . '_coins';
+            // Escrow refund to seller
+            $db->prepare("UPDATE users SET $coinCol = $coinCol + ? WHERE id = ?")->execute([$et['quantity'], $et['seller_id']]);
+            // Restore offer remaining
+            $db->prepare("UPDATE p2p_offers SET remaining = remaining + ?, status = 'active' WHERE id = ?")->execute([$et['quantity'], $et['offer_id']]);
+            // Mark cancelled
+            $db->prepare("UPDATE p2p_trades SET status = 'cancelled' WHERE id = ?")->execute([$et['id']]);
+        }
+    } catch (Throwable $e) { /* ignore auto cancel errors silently */ }
+
     switch ($action) {
+
+        // ─── P2P: CREATE OFFER (Merchants Only) ───
+        case 'create_p2p_offer':
+            if (!$userId) { $response['message'] = 'Please log in.'; break; }
+            $userRole = $_SESSION['role'] ?? 'user';
+            if ($userRole !== 'merchant' && $userRole !== 'admin') { $response['message'] = 'Only verified merchants can create P2P offers.'; break; }
+            $type = trim($req['type'] ?? '');
+            $coinType = trim($req['coin_type'] ?? 'bronze');
+            $price = abs((float)($req['price'] ?? 0));
+            $quantity = abs((int)($req['quantity'] ?? 0));
+            $minAmt = abs((int)($req['min_amount'] ?? 1));
+            $maxAmt = abs((int)($req['max_amount'] ?? 0));
+            if (!in_array($type, ['buy','sell'])) { $response['message'] = 'Invalid type.'; break; }
+            if (!in_array($coinType, ['bronze','silver','gold'])) { $response['message'] = 'Invalid coin type.'; break; }
+            if ($price < 1) { $response['message'] = 'Price must be at least ৳1.'; break; }
+            if ($quantity < 1) { $response['message'] = 'Quantity must be at least 1.'; break; }
+            try {
+                $stmt = $db->prepare("INSERT INTO p2p_offers (agent_id, type, coin_type, price_per_coin, quantity, remaining, min_amount, max_amount) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$userId, $type, $coinType, $price, $quantity, $quantity, $minAmt, $maxAmt]);
+                $response = ['success' => true, 'message' => 'P2P offer created!'];
+            } catch (Throwable $e) { $response['message'] = 'Server error.'; }
+            break;
+
+        // ─── P2P: CANCEL OFFER ───
+        case 'cancel_p2p_offer':
+            if (!$userId) { $response['message'] = 'Please log in.'; break; }
+            $offerId = (int)($req['offer_id'] ?? 0);
+            try {
+                $stmt = $db->prepare("UPDATE p2p_offers SET status = 'cancelled' WHERE id = ? AND agent_id = ? AND status = 'active'");
+                $stmt->execute([$offerId, $userId]);
+                if ($stmt->rowCount()) {
+                    $response = ['success' => true, 'message' => 'Offer cancelled.'];
+                } else {
+                    $response['message'] = 'Offer not found or already inactive.';
+                }
+            } catch (Throwable $e) { $response['message'] = 'Server error.'; }
+            break;
+
 
         // ─── PLACE ORDER (user clicks buy/sell) ───
         case 'place_p2p_order':
@@ -75,7 +129,7 @@ try {
                 $stmt = $db->prepare("UPDATE users SET $coinCol = $coinCol - ? WHERE id = ?");
                 $stmt->execute([$qty, $sellerId]);
 
-                $stmt = $db->prepare("INSERT INTO p2p_trades (offer_id, seller_id, buyer_id, coin_type, quantity, total_price, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')");
+                $stmt = $db->prepare("INSERT INTO p2p_trades (offer_id, seller_id, buyer_id, coin_type, quantity, total_price, status, sender_phone) VALUES (?, ?, ?, ?, ?, ?, 'pending', '')");
                 $stmt->execute([$offerId, $sellerId, $buyerId, $offer['coin_type'], $qty, $totalPrice]);
                 $tradeId = $db->lastInsertId();
 
@@ -100,7 +154,7 @@ try {
                 $stmt->execute([$tradeId, $userId]);
                 $trade = $stmt->fetch();
                 if (!$trade) { $response['message'] = 'Trade not found or already processed.'; break; }
-                $stmt = $db->prepare("UPDATE p2p_trades SET status = 'paid', payment_method = ?, sender_phone = ?, txid = ?, paid_at = NOW() WHERE id = ?");
+                $stmt = $db->prepare("UPDATE p2p_trades SET status = 'paid', payment_method = ?, sender_phone = ?, txid = ? WHERE id = ?");
                 $stmt->execute([$method, $senderPhone, $txid, $tradeId]);
                 createNotification($db, (int)$trade['seller_id'], $userId, 'p2p_payment_received', 'Payment marked for trade #' . $tradeId . '. ' . ($trade['offer_type'] === 'sell' ? 'Release coins to buyer.' : 'Release coins to complete the trade.'));
                 $response = ['success' => true, 'message' => 'Payment confirmed!'];
@@ -166,25 +220,35 @@ try {
             } catch (Throwable $e) { $db->rollBack(); $response['message'] = 'Server error.'; }
             break;
 
-        // ─── REPORT TRADE ───
-        case 'report_p2p_trade':
+        // ─── DISPUTE / APPEAL TRADE ───
+        case 'file_dispute':
             if (!$userId) { $response['message'] = 'Please log in.'; break; }
             $tradeId = (int)($req['trade_id'] ?? 0);
             $reason = trim($req['reason'] ?? '');
             $details = trim($req['details'] ?? '');
             if ($tradeId < 1 || $reason === '') { $response['message'] = 'Please provide a reason.'; break; }
             try {
+                $db->beginTransaction();
                 $stmt = $db->prepare("SELECT * FROM p2p_trades WHERE id = ? AND (buyer_id = ? OR seller_id = ?)");
                 $stmt->execute([$tradeId, $userId, $userId]);
                 $trade = $stmt->fetch();
-                if (!$trade) { $response['message'] = 'Trade not found.'; break; }
+                if (!$trade) { $db->rollBack(); $response['message'] = 'Trade not found.'; break; }
+                if ($trade['status'] !== 'paid' && $trade['status'] !== 'pending') { $db->rollBack(); $response['message'] = 'Only pending/paid trades can be disputed.'; break; }
+                
+                // Change status to disputed
+                $stmt = $db->prepare("UPDATE p2p_trades SET status = 'disputed' WHERE id = ?");
+                $stmt->execute([$tradeId]);
+
                 $reportedId = (int)$trade['buyer_id'] === (int)$userId ? (int)$trade['seller_id'] : (int)$trade['buyer_id'];
                 $stmt = $db->prepare("INSERT INTO p2p_reports (trade_id, reporter_id, reported_id, reason, details) VALUES (?, ?, ?, ?, ?)");
                 $stmt->execute([$tradeId, $userId, $reportedId, $reason, $details]);
-                createNotification($db, 0, $userId, 'p2p_order_placed', 'Report filed for trade #' . $tradeId . '. Admin will review.');
-                $response = ['success' => true, 'message' => 'Report submitted. Admin will review.'];
-            } catch (Throwable $e) { $response['message'] = 'Server error.'; }
+                
+                $db->commit();
+                createNotification($db, $reportedId, $userId, 'p2p_dispute', 'A dispute has been filed against trade #' . $tradeId . '. Trade is locked until admin reviews.');
+                $response = ['success' => true, 'message' => 'Dispute filed. The trade is locked for admin review.'];
+            } catch (Throwable $e) { $db->rollBack(); $response['message'] = 'Server error.'; }
             break;
+
 
         // ─── GET TRADE DETAIL ───
         case 'get_p2p_trade':
@@ -237,10 +301,39 @@ try {
                 $stmt = $db->prepare("SELECT id FROM p2p_trades WHERE id = ? AND (buyer_id = ? OR seller_id = ?)");
                 $stmt->execute([$tradeId, $userId, $userId]);
                 if (!$stmt->fetch()) { $response['message'] = 'Trade not found.'; break; }
-                $stmt = $db->prepare("SELECT m.*, u.username, u.full_name FROM p2p_chat_messages m JOIN users u ON u.id = m.sender_id WHERE m.trade_id = ? ORDER BY m.created_at ASC");
+                $stmt = $db->prepare("SELECT m.id, m.trade_id, m.sender_id, m.message, m.image_path, m.created_at, u.username, u.full_name FROM p2p_chat_messages m JOIN users u ON u.id = m.sender_id WHERE m.trade_id = ? ORDER BY m.created_at ASC");
                 $stmt->execute([$tradeId]);
                 $msgs = $stmt->fetchAll();
                 $response = ['success' => true, 'messages' => $msgs];
+            } catch (Throwable $e) { $response['message'] = 'Server error.'; }
+            break;
+
+        // ─── UPLOAD CHAT IMAGE ───
+        case 'upload_chat_image':
+            if (!$userId) { $response['message'] = 'Please log in.'; break; }
+            $tradeId = (int)($_POST['trade_id'] ?? 0);
+            if (!isset($_FILES['chat_image']) || $_FILES['chat_image']['error'] !== UPLOAD_ERR_OK) {
+                $response['message'] = 'Image upload failed.'; break;
+            }
+            try {
+                $stmt = $db->prepare("SELECT id FROM p2p_trades WHERE id = ? AND (buyer_id = ? OR seller_id = ?)");
+                $stmt->execute([$tradeId, $userId, $userId]);
+                if (!$stmt->fetch()) { $response['message'] = 'Trade not found.'; break; }
+                
+                $ext = strtolower(pathinfo($_FILES['chat_image']['name'], PATHINFO_EXTENSION));
+                if (!in_array($ext, ['jpg','jpeg','png'])) { $response['message'] = 'Only JPG/PNG allowed.'; break; }
+                
+                $uploadDir = __DIR__ . '/../assets/images/chat/';
+                if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+                $filename = 'p2p_' . $tradeId . '_' . time() . '_' . rand(100,999) . '.' . $ext;
+                
+                if (move_uploaded_file($_FILES['chat_image']['tmp_name'], $uploadDir . $filename)) {
+                    $stmt = $db->prepare("INSERT INTO p2p_chat_messages (trade_id, sender_id, message, image_path) VALUES (?, ?, '', ?)");
+                    $stmt->execute([$tradeId, $userId, $filename]);
+                    $response = ['success' => true, 'message' => 'Image sent!'];
+                } else {
+                    $response['message'] = 'Failed to save image.';
+                }
             } catch (Throwable $e) { $response['message'] = 'Server error.'; }
             break;
 

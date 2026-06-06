@@ -596,9 +596,9 @@ class Auth {
             $stmt->execute([$email]);
             $user = $stmt->fetch();
 
-            if (!$user) {
-                return ['success' => false, 'message' => 'If that email is registered, an OTP has been sent.'];
-            }
+        if (!$user) {
+            return ['success' => false, 'message' => 'No account found with this email', 'errors' => ['email' => 'No account found']];
+        }
 
             $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
             $expires = date('Y-m-d H:i:s', time() + 600);
@@ -668,7 +668,58 @@ class Auth {
 
             $this->logSecurityEvent($user['id'], 'password_reset_completed', ['email' => $user['email']]);
 
+            // Send notification email
+            try {
+                require_once __DIR__ . '/mail_templates.php';
+                require_once __DIR__ . '/mailer.php';
+                $mailer = Mailer::getInstance();
+                $ip = $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
+                $device = $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown';
+                $body = MailTemplates::passwordChanged($user['username'], $ip, $device);
+                $mailer->send($user['email'], 'Password Changed Successfully', $body, 'noreply@robicodes.xyz', 'RobiCodes');
+            } catch (Throwable $e) {
+                error_log("Password change notification error: " . $e->getMessage());
+            }
+
             return ['success' => true, 'message' => 'Password reset successfully! You can now log in.'];
+        } catch (PDOException $e) {
+            error_log("Reset password error: " . $e->getMessage());
+            return ['success' => false, 'message' => 'Reset failed. Please try again.'];
+        }
+    }
+
+    public function resetPassword(string $email, string $new_password): array {
+        try {
+            $stmt = $this->db->prepare("SELECT id, username, email FROM users WHERE email = ? LIMIT 1");
+            $stmt->execute([$email]);
+            $user = $stmt->fetch();
+
+            if (!$user) return ['success' => false, 'message' => 'User not found'];
+
+            if (strlen($new_password) < 8) {
+                return ['success' => false, 'message' => 'Password must be at least 8 characters'];
+            }
+
+            $password_hash = password_hash($new_password, PASSWORD_BCRYPT, ['cost' => 12]);
+
+            $stmt = $this->db->prepare("UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expires = NULL, login_attempts = 0, locked_until = NULL WHERE id = ?");
+            $stmt->execute([$password_hash, $user['id']]);
+
+            $this->logSecurityEvent($user['id'], 'password_reset_completed', ['email' => $user['email']]);
+
+            try {
+                require_once __DIR__ . '/mail_templates.php';
+                require_once __DIR__ . '/mailer.php';
+                $mailer = Mailer::getInstance();
+                $ip = $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
+                $device = $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown';
+                $body = MailTemplates::passwordChanged($user['username'], $ip, $device);
+                $mailer->send($user['email'], 'Password Changed Successfully', $body, 'noreply@robicodes.xyz', 'RobiCodes');
+            } catch (Throwable $e) {
+                error_log("Password change notification error: " . $e->getMessage());
+            }
+
+            return ['success' => true, 'message' => 'Password reset successfully!'];
         } catch (PDOException $e) {
             error_log("Reset password error: " . $e->getMessage());
             return ['success' => false, 'message' => 'Reset failed. Please try again.'];

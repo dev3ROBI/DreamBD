@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $password = $_POST['password'] ?? '';
         $confirm = $_POST['confirm_password'] ?? '';
 
-        if (empty($otp)) {
+        if (empty($otp) && empty($password)) {
             // Step 1: Send OTP
             if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $response['message'] = 'Please enter a valid email';
@@ -38,45 +38,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $response['errors']['global'] = $response['message'];
                 }
             }
-        } elseif (empty($password)) {
+        } elseif (!empty($otp) && empty($password)) {
             // Step 2: Verify OTP only
             if (empty($email)) {
                 $response['message'] = 'Session expired. Please start again.';
                 $response['errors']['global'] = 'Session expired.';
-            } elseif (empty($otp) || !preg_match('/^\d{6}$/', $otp)) {
+            } elseif (!preg_match('/^\d{6}$/', $otp)) {
                 $response['message'] = 'Please enter a valid 6-digit OTP';
                 $response['errors']['otp'] = 'Enter a valid 6-digit OTP';
             } else {
                 $result = $auth->validateResetOtp($email, $otp);
                 $response['success'] = $result['success'];
                 $response['message'] = $result['message'];
-                if (!$result['success']) {
+                if ($result['success']) {
+                    $_SESSION['reset_otp_verified'] = true;
+                } else {
                     $response['errors']['otp'] = $result['message'];
                 }
             }
         } else {
-            // Step 3: Verify OTP again + reset password
+            // Step 3: Reset password (session-verified, skip OTP re-check)
             if (empty($email)) {
                 $response['message'] = 'Session expired. Please start again.';
                 $response['errors']['global'] = 'Session expired.';
-            } elseif (empty($otp) || !preg_match('/^\d{6}$/', $otp)) {
-                $response['message'] = 'Please enter a valid 6-digit OTP';
-                $response['errors']['otp'] = 'Enter a valid 6-digit OTP';
-            } elseif (strlen($password) < 8) {
-                $response['message'] = 'Password must be at least 8 characters';
-                $response['errors']['password'] = 'Password must be at least 8 characters';
-            } elseif ($password !== $confirm) {
-                $response['message'] = 'Passwords do not match';
-                $response['errors']['confirm_password'] = 'Passwords do not match';
             } else {
-                $result = $auth->resetPasswordWithOtp($email, $otp, $password);
-                $response['success'] = $result['success'];
-                $response['message'] = $result['message'];
-                if ($result['success']) {
+                // Check if password was already reset (race-condition guard)
+                try {
+                    $db = Database::getInstance()->getConnection();
+                    $stmt = $db->prepare("SELECT reset_token FROM users WHERE email = ? LIMIT 1");
+                    $stmt->execute([$email]);
+                    $pwUser = $stmt->fetch();
+                } catch (PDOException $e) {
+                    $pwUser = null;
+                }
+                if ($pwUser && $pwUser['reset_token'] === null) {
+                    $response['success'] = true;
+                    $response['message'] = 'Password reset successfully!';
+                    unset($_SESSION['reset_email'], $_SESSION['reset_otp_verified']);
+                } elseif (empty($_SESSION['reset_otp_verified'])) {
+                    $response['message'] = 'OTP not verified. Please start again.';
+                    $response['errors']['global'] = 'OTP not verified. Please start again.';
                     unset($_SESSION['reset_email']);
-                    $response['redirect'] = 'index.php?page=login&reset=true';
-                } elseif (strpos($result['message'] ?? '', 'OTP') !== false || strpos($result['message'] ?? '', 'expired') !== false) {
-                    $response['errors']['otp'] = $result['message'];
+                } elseif (strlen($password) < 8) {
+                    $response['message'] = 'Password must be at least 8 characters';
+                    $response['errors']['password'] = 'Password must be at least 8 characters';
+                } elseif ($password !== $confirm) {
+                    $response['message'] = 'Passwords do not match';
+                    $response['errors']['confirm_password'] = 'Passwords do not match';
+                } else {
+                    $result = $auth->resetPassword($email, $password);
+                    $response['success'] = $result['success'];
+                    $response['message'] = $result['message'];
+                    if ($result['success']) {
+                        unset($_SESSION['reset_email'], $_SESSION['reset_otp_verified']);
+                    }
                 }
             }
         }

@@ -33,6 +33,23 @@ if ($viewerId) {
     $stmt->execute([$viewerId]); $paymentSettings = $stmt->fetchAll();
 }
 
+// Real trade count per merchant for offer cards
+$tradeCountMap = [];
+if (!empty($sellOffers) || !empty($buyOffers)) {
+    $agentIds = array_unique(array_merge(
+        array_column($sellOffers, 'agent_id'),
+        array_column($buyOffers, 'agent_id')
+    ));
+    if ($agentIds) {
+        $phs = implode(',', array_fill(0, count($agentIds), '?'));
+        $tcStmt = $db->prepare("SELECT o.agent_id, COUNT(t.id) as cnt FROM p2p_offers o JOIN p2p_trades t ON t.offer_id = o.id WHERE o.agent_id IN ($phs) AND t.status = 'completed' GROUP BY o.agent_id");
+        $tcStmt->execute($agentIds);
+        foreach ($tcStmt->fetchAll() as $row) {
+            $tradeCountMap[(int)$row['agent_id']] = (int)$row['cnt'];
+        }
+    }
+}
+
 $coinEmoji = ['bronze'=>'<img src="assets/images/coin-bronze.svg" class="p2p-coin-svg" alt="">','silver'=>'<img src="assets/images/coin-silver.svg" class="p2p-coin-svg" alt="">','gold'=>'<img src="assets/images/coin-gold.svg" class="p2p-coin-svg" alt="">'];
 $coinValues = ['bronze'=>25, 'silver'=>50, 'gold'=>100];
 $coinLabels = ['bronze'=>'Bronze','silver'=>'Silver','gold'=>'Gold'];
@@ -185,7 +202,6 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
 .p2p-chat-box { border:1px solid var(--p2p-border); border-radius:16px; overflow:hidden; margin-top:16px }
 .p2p-chat-head { padding:12px 16px; font-weight:700; font-size:.82rem; border-bottom:1px solid var(--p2p-border); display:flex; align-items:center; gap:8px; background:#f8fafc }
 .dark .p2p-chat-head { background:#1a2332 }
-.dark .p2p-chat-head { background:#1a2332 }
 .p2p-chat-msgs { 
   max-height:280px; overflow-y:auto; padding:12px 16px; display:flex; flex-direction:column; gap:8px;
   scrollbar-width: none; -ms-overflow-style: none;
@@ -310,6 +326,78 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
 .p2p-myoffer-item .meta .st.active { background:#d1fae5; color:#065f46 }
 .p2p-myoffer-item .meta .st.cancelled { background:#fef2f2; color:#991b1b }
 .p2p-myoffer-item .meta .st.completed { background:#f5f3ff; color:#5b21b6 }
+
+/* ═══ TOPBAR ITEMS ═══ */
+.p2p-topbar-v3-item { background:var(--p2p-card); border:1px solid var(--p2p-border); border-radius:16px; padding:14px 16px; text-align:center; transition:all .2s }
+.p2p-topbar-v3-item:hover { border-color:rgba(139,92,246,.3) }
+
+/* ═══ OFFER CARD INTERNALS ═══ */
+.p2p-offer-card-v3-top { display:flex; align-items:center; gap:10px; margin-bottom:14px }
+.p2p-offer-card-v3-avatar { width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg,#8b5cf6,#6366f1); color:#fff; display:flex; align-items:center; justify-content:center; font-size:.9rem; font-weight:800; flex-shrink:0 }
+.p2p-offer-card-v3-user .name { font-size:.85rem; font-weight:700; color:var(--p2p-text); display:flex; align-items:center; gap:5px }
+.p2p-offer-card-v3-user .verified { width:16px; height:16px; background:#3b82f6; color:#fff; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:.5rem }
+.p2p-offer-card-v3-user .role { font-size:.7rem; color:var(--p2p-muted); margin-top:2px }
+.p2p-offer-card-v3-user .orders { color:var(--p2p-accent); font-weight:600 }
+.p2p-offer-card-v3-body { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:14px; padding:12px; background:var(--p2p-bg); border-radius:12px }
+@media(max-width:480px){ .p2p-offer-card-v3-body { grid-template-columns:1fr 1fr } }
+.p2p-offer-card-v3-cell .lbl { font-size:.58rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--p2p-muted); margin-bottom:3px }
+.p2p-offer-card-v3-cell .val { font-size:.85rem; font-weight:800; color:var(--p2p-text) }
+.p2p-offer-card-v3-cell .val.price { color:var(--p2p-accent) }
+.p2p-offer-card-v3-cell .coin-tag { display:inline-flex; align-items:center; gap:3px }
+.p2p-offer-card-v3-footer { display:flex; align-items:center; justify-content:space-between; padding-top:10px; border-top:1px solid var(--p2p-border) }
+.p2p-offer-card-v3-footer .payment-icons { display:flex; gap:5px; align-items:center }
+.p2p-offer-card-v3-footer .payment-icons img { height:18px; border-radius:4px; opacity:.8 }
+.p2p-offer-card-v3-footer .action-badge { font-size:.72rem; font-weight:800; padding:5px 16px; border-radius:999px; background:linear-gradient(135deg,#8b5cf6,#6366f1); color:#fff }
+.p2p-coin-svg { width:20px; height:20px; vertical-align:middle }
+
+/* ═══ COIN FILTER ═══ */
+.p2p-coin-filter { display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap }
+.p2p-coin-filter-btn { padding:5px 14px; border-radius:999px; border:1.5px solid var(--p2p-border); font-size:.72rem; font-weight:700; cursor:pointer; background:var(--p2p-card); color:var(--p2p-muted); transition:all .18s; font-family:'Plus Jakarta Sans',sans-serif; white-space:nowrap }
+.p2p-coin-filter-btn:hover { border-color:var(--p2p-accent); color:var(--p2p-accent) }
+.p2p-coin-filter-btn.active { background:rgba(139,92,246,.1); border-color:var(--p2p-accent); color:var(--p2p-accent) }
+
+/* ═══ ORDER MODAL INTERNALS ═══ */
+.seller-card { display:flex; align-items:center; gap:12px; padding:14px; background:var(--p2p-bg); border-radius:14px; margin-bottom:16px }
+.seller-card .avatar { width:44px; height:44px; border-radius:50%; background:linear-gradient(135deg,#8b5cf6,#6366f1); color:#fff; display:flex; align-items:center; justify-content:center; font-size:1rem; font-weight:800; flex-shrink:0 }
+.seller-card .info .name { font-size:.9rem; font-weight:700; color:var(--p2p-text) }
+.seller-card .info .stats { font-size:.7rem; color:var(--p2p-muted); margin-top:2px }
+.info-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px }
+.info-grid .box { background:var(--p2p-bg); border-radius:12px; padding:10px 12px }
+.info-grid .box .lbl { font-size:.58rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--p2p-muted); margin-bottom:3px }
+.info-grid .box .val { font-size:.9rem; font-weight:800; color:var(--p2p-text) }
+.info-grid .box .val.green { color:var(--p2p-green) }
+.qty-presets { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px }
+.qty-presets button { padding:6px 12px; border-radius:8px; border:1.5px solid var(--p2p-border); background:var(--p2p-card); font-size:.72rem; font-weight:700; cursor:pointer; color:var(--p2p-muted); transition:all .15s; font-family:'Plus Jakarta Sans',sans-serif }
+.qty-presets button:hover { border-color:var(--p2p-accent); color:var(--p2p-accent) }
+.qty-input { width:100%; padding:12px 14px; border-radius:12px; border:2px solid var(--p2p-border); font-size:.95rem; font-weight:700; outline:none; box-sizing:border-box; font-family:'Plus Jakarta Sans',sans-serif; background:var(--p2p-card); color:var(--p2p-text); margin-bottom:10px; transition:all .2s }
+.qty-input:focus { border-color:var(--p2p-accent); box-shadow:0 0 0 4px rgba(139,92,246,.1) }
+.total-display { background:var(--p2p-bg); border-radius:12px; padding:12px 14px; font-size:.9rem; font-weight:800; color:var(--p2p-text); margin-bottom:12px; display:flex; align-items:center; justify-content:space-between }
+.total-display .sub { font-size:.65rem; font-weight:500; color:var(--p2p-muted) }
+.action-btn { width:100%; padding:14px; border-radius:14px; border:0; font-size:.95rem; font-weight:800; color:#fff; cursor:pointer; transition:all .2s; font-family:'Plus Jakarta Sans',sans-serif; display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:8px }
+.action-btn.buy { background:linear-gradient(135deg,#059669,#10b981); box-shadow:0 4px 16px rgba(5,150,105,.2) }
+.action-btn.buy:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(5,150,105,.35) }
+.action-btn.sell { background:linear-gradient(135deg,#dc2626,#ef4444); box-shadow:0 4px 16px rgba(220,38,38,.2) }
+.action-btn.sell:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(220,38,38,.35) }
+.action-btn:disabled { opacity:.6; cursor:not-allowed; transform:none !important }
+
+/* ═══ PAYMENT CONFIRM FORM ═══ */
+.p2p-confirm-pay-form { display:flex; flex-direction:column; gap:10px; margin-bottom:14px }
+.p2p-confirm-pay-form .field { display:flex; flex-direction:column; gap:4px }
+.p2p-confirm-pay-form .field label { font-size:.72rem; font-weight:700; color:var(--p2p-muted) }
+.p2p-confirm-pay-form .field input { width:100%; padding:11px 14px; border-radius:12px; border:2px solid var(--p2p-border); font-size:.85rem; font-weight:600; outline:none; box-sizing:border-box; font-family:'Plus Jakarta Sans',sans-serif; background:var(--p2p-card); color:var(--p2p-text); transition:border-color .2s }
+.p2p-confirm-pay-form .field input:focus { border-color:var(--p2p-accent); box-shadow:0 0 0 4px rgba(139,92,246,.1) }
+
+/* ═══ PAY DETAIL V3 ROWS ═══ */
+.p2p-pay-detail-v3-row { display:flex; align-items:center; justify-content:space-between; padding:6px 0; font-size:.82rem }
+.p2p-pay-detail-v3-row .lbl { color:var(--p2p-muted); font-weight:500 }
+.p2p-pay-detail-v3-row .val { font-weight:800; color:var(--p2p-text) }
+
+/* ═══ MOBILE TAB SCROLL ═══ */
+@media(max-width:600px) {
+  .p2p-tabbar-v3 { overflow-x:auto; scrollbar-width:none; flex-wrap:nowrap }
+  .p2p-tabbar-v3::-webkit-scrollbar { display:none }
+  .p2p-tabbar-btn { flex-shrink:0 }
+}
 </style>
 
 <div class="p2p-page" id="p2pPage" data-csrf="<?php echo htmlspecialchars($csrfToken); ?>" data-user-id="<?php echo (int)($viewerId ?? 0); ?>" data-role="<?php echo htmlspecialchars($userRole); ?>">
@@ -321,29 +409,38 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
 <!-- ═══ HERO ═══ -->
 <div class="p2p-hero-v3">
     <div class="p2p-hero-v3-content">
+        <?php if ($userRole === 'merchant'): 
+            // Calculate my merchant stats
+            $myTotalTrades = 0; $myCompletedTrades = 0;
+            foreach ($myTrades as $mt) {
+                if ($mt['seller_id'] == $viewerId || $mt['buyer_id'] == $viewerId) {
+                    $myTotalTrades++;
+                    if ($mt['status'] === 'completed') $myCompletedTrades++;
+                }
+            }
+            $completionRate = $myTotalTrades > 0 ? round(($myCompletedTrades / $myTotalTrades) * 100) : 100;
+        ?>
+        <div style="display:flex; align-items:center; gap:16px;">
+            <div style="width:64px;height:64px;border-radius:50%;background:#8b5cf6;color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:800;border:3px solid rgba(255,255,255,.2)"><?php echo strtoupper(mb_substr($userName,0,1)); ?></div>
+            <div>
+                <h1 style="display:flex;align-items:center;gap:8px;font-size:1.5rem;"><?php echo htmlspecialchars($userName); ?> <span style="background:#059669;color:#fff;font-size:.65rem;padding:2px 8px;border-radius:99px;display:flex;align-items:center;gap:4px;"><i class="fas fa-check-circle"></i> Verified Merchant</span></h1>
+                <p style="margin-top:4px;display:flex;gap:12px;font-size:.85rem;color:#cbd5e1;">
+                    <span><i class="fas fa-circle" style="color:#10b981;font-size:.6rem;"></i> Online</span>
+                    <span><i class="fas fa-handshake"></i> <?php echo $myCompletedTrades; ?> Trades</span>
+                    <span><i class="fas fa-chart-line"></i> <?php echo $completionRate; ?>% Completion</span>
+                </p>
+            </div>
+        </div>
+        <?php else: ?>
         <h1>P2P Trading</h1>
         <p>Buy and sell coins directly with other users</p>
+        <?php endif; ?>
     </div>
     <div style="display:flex;gap:8px;position:relative;z-index:1;flex-shrink:0">
         <span style="font-size:.65rem;font-weight:700;color:#a78bfa;background:rgba(139,92,246,.15);padding:6px 12px;border-radius:999px;border:1px solid rgba(139,92,246,.2)" id="p2pBalDisplay">Balance: ৳<span id="p2pBalVal"><?php echo number_format($balance??0,0); ?></span></span>
     </div>
 </div>
 
-<!-- ═══ PRICE CHART ═══ -->
-<div class="p2p-chart-v3">
-    <div class="p2p-chart-v3-head">
-        <div class="title"><i class="fas fa-chart-line"></i> P2P Market</div>
-        <div><span class="price-ticker up" id="chartPrice">৳0.00</span> <span class="change up" id="chartChange">+0.00%</span></div>
-    </div>
-    <div class="p2p-chart-v3-body">
-        <canvas id="p2pPriceChart"></canvas>
-        <div class="p2p-chart-filters">
-            <button class="active" data-range="7d">7D</button>
-            <button data-range="30d">30D</button>
-            <button data-range="90d">3M</button>
-        </div>
-    </div>
-</div>
 
 <!-- ═══ TOP STAT BAR ═══ -->
 <div class="p2p-topbar-v3">
@@ -377,14 +474,20 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
     <button class="p2p-tabbar-btn" data-tab="convert"><i class="fas fa-arrows-rotate"></i> Convert</button>
     <?php if ($userRole === 'merchant' || $userRole === 'admin'): ?>
     <button class="p2p-tabbar-btn" data-tab="offers"><i class="fas fa-tag"></i> Offers</button>
-    <button class="p2p-tabbar-btn" data-tab="settings"><i class="fas fa-gear"></i> Payment</button>
     <?php endif; ?>
+    <button class="p2p-tabbar-btn" data-tab="settings"><i class="fas fa-gear"></i> Payment</button>
 </div>
 
 <!-- ════════════════════════════════════ -->
 <!-- ═══ TAB: BUY ═══ -->
 <!-- ════════════════════════════════════ -->
 <div class="p2p-tab-panel active" id="tabBuy">
+    <div class="p2p-coin-filter">
+        <button class="p2p-coin-filter-btn active" data-coin="all">🔁 All</button>
+        <button class="p2p-coin-filter-btn" data-coin="bronze">🥉 Bronze</button>
+        <button class="p2p-coin-filter-btn" data-coin="silver">🥈 Silver</button>
+        <button class="p2p-coin-filter-btn" data-coin="gold">🥇 Gold</button>
+    </div>
     <?php if (empty($sellOffers)): ?>
     <div class="p2p-offer-grid-v3"><div style="text-align:center;padding:3rem;color:var(--p2p-muted)"><i class="fas fa-store" style="font-size:2rem;display:block;margin-bottom:8px;opacity:.3"></i><p style="font-weight:500">No sell offers available</p></div></div>
     <?php else: ?>
@@ -400,7 +503,7 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
                 <div class="p2p-offer-card-v3-avatar"><?php echo $initial; ?></div>
                 <div class="p2p-offer-card-v3-user">
                     <div class="name"><?php echo $uname; ?> <span class="verified"><i class="fas fa-check"></i></span></div>
-                    <div class="role"><span>Seller</span> · <span class="orders"><i class="fas fa-check-circle"></i> <?php echo rand(20,200);?> orders</span></div>
+                    <div class="role"><span>Seller</span> · <span class="orders"><i class="fas fa-check-circle"></i> <?php echo number_format($tradeCountMap[(int)$o['agent_id']] ?? 0); ?> orders</span></div>
                 </div>
             </div>
             <div class="p2p-offer-card-v3-body">
@@ -428,6 +531,12 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
 <!-- ═══ TAB: SELL ═══ -->
 <!-- ════════════════════════════════════ -->
 <div class="p2p-tab-panel" id="tabSell">
+    <div class="p2p-coin-filter">
+        <button class="p2p-coin-filter-btn active" data-coin="all">🔁 All</button>
+        <button class="p2p-coin-filter-btn" data-coin="bronze">🥉 Bronze</button>
+        <button class="p2p-coin-filter-btn" data-coin="silver">🥈 Silver</button>
+        <button class="p2p-coin-filter-btn" data-coin="gold">🥇 Gold</button>
+    </div>
     <?php if (empty($buyOffers)): ?>
     <div class="p2p-offer-grid-v3"><div style="text-align:center;padding:3rem;color:var(--p2p-muted)"><i class="fas fa-store" style="font-size:2rem;display:block;margin-bottom:8px;opacity:.3"></i><p style="font-weight:500">No buy offers available</p></div></div>
     <?php else: ?>
@@ -443,7 +552,7 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
                 <div class="p2p-offer-card-v3-avatar"><?php echo $initial; ?></div>
                 <div class="p2p-offer-card-v3-user">
                     <div class="name"><?php echo $uname; ?> <span class="verified"><i class="fas fa-check"></i></span></div>
-                    <div class="role"><span>Buyer</span> · <span class="orders"><i class="fas fa-check-circle"></i> <?php echo rand(20,200);?> orders</span></div>
+                    <div class="role"><span>Buyer</span> · <span class="orders"><i class="fas fa-check-circle"></i> <?php echo number_format($tradeCountMap[(int)$o['agent_id']] ?? 0); ?> orders</span></div>
                 </div>
             </div>
             <div class="p2p-offer-card-v3-body">
@@ -494,7 +603,8 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
         if ($st === 'paid' && $isBuyer) $tradeActions = '<span style="font-size:.7rem;font-weight:600;color:#d97706"><i class="fas fa-clock"></i> Waiting for seller to release...</span>';
         if ($st === 'pending' || $st === 'paid') $tradeActions .= '<span style="flex:1"></span><button class="p2p-btn-cancel" onclick="cancelOrder('.(int)$t['id'].')"><i class="fas fa-xmark"></i> Cancel</button>';
         if ($st === 'completed' || $st === 'cancelled') $tradeActions .= '<span style="flex:1"></span><button class="p2p-btn-chat" onclick="openTradeChat('.(int)$t['id'].')"><i class="fas fa-comment"></i> Chat</button>';
-        if ($st === 'paid' || $st === 'completed' || $st === 'cancelled') $tradeActions .= '<button class="p2p-btn-report" onclick="reportTrade('.(int)$t['id'].')"><i class="fas fa-flag"></i></button>';
+        if ($st === 'paid' || $st === 'pending') $tradeActions .= '<button class="p2p-btn-report" onclick="disputeTrade('.(int)$t['id'].')" style="background:#ef444415;color:#ef4444;"><i class="fas fa-gavel"></i> Appeal</button>';
+        else $tradeActions .= '<button class="p2p-btn-report" onclick="reportTrade('.(int)$t['id'].')"><i class="fas fa-flag"></i></button>';
     ?>
     <div class="p2p-trade-item" data-trade-id="<?php echo (int)$t['id']; ?>">
         <div class="p2p-trade-top">
@@ -661,7 +771,7 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
                 foreach ($paymentSettings as $ps) {
                     if ($ps['method'] === $m) { $found = $ps; break; }
                 }
-                $num = $found ? $found['number'] : '01888780877';
+                $num = $found ? $found['number'] : '';
                 $inst = $found ? $found['instruction'] : 'send_money';
                 $colors = ['bkash'=>'#E2136E','nagad'=>'#E8522E','rocket'=>'#CC0000'];
                 $labels = ['bkash'=>'bKash','nagad'=>'Nagad','rocket'=>'Rocket'];
@@ -714,6 +824,8 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
             <div class="p2p-chat-box" style="border:0;border-radius:0;margin-top:0">
                 <div class="p2p-chat-msgs" id="chatMessages"></div>
                 <div class="p2p-chat-input-wrap">
+                    <input type="file" id="chatImageInput" accept="image/png, image/jpeg" style="display:none" onchange="uploadChatImage()">
+                    <button id="chatAttachBtn" onclick="document.getElementById('chatImageInput').click()" style="background:none;color:var(--p2p-muted);font-size:1.2rem;padding:0 10px"><i class="fas fa-paperclip"></i></button>
                     <input type="text" id="chatInput" placeholder="Type a message..." maxlength="500">
                     <button id="chatSendBtn"><i class="fas fa-paper-plane"></i></button>
                 </div>
@@ -728,7 +840,7 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
 <div class="p2p-detail-overlay" id="reportOverlay">
     <div class="p2p-detail-panel" style="max-width:400px">
         <div class="p2p-detail-head">
-            <h3><i class="fas fa-flag" style="color:#dc2626"></i> Report Trade</h3>
+            <h3 id="reportTitle"><i class="fas fa-flag" style="color:#dc2626"></i> Report / Dispute Trade</h3>
             <button class="p2p-detail-close" onclick="document.getElementById('reportOverlay').style.display='none';document.body.style.overflow=''">&times;</button>
         </div>
         <div class="p2p-detail-body" id="reportBody">
@@ -753,7 +865,8 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
                 <label style="font-size:.72rem;font-weight:700;color:var(--p2p-muted);display:block;margin-bottom:4px">Details</label>
                 <textarea id="reportDetails" style="width:100%;padding:10px 12px;border-radius:12px;border:2px solid var(--p2p-border);font-size:.82rem;outline:none;box-sizing:border-box;font-family:'Plus Jakarta Sans',sans-serif;background:var(--p2p-card);color:var(--p2p-text);resize:vertical" rows="3" placeholder="Describe the issue..."></textarea>
             </div>
-            <button class="p2p-btn-submit-report" id="reportSubmitBtn" onclick="submitReport()"><i class="fas fa-paper-plane"></i> Submit Report</button>
+            <input type="hidden" id="reportMode" value="report">
+            <button class="p2p-btn-submit-report" id="reportSubmitBtn" onclick="submitReport()"><i class="fas fa-paper-plane"></i> Submit</button>
             <div class="p2p-fb" id="reportFb"></div>
         </div>
     </div>
@@ -800,8 +913,31 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
 
     // ═══ FORM & TRADE LOGIC ═══
     var currentReportTradeId = 0;
+    
+    window.disputeTrade = function(tradeId) {
+        currentReportTradeId = tradeId;
+        document.getElementById('reportMode').value = 'dispute';
+        document.getElementById('reportTitle').innerHTML = '<i class="fas fa-gavel" style="color:#dc2626"></i> Appeal / Dispute Trade';
+        var over = document.getElementById('reportOverlay');
+        over.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        
+        var input = document.getElementById('reportReason');
+        if (input) input.value = 'scam';
+        var trigger = document.querySelector('#reportReasonSelect .p2p-select-trigger span');
+        if (trigger) trigger.textContent = 'Scam / Fraud';
+        document.querySelectorAll('#reportReasonSelect .p2p-select-option').forEach(function(o){
+            o.classList.toggle('active', o.getAttribute('data-value') === 'scam');
+        });
+        document.getElementById('reportDetails').value = '';
+        hideFb('reportFb');
+        initAllCustomSelects(over);
+    };
+    
     window.reportTrade = function(tradeId) {
         currentReportTradeId = tradeId;
+        document.getElementById('reportMode').value = 'report';
+        document.getElementById('reportTitle').innerHTML = '<i class="fas fa-flag" style="color:#dc2626"></i> Report Trade';
         var over = document.getElementById('reportOverlay');
         over.style.display = 'flex';
         document.body.style.overflow = 'hidden';
@@ -822,13 +958,15 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
     window.submitReport = function() {
         var reason = document.getElementById('reportReason').value;
         var details = document.getElementById('reportDetails').value.trim();
+        var mode = document.getElementById('reportMode').value;
+        var actionName = mode === 'dispute' ? 'file_dispute' : 'report_p2p_trade';
         if (!currentReportTradeId) return;
         var btn = document.getElementById('reportSubmitBtn');
         btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
         fetch('handlers/p2p_handler.php', {
             method: 'POST',
             headers: {'Content-Type': 'application/json','X-Requested-With': 'XMLHttpRequest'},
-            body: JSON.stringify({action: 'report_p2p_trade', trade_id: currentReportTradeId, reason: reason, details: details, csrf_token: csrfToken})
+            body: JSON.stringify({action: actionName, trade_id: currentReportTradeId, reason: reason, details: details, csrf_token: csrfToken})
         })
         .then(function(r){ return r.json(); })
         .then(function(res){
@@ -861,108 +999,7 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
         });
     };
 
-    // ═══ PRICE CHART ═══
-    (function drawPriceChart() {
-        var canvas = document.getElementById('p2pPriceChart');
-        if (!canvas) return;
-        var ctx = canvas.getContext('2d');
-        var W, H;
-        function resize() {
-            var rect = canvas.parentElement.getBoundingClientRect();
-            W = canvas.width = rect.width - 48;
-            H = canvas.height = 260;
-            draw();
-        }
-        function draw() {
-            ctx.clearRect(0, 0, W, H);
-            var pad = {t: 25, r: 15, b: 30, l: 55};
-            var cw = W - pad.l - pad.r;
-            var ch = H - pad.t - pad.b;
-
-            // Generate smooth random walk data
-            var points = 30;
-            var data = [];
-            var start = 85 + Math.random() * 30;
-            for (var i = 0; i < points; i++) {
-                var prev = data.length > 0 ? data[data.length - 1] : start;
-                var change = (Math.random() - 0.48) * 6;
-                data.push(Math.max(10, prev + change));
-            }
-            var min = Math.min.apply(null, data) - 5;
-            var max = Math.max.apply(null, data) + 5;
-            var padRange = (max - min) * 0.1;
-            min -= padRange; max += padRange;
-
-            // Grid
-            ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 0.5;
-            for (var i = 0; i <= 4; i++) {
-                var y = pad.t + (ch / 4) * i;
-                ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
-                var val = max - (max - min) * (i / 4);
-                ctx.fillStyle = '#94a3b8'; ctx.font = '9px sans-serif'; ctx.textAlign = 'right';
-                ctx.fillText('৳' + val.toFixed(0), pad.l - 8, y + 3);
-            }
-
-            // Gradient fill under line
-            var step = cw / (data.length - 1);
-            ctx.beginPath();
-            data.forEach(function(v, i) {
-                var x = pad.l + i * step, y = pad.t + ch - ((v - min) / (max - min)) * ch;
-                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-            });
-            ctx.lineTo(pad.l + (data.length - 1) * step, pad.t + ch);
-            ctx.lineTo(pad.l, pad.t + ch);
-            ctx.closePath();
-            var g = ctx.createLinearGradient(0, pad.t, 0, pad.t + ch);
-            g.addColorStop(0, 'rgba(5,150,105,0.3)');
-            g.addColorStop(0.5, 'rgba(5,150,105,0.08)');
-            g.addColorStop(1, 'rgba(5,150,105,0.02)');
-            ctx.fillStyle = g; ctx.fill();
-
-            // Main line
-            ctx.beginPath();
-            data.forEach(function(v, i) {
-                var x = pad.l + i * step, y = pad.t + ch - ((v - min) / (max - min)) * ch;
-                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-            });
-            ctx.strokeStyle = '#059669'; ctx.lineWidth = 2.5; ctx.stroke();
-
-            // Glow line
-            ctx.beginPath();
-            data.forEach(function(v, i) {
-                var x = pad.l + i * step, y = pad.t + ch - ((v - min) / (max - min)) * ch;
-                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-            });
-            ctx.strokeStyle = 'rgba(5,150,105,0.15)'; ctx.lineWidth = 8; ctx.stroke();
-
-            // Dots on last 5 points
-            for (var i = Math.max(0, data.length - 5); i < data.length; i++) {
-                var x = pad.l + i * step, y = pad.t + ch - ((data[i] - min) / (max - min)) * ch;
-                ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill();
-                ctx.strokeStyle = '#059669'; ctx.lineWidth = 2; ctx.stroke();
-            }
-
-            // X labels
-            var labels = ['Apr 14','Apr 15','Apr 16','Apr 17','Apr 18','Apr 19','Today'];
-            step = cw / (labels.length - 1);
-            ctx.fillStyle = '#94a3b8'; ctx.font = '8px sans-serif'; ctx.textAlign = 'center';
-            labels.forEach(function(l, i) { ctx.fillText(l, pad.l + i * step, H - 6); });
-
-            // Update price ticker
-            var lastPrice = data[data.length - 1];
-            var firstPrice = data[0];
-            var change = ((lastPrice - firstPrice) / firstPrice * 100);
-            var ticker = document.getElementById('chartPrice');
-            var changeEl = document.getElementById('chartChange');
-            if (ticker) { ticker.textContent = '৳' + lastPrice.toFixed(2); ticker.className = 'price-ticker ' + (change >= 0 ? 'up' : 'down'); }
-            if (changeEl) { changeEl.textContent = (change >= 0 ? '+' : '') + change.toFixed(2) + '%'; changeEl.className = 'change ' + (change >= 0 ? 'up' : 'down'); }
-        }
-        resize();
-        window.addEventListener('resize', resize);
-        setInterval(function() {
-            setTimeout(resize, 8000);
-        }, 8000);
-    })();
+    // ═══ PRICE CHART ═══ (removed – was fake random data)
 
     var csrfToken = document.getElementById('p2pPage')?.getAttribute('data-csrf') || '';
     var userId = parseInt(document.getElementById('p2pPage')?.getAttribute('data-user-id') || '0');
@@ -978,6 +1015,22 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
             this.classList.add('active');
             var target = document.getElementById('tab' + this.getAttribute('data-tab').charAt(0).toUpperCase() + this.getAttribute('data-tab').slice(1));
             if (target) target.classList.add('active');
+            // Reset coin filters when switching tabs
+            target && target.querySelectorAll('.p2p-coin-filter-btn').forEach(function(b,i){ b.classList.toggle('active', i===0); });
+            target && target.querySelectorAll('.p2p-offer-card-v3').forEach(function(c){ c.style.display=''; });
+        });
+    });
+
+    // ═══ COIN FILTER ═══
+    document.querySelectorAll('.p2p-coin-filter-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var panel = this.closest('.p2p-tab-panel');
+            var coin = this.getAttribute('data-coin');
+            this.closest('.p2p-coin-filter').querySelectorAll('.p2p-coin-filter-btn').forEach(function(b){ b.classList.remove('active'); });
+            this.classList.add('active');
+            panel.querySelectorAll('.p2p-offer-card-v3').forEach(function(card) {
+                card.style.display = (coin === 'all' || card.getAttribute('data-coin') === coin) ? '' : 'none';
+            });
         });
     });
 
@@ -1122,7 +1175,7 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
                 html += '<img src="assets/images/payment-icon/' + pm.method + '-logo-mobile-banking.png" alt="" onerror="this.style.display=\'none\'" style="height:22px">';
                 html += '<strong style="color:' + mColor + ';font-size:.85rem">' + mName + '</strong>';
                 html += '<span style="margin-left:auto;font-size:.65rem;font-weight:700;color:' + mColor + ';background:' + mColor + '15;padding:2px 8px;border-radius:999px">' + instrLabel + '</span></div>';
-                html += '<div class="p2p-pay-phone">' + pm.number + ' <button onclick="copyText(\'' + pm.number + '\')" style="background:none;border:none;color:' + mColor + ';cursor:pointer;font-size:.7rem"><i class="fas fa-copy"></i></button></div>';
+                html += '<div class="p2p-pay-phone">' + pm.number + ' <button onclick="copyText(\'' + pm.number + '\', this)" style="background:none;border:none;color:' + mColor + ';cursor:pointer;font-size:.7rem"><i class="fas fa-copy"></i></button></div>';
                 html += '</div>';
             });
             html += '<div class="p2p-pay-warning-note"><i class="fas fa-info-circle"></i> Send exactly <strong>৳' + totalPrice.toFixed(0) + '</strong> using any method above</div>';
@@ -1180,11 +1233,23 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
         .catch(function(){ showFb('payFb', 'Network error.', 'error'); if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check-circle"></i> I Have Paid'; } });
     };
 
-    window.copyText = function(text) {
-        navigator.clipboard.writeText(text).then(function(){
-            var btns = document.querySelectorAll('.copy-btn');
-            btns.forEach(function(b){ var t=b.innerHTML; b.innerHTML='<i class="fas fa-check"></i> Copied!'; setTimeout(function(){b.innerHTML=t;},1500); });
-        });
+    window.copyText = function(text, btn) {
+        var doFlash = function(b) {
+            if (!b) return;
+            var orig = b.innerHTML;
+            b.innerHTML = '<i class="fas fa-check"></i> Copied!';
+            setTimeout(function(){ b.innerHTML = orig; }, 1500);
+        };
+        function fallback(t, b) {
+            var ta = document.createElement('textarea');
+            ta.value = t; ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+            document.body.appendChild(ta); ta.focus(); ta.select();
+            try { document.execCommand('copy'); doFlash(b); } catch(e) {}
+            document.body.removeChild(ta);
+        }
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(function(){ doFlash(btn); }).catch(function(){ fallback(text, btn); });
+        } else { fallback(text, btn); }
     };
 
     // ═══ ORDER ACTIONS (from Orders tab) ═══
@@ -1247,6 +1312,39 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
         if (e.key === 'Enter') document.getElementById('chatSendBtn').click();
     });
 
+    window.uploadChatImage = function() {
+        var input = document.getElementById('chatImageInput');
+        if (!input.files || input.files.length === 0 || !currentChatTradeId) return;
+        var formData = new FormData();
+        formData.append('action', 'upload_chat_image');
+        formData.append('trade_id', currentChatTradeId);
+        formData.append('csrf_token', csrfToken);
+        formData.append('chat_image', input.files[0]);
+
+        var btn = document.getElementById('chatAttachBtn');
+        var oldHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        btn.disabled = true;
+
+        fetch('handlers/p2p_handler.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(function(r){ return r.json(); })
+        .then(function(res){
+            btn.innerHTML = oldHtml;
+            btn.disabled = false;
+            input.value = '';
+            if (res.success) { loadChatMessages(currentChatTradeId); }
+            else { alert(res.message); }
+        })
+        .catch(function(){
+            btn.innerHTML = oldHtml;
+            btn.disabled = false;
+            input.value = '';
+        });
+    };
+
     function loadChatMessages(tradeId) {
         fetch('handlers/p2p_handler.php?' + new URLSearchParams({action:'get_p2p_messages', trade_id: tradeId, csrf_token: csrfToken}))
         .then(function(r){ return r.json(); })
@@ -1258,7 +1356,15 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
                 var isOwn = parseInt(m.sender_id) === userId;
                 html += '<div class="p2p-chat-msg ' + (isOwn ? 'own' : 'other') + '">';
                 if (!isOwn) html += '<div class="sender">' + (m.full_name || m.username) + '</div>';
-                html += m.message;
+                
+                if (m.image_path) {
+                    html += '<img src="assets/images/chat/' + m.image_path + '" style="max-width:100%; border-radius:8px; display:block; margin-bottom:4px" onclick="window.open(this.src,\'_blank\')">';
+                }
+                
+                if (m.message) {
+                    var safeMsg = m.message.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                    html += safeMsg;
+                }
                 html += '<span class="time">' + new Date(m.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) + '</span>';
                 html += '</div>';
             });
@@ -1284,7 +1390,7 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
             document.getElementById('p2pCreateBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
             hideFb('p2pCreateFb');
 
-            fetch('handlers/tournament_handler.php', {
+            fetch('handlers/p2p_handler.php', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json','X-Requested-With': 'XMLHttpRequest'},
                 body: JSON.stringify({action: 'create_p2p_offer', type: type, coin_type: coin, price: price, quantity: qty, min_amount: minAmt, max_amount: maxAmt, csrf_token: csrfToken})

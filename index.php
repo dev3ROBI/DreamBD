@@ -416,7 +416,7 @@ $themeAttr = htmlspecialchars($theme, ENT_QUOTES, 'UTF-8');
     </button>
     
     <!-- Modal Overlay -->
-    <div class="modal-overlay hidden fixed inset-0 bg-black/50 z-40" id="modalOverlay"></div>
+    <div class="modal-overlay hidden fixed inset-0 bg-black/50" id="modalOverlay"></div>
 
     <!-- Post View Modal -->
     <div class="home-post-modal-backdrop hidden" id="homePostModalBackdrop" aria-hidden="true">
@@ -576,8 +576,20 @@ $themeAttr = htmlspecialchars($theme, ENT_QUOTES, 'UTF-8');
         </div>
     </div>
     
+    <!-- Forgot Password Success Overlay -->
+    <div class="fixed inset-0 items-center justify-center" id="forgotSuccessOverlay" style="display:none;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:1001">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4 text-center" onclick="event.stopPropagation()" style="animation:authModalContentIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full mb-4">
+                <i class="fas fa-check-circle text-3xl text-green-500"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Password Reset!</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Your password has been reset successfully. Sign in with your new password.</p>
+            <a href="index.php?page=login" class="inline-block w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white hover:text-white font-medium text-sm rounded-lg transition-colors">Go to Login</a>
+        </div>
+    </div>
+
     <!-- Forgot Password Modal -->
-    <div class="auth-modal hidden fixed inset-0 z-50 items-center justify-center" id="forgotPasswordModal" style="display:none">
+    <div class="auth-modal hidden fixed inset-0 items-center justify-center" id="forgotPasswordModal" style="display:none">
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 max-w-sm w-full mx-4 relative">
             <button class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" data-modal-close="forgotPassword" aria-label="Close modal">
                 <i class="fas fa-times"></i>
@@ -630,13 +642,13 @@ $themeAttr = htmlspecialchars($theme, ENT_QUOTES, 'UTF-8');
                 <div id="forgotStepPassword" style="display:none">
                     <div class="mb-4">
                         <label for="reset_password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New password</label>
-                        <input type="password" id="reset_password" name="password" required minlength="8"
+                        <input type="password" id="reset_password" name="password" required minlength="8" autocomplete="new-password"
                                class="block w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                                placeholder="At least 8 characters">
                     </div>
                     <div class="mb-4">
                         <label for="reset_confirm" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirm password</label>
-                        <input type="password" id="reset_confirm" name="confirm_password" required minlength="8"
+                        <input type="password" id="reset_confirm" name="confirm_password" required minlength="8" autocomplete="new-password"
                                class="block w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                                placeholder="Repeat new password">
                     </div>

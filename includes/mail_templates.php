@@ -2,7 +2,7 @@
 
 class MailTemplates {
     private static $appName = 'RobiCodes';
-    private static $appUrl = 'http://localhost/Dream';
+    private static $appUrl = '';
 
     private static function baseTemplate(string $title, string $content): string {
         return <<<HTML
@@ -62,6 +62,24 @@ Enter this code on the password reset page. It expires in 10 minutes.
 <p style="font-size:14px;color:#6b7280;margin:0;line-height:1.6">If you didn't request this, please ignore this email.</p>
 HTML;
         return self::baseTemplate('Password Reset OTP', $content);
+    }
+
+    public static function passwordChanged(string $username, string $ip, string $device): string {
+        $url = self::$appUrl ?: env('APP_URL', 'http://localhost/Dream');
+        $content = <<<HTML
+<p style="font-size:16px;color:#374151;margin:0 0 24px">Hi <strong>{$username}</strong>,</p>
+<p style="font-size:15px;color:#4b5563;margin:0 0 24px;line-height:1.6">
+Your password has been changed successfully.
+</p>
+<div style="background:#f3f4f6;border-radius:12px;padding:20px 24px;margin:0 0 24px;font-size:14px;color:#4b5563;line-height:1.8">
+    <strong style="color:#374151">Device:</strong> {$device}<br>
+    <strong style="color:#374151">IP Address:</strong> {$ip}
+</div>
+<p style="font-size:14px;color:#6b7280;margin:0 0 24px;line-height:1.6">
+If you did not make this change, please <a href="{$url}/index.php?page=login" style="color:#3b82f6">reset your password</a> immediately or contact support.
+</p>
+HTML;
+        return self::baseTemplate('Password Changed', $content);
     }
 
     public static function welcomeVerified(string $username): string {

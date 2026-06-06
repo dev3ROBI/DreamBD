@@ -14,7 +14,7 @@ class AuthHandler {
             const form = e.target;
             if (!form || !form.hasAttribute('data-ajax-form')) return;
             e.preventDefault();
-            this.handleAuthFormSubmit(form);
+            this.handleAuthFormSubmit(form, e.submitter);
         });
         
         this.initPasswordToggles();
@@ -85,32 +85,14 @@ class AuthHandler {
             this.openModal(modalId);
         });
         
-        // Close modal triggers
+        // Close modal triggers (only via X button, no outside-click or Escape)
         document.addEventListener('click', (e) => {
             const closeBtn = e.target.closest('[data-modal-close]');
-            if (closeBtn) {
-                e.preventDefault();
-                e.stopPropagation();
-                const modalId = closeBtn.getAttribute('data-modal-close') + 'Modal';
-                this.closeModal(modalId);
-                return;
-            }
-            
-            // Close when clicking outside
-            const modal = e.target.closest('.auth-modal');
-            if (modal && e.target === modal) {
-                this.closeModal(modal.id);
-            }
-        });
-        
-        // Close with Escape key
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                const activeModal = document.querySelector('.auth-modal.active');
-                if (activeModal) {
-                    this.closeModal(activeModal.id);
-                }
-            }
+            if (!closeBtn) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const modalId = closeBtn.getAttribute('data-modal-close') + 'Modal';
+            this.closeModal(modalId);
         });
     }
 
@@ -375,10 +357,16 @@ class AuthHandler {
             const stepOtp = document.getElementById('forgotStepOtp');
             const stepPassword = document.getElementById('forgotStepPassword');
             const desc = document.getElementById('forgotDesc');
+            const form = document.getElementById('forgotPasswordForm');
             if (stepOtp) stepOtp.style.display = 'none';
-            if (stepPassword) stepPassword.style.display = 'none';
+            if (stepPassword) {
+                stepPassword.style.display = 'none';
+                // Disable password fields so browser autofill + FormData ignore them
+                stepPassword.querySelectorAll('[name]').forEach(el => el.setAttribute('disabled', 'disabled'));
+            }
             if (stepEmail) stepEmail.style.display = 'block';
             if (desc) desc.textContent = 'Enter your email to receive an OTP';
+            if (form) form.reset();
         }
         
         modal.classList.remove('active');
@@ -399,7 +387,8 @@ class AuthHandler {
         }, 300);
     }
     
-    async handleAuthFormSubmit(form) {
+    async handleAuthFormSubmit(form, submitter) {
+        if (form.dataset.submitting) return;
         if (!this.validateForm(form)) return;
 
         const recaptchaError = form.querySelector('#recaptchaError');
@@ -408,8 +397,23 @@ class AuthHandler {
             recaptchaError.classList.add('hidden');
         }
         
+        form.dataset.submitting = '1';
+        
+        // Copy forgot password email to hidden field before FormData
+        if (form.id === 'forgotPasswordForm') {
+            const visibleEmail = form.querySelector('[name="email_visible"]');
+            const hiddenEmail = form.querySelector('#forgotEmailHidden');
+            if (visibleEmail && hiddenEmail) {
+                hiddenEmail.value = visibleEmail.value;
+            }
+        }
+        
         const formData = new FormData(form);
-        const submitBtn = form.querySelector('[type="submit"]');
+        const stepEmail = form.querySelector('#forgotStepEmail');
+        const stepOtp = form.querySelector('#forgotStepOtp');
+        const stepPassword = form.querySelector('#forgotStepPassword');
+        const visibleStep = stepPassword?.style.display !== 'none' ? stepPassword : stepOtp?.style.display !== 'none' ? stepOtp : stepEmail;
+        const submitBtn = submitter || (visibleStep?.querySelector('[type="submit"]')) || form.querySelector('[type="submit"]');
         const formAction = form.getAttribute('action') || form.action;
         
         // Loading state
@@ -419,15 +423,6 @@ class AuthHandler {
             const loader = submitBtn.querySelector('.btn-loader');
             if (text) text.classList.add('hidden');
             if (loader) loader.classList.remove('hidden');
-        }
-        
-        // Copy forgot password email to hidden field before submit
-        if (form.id === 'forgotPasswordForm') {
-            const visibleEmail = form.querySelector('[name="email_visible"]');
-            const hiddenEmail = form.querySelector('#forgotEmailHidden');
-            if (visibleEmail && hiddenEmail) {
-                hiddenEmail.value = visibleEmail.value;
-            }
         }
 
         try {
@@ -464,13 +459,23 @@ class AuthHandler {
                     this.clearAlerts(form);
                 }
                 // Step 2 → 3: OTP verified
-                else if (stepOtp && stepPassword && !stepEmail || stepOtp && stepPassword && stepOtp.style.display !== 'none') {
+                else if (stepOtp && stepPassword && stepOtp.style.display !== 'none') {
                     stepOtp.style.display = 'none';
                     stepPassword.style.display = 'block';
                     if (forgotDesc) forgotDesc.textContent = 'Choose a new password';
                     this.clearAlerts(form);
+                    // Enable password fields for FormData
+                    form.querySelectorAll('#forgotStepPassword [name]').forEach(el => el.removeAttribute('disabled'));
                 }
-                // Step 3 or other forms: success
+                // Step 3: password reset complete → show success overlay
+                else if (form.id === 'forgotPasswordForm' && stepPassword) {
+                    form.dataset.successShown = '1';
+                    this.closeModal('forgotPasswordModal');
+                    const overlay = document.getElementById('forgotSuccessOverlay');
+                    if (overlay) overlay.style.display = 'flex';
+                    form.reset();
+                }
+                // Other forms: success
                 else {
                     this.showAlert(form, result.message || 'Success!', 'success');
 
@@ -490,6 +495,9 @@ class AuthHandler {
                 }
                 
             } else {
+                // Don't overwrite success with a late error response
+                if (form.dataset.successShown) return;
+
                 // Reset reCAPTCHA on failure
                 if (typeof grecaptcha !== 'undefined') {
                     grecaptcha.reset();
@@ -521,6 +529,8 @@ class AuthHandler {
             if (text) text.classList.remove('hidden');
             if (loader) loader.classList.add('hidden');
         }
+        
+        delete form.dataset.submitting;
     }
     
     validateForm(form) {

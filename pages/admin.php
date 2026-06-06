@@ -19,8 +19,11 @@ if (!$isAdmin) {
 $adminSecurity = new Security();
 $adminCsrfToken = $adminSecurity->generateCSRFToken();
 
-// Handle resolve/dismiss action
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && in_array($_POST['action'], ['resolve_report', 'dismiss_report'])) {
+// Handle admin actions
+$action = $_POST['action'] ?? '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    if (in_array($action, ['resolve_report', 'dismiss_report'])) {
     $reportId = (int) ($_POST['report_id'] ?? 0);
     $adminNote = trim($_POST['admin_note'] ?? '');
     $action = $_POST['action'];
@@ -48,6 +51,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && in_array
 
         echo '<div class="admin-alert success">Report ' . $status . ' successfully. Notifications sent.</div>';
     }
+    }
+
+    if ($action === 'change_role') {
+        $targetUserId = (int)($_POST['user_id'] ?? 0);
+        $newRole = $_POST['new_role'] ?? 'user';
+        $validRoles = ['user', 'merchant', 'agent', 'admin'];
+        if (in_array($newRole, $validRoles) && $targetUserId > 0) {
+            // Prevent changing own role or super admin
+            if ($targetUserId !== (int)$adminViewerId) {
+                $db->prepare("UPDATE users SET role = ? WHERE id = ?")->execute([$newRole, $targetUserId]);
+                echo '<div class="admin-alert success">User role updated to ' . ucfirst($newRole) . ' successfully.</div>';
+            } else {
+                echo '<div class="admin-alert error">Cannot change your own role here.</div>';
+            }
+        }
+    }
+}
+
+// Determine view
+$adminView = $_GET['view'] ?? 'reports';
+
+// Fetch users if in users view
+$searchQuery = trim($_GET['search'] ?? '');
+$usersList = [];
+if ($adminView === 'users') {
+    $searchFilter = '';
+    if ($searchQuery) {
+        $searchFilter = "WHERE username LIKE :q OR full_name LIKE :q OR email LIKE :q OR id = :id_q";
+    }
+    $uSql = "SELECT id, username, full_name, email, role, registered_at FROM users $searchFilter ORDER BY id DESC LIMIT 50";
+    $uStmt = $db->prepare($uSql);
+    if ($searchQuery) {
+        $uStmt->execute(['q' => "%$searchQuery%", 'id_q' => (int)$searchQuery]);
+    } else {
+        $uStmt->execute();
+    }
+    $usersList = $uStmt->fetchAll();
 }
 
 // Fetch reports
@@ -83,11 +123,17 @@ $counts['all'] = $counts['pending'] + $counts['resolved'] + $counts['dismissed']
         <!-- Header -->
         <div class="admin-header">
             <div>
-                <h1><i class="fas fa-shield-alt" style="color:#1877f2"></i> Report Management</h1>
-                <p class="admin-header-sub">Review and resolve post reports from the community</p>
+                <h1><i class="fas fa-shield-alt" style="color:#1877f2"></i> Admin Control Panel</h1>
+                <p class="admin-header-sub">Manage reports, users, and platform settings</p>
             </div>
-            <a href="index.php?page=community" class="admin-back-link"><i class="fas fa-arrow-left"></i> Back to Community</a>
+            <div style="display:flex; gap:10px;">
+                <a href="?page=admin&view=reports" class="admin-back-link <?= $adminView === 'reports' ? 'active' : '' ?>" style="<?= $adminView==='reports'?'background:#e0e7ff;color:#4f46e5':'' ?>"><i class="fas fa-flag"></i> Reports</a>
+                <a href="?page=admin&view=users" class="admin-back-link <?= $adminView === 'users' ? 'active' : '' ?>" style="<?= $adminView==='users'?'background:#e0e7ff;color:#4f46e5':'' ?>"><i class="fas fa-users"></i> Users</a>
+                <a href="index.php?page=community" class="admin-back-link"><i class="fas fa-arrow-left"></i> Exit</a>
+            </div>
         </div>
+
+        <?php if ($adminView === 'reports'): ?>
 
         <!-- Stats Cards -->
         <div class="admin-stats-row">
@@ -208,6 +254,63 @@ $counts['all'] = $counts['pending'] + $counts['resolved'] + $counts['dismissed']
                 <?php endif; ?>
             </div>
             <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+        
+        <?php elseif ($adminView === 'users'): ?>
+        <!-- USER MANAGEMENT VIEW -->
+        <div class="admin-search-bar" style="margin-bottom:20px;">
+            <form method="GET" style="display:flex; gap:10px;">
+                <input type="hidden" name="page" value="admin">
+                <input type="hidden" name="view" value="users">
+                <input type="text" name="search" value="<?= htmlspecialchars($searchQuery) ?>" placeholder="Search by username, email, or ID..." style="flex:1; padding:12px; border:1px solid #e2e8f0; border-radius:10px;">
+                <button type="submit" style="padding:12px 20px; background:#4f46e5; color:#fff; border:none; border-radius:10px; cursor:pointer;"><i class="fas fa-search"></i> Search</button>
+            </form>
+        </div>
+        
+        <div class="admin-report-list">
+            <table style="width:100%; border-collapse:collapse; background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 4px 6px -1px rgba(0,0,0,.1);">
+                <thead style="background:#f8fafc; border-bottom:2px solid #e2e8f0;">
+                    <tr>
+                        <th style="padding:12px; text-align:left;">ID</th>
+                        <th style="padding:12px; text-align:left;">User</th>
+                        <th style="padding:12px; text-align:left;">Email</th>
+                        <th style="padding:12px; text-align:left;">Role</th>
+                        <th style="padding:12px; text-align:center;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($usersList)): ?>
+                    <tr><td colspan="5" style="padding:20px; text-align:center;">No users found.</td></tr>
+                    <?php else: ?>
+                    <?php foreach ($usersList as $u): ?>
+                    <tr style="border-bottom:1px solid #e2e8f0;">
+                        <td style="padding:12px;">#<?= $u['id'] ?></td>
+                        <td style="padding:12px;"><strong><?= htmlspecialchars($u['full_name'] ?: $u['username']) ?></strong><br><small style="color:#64748b">@<?= htmlspecialchars($u['username']) ?></small></td>
+                        <td style="padding:12px;"><?= htmlspecialchars($u['email']) ?></td>
+                        <td style="padding:12px;">
+                            <span style="padding:4px 8px; border-radius:99px; font-size:.75rem; font-weight:700; background:<?= $u['role']==='admin'?'#fee2e2':($u['role']==='merchant'?'#fef3c7':'#e0e7ff') ?>; color:<?= $u['role']==='admin'?'#ef4444':($u['role']==='merchant'?'#d97706':'#4f46e5') ?>;">
+                                <?= ucfirst($u['role']) ?>
+                            </span>
+                        </td>
+                        <td style="padding:12px; text-align:center;">
+                            <form method="POST" style="display:flex; gap:6px; justify-content:center;">
+                                <input type="hidden" name="action" value="change_role">
+                                <input type="hidden" name="user_id" value="<?= $u['id'] ?>">
+                                <select name="new_role" style="padding:6px; border:1px solid #cbd5e1; border-radius:6px;">
+                                    <option value="user" <?= $u['role']==='user'?'selected':'' ?>>User</option>
+                                    <option value="agent" <?= $u['role']==='agent'?'selected':'' ?>>Agent</option>
+                                    <option value="merchant" <?= $u['role']==='merchant'?'selected':'' ?>>Merchant</option>
+                                    <option value="admin" <?= $u['role']==='admin'?'selected':'' ?>>Admin</option>
+                                </select>
+                                <button type="submit" style="padding:6px 12px; background:#10b981; color:#fff; border:none; border-radius:6px; cursor:pointer;" <?= $u['id']==$adminViewerId?'disabled':'' ?>><i class="fas fa-save"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
         </div>
         <?php endif; ?>
     </div>

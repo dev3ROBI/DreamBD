@@ -741,6 +741,7 @@ CREATE TABLE IF NOT EXISTS `p2p_chat_messages` (
   `trade_id` int(10) unsigned NOT NULL,
   `sender_id` int(10) unsigned NOT NULL,
   `message` text NOT NULL,
+  `image_path` varchar(255) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   KEY `idx_trade` (`trade_id`),
