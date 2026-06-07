@@ -345,10 +345,21 @@ try {
         case 'get_user_trades':
             if (!$userId) { $response['message'] = 'Please log in.'; break; }
             try {
-                $stmt = $db->prepare("SELECT t.*, o.type AS offer_type, ob.username AS buyer_name, os.username AS seller_name FROM p2p_trades t JOIN p2p_offers o ON o.id = t.offer_id LEFT JOIN users ob ON ob.id = t.buyer_id LEFT JOIN users os ON os.id = t.seller_id WHERE t.buyer_id = ? OR t.seller_id = ? ORDER BY t.created_at DESC LIMIT 30");
-                $stmt->execute([$userId, $userId]);
+                $stmt = $db->prepare("SELECT t.*, o.type AS offer_type, ob.username AS buyer_name, os.username AS seller_name, (SELECT COUNT(*) FROM p2p_chat_messages cm WHERE cm.trade_id = t.id AND cm.sender_id != ? AND cm.is_read = 0) AS unread_count FROM p2p_trades t JOIN p2p_offers o ON o.id = t.offer_id LEFT JOIN users ob ON ob.id = t.buyer_id LEFT JOIN users os ON os.id = t.seller_id WHERE t.buyer_id = ? OR t.seller_id = ? ORDER BY t.created_at DESC LIMIT 30");
+                $stmt->execute([$userId, $userId, $userId]);
                 $trades = $stmt->fetchAll();
                 $response = ['success' => true, 'trades' => $trades];
+            } catch (Throwable $e) { $response['message'] = 'Server error.'; }
+            break;
+
+        // ─── GET UNREAD CHAT COUNTS ───
+        case 'get_unread_chat_counts':
+            if (!$userId) { $response['message'] = 'Please log in.'; break; }
+            try {
+                $stmt = $db->prepare("SELECT t.id AS trade_id, COUNT(m.id) AS unread_count FROM p2p_trades t JOIN p2p_chat_messages m ON m.trade_id = t.id WHERE (t.buyer_id = ? OR t.seller_id = ?) AND m.sender_id != ? AND m.is_read = 0 GROUP BY t.id");
+                $stmt->execute([$userId, $userId, $userId]);
+                $counts = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+                $response = ['success' => true, 'counts' => $counts ? $counts : new stdClass()];
             } catch (Throwable $e) { $response['message'] = 'Server error.'; }
             break;
 
@@ -376,6 +387,11 @@ try {
                 $stmt = $db->prepare("SELECT id FROM p2p_trades WHERE id = ? AND (buyer_id = ? OR seller_id = ?)");
                 $stmt->execute([$tradeId, $userId, $userId]);
                 if (!$stmt->fetch()) { $response['message'] = 'Trade not found.'; break; }
+                
+                // Mark incoming messages as read
+                $updateStmt = $db->prepare("UPDATE p2p_chat_messages SET is_read = 1 WHERE trade_id = ? AND sender_id != ? AND is_read = 0");
+                $updateStmt->execute([$tradeId, $userId]);
+
                 $response = ['success' => true, 'messages' => $loadP2PMessages($tradeId)];
             } catch (Throwable $e) { $response['message'] = 'Server error.'; }
             break;
@@ -660,8 +676,8 @@ try {
             $offset = (int)($req['offset'] ?? 0);
             $limit = 20;
             try {
-                $stmt = $db->prepare("SELECT t.*, o.type AS offer_type, ob.username AS buyer_name, os.username AS seller_name FROM p2p_trades t JOIN p2p_offers o ON o.id = t.offer_id LEFT JOIN users ob ON ob.id = t.buyer_id LEFT JOIN users os ON os.id = t.seller_id WHERE t.buyer_id = ? OR t.seller_id = ? ORDER BY t.created_at DESC LIMIT ? OFFSET ?");
-                $stmt->execute([$userId, $userId, $limit, $offset]);
+                $stmt = $db->prepare("SELECT t.*, o.type AS offer_type, ob.username AS buyer_name, os.username AS seller_name, (SELECT COUNT(*) FROM p2p_chat_messages cm WHERE cm.trade_id = t.id AND cm.sender_id != ? AND cm.is_read = 0) AS unread_count FROM p2p_trades t JOIN p2p_offers o ON o.id = t.offer_id LEFT JOIN users ob ON ob.id = t.buyer_id LEFT JOIN users os ON os.id = t.seller_id WHERE t.buyer_id = ? OR t.seller_id = ? ORDER BY t.created_at DESC LIMIT ? OFFSET ?");
+                $stmt->execute([$userId, $userId, $userId, $limit, $offset]);
                 $trades = $stmt->fetchAll();
                 $response = ['success' => true, 'trades' => $trades, 'has_more' => count($trades) === $limit];
             } catch (Throwable $e) { $response['message'] = 'Server error.'; }

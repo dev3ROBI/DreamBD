@@ -456,8 +456,8 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
   .p2p-tabbar-btn { flex-shrink:0 }
 }
 @media(max-width:480px) {
-  .p2p-detail-panel { max-width:none; max-height:none; border-radius:0; width:100vw; height:100dvh; }
-  .p2p-detail-panel.p2p-detail-v3 { max-width:none; }
+  .p2p-detail-panel { max-width:none !important; max-height:none !important; border-radius:0 !important; width:100vw !important; height:100dvh !important; }
+  .p2p-detail-panel.p2p-detail-v3 { max-width:none !important; }
 }
 </style>
 
@@ -731,7 +731,7 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
         if ($st === 'paid' && $isSeller && $offerType === 'buy') $tradeActions = '<button class="p2p-btn-confirm" onclick="confirmReceived('.(int)$t['id'].')"><i class="fas fa-check"></i> Release Coins</button>';
         if ($st === 'paid' && $isBuyer) $tradeActions = '<span style="font-size:.7rem;font-weight:600;color:#d97706"><i class="fas fa-clock"></i> Waiting for seller to release...</span>';
         if ($st === 'pending' || $st === 'paid') $tradeActions .= '<span style="flex:1"></span><button class="p2p-btn-cancel" onclick="cancelOrder('.(int)$t['id'].')"><i class="fas fa-xmark"></i> Cancel</button>';
-        if ($st === 'completed' || $st === 'cancelled') $tradeActions .= '<span style="flex:1"></span><button class="p2p-btn-chat" onclick="openTradeChat('.(int)$t['id'].')"><i class="fas fa-comment"></i> Chat</button>';
+        if ($st === 'completed' || $st === 'cancelled') $tradeActions .= '<span style="flex:1"></span>';
         if ($st === 'paid' || $st === 'pending') $tradeActions .= '<button class="p2p-btn-report" onclick="disputeTrade('.(int)$t['id'].')" style="background:#ef444415;color:#ef4444;"><i class="fas fa-gavel"></i> Appeal</button>';
         else $tradeActions .= '<button class="p2p-btn-report" onclick="reportTrade('.(int)$t['id'].')"><i class="fas fa-flag"></i></button>';
     ?>
@@ -753,12 +753,16 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
             <span class="chip"><i class="fas fa-bangladeshi-taka-sign"></i> <strong>৳<?php echo number_format((float)$t['total_price'],0); ?></strong></span>
             <span class="chip"><i class="fas fa-arrow-right-arrow-left"></i> <?php echo $isBuyer ? 'Buy' : 'Sell'; ?></span>
         </div>
-        <?php if ($tradeActions): ?>
         <div class="p2p-trade-actions">
-            <button class="p2p-btn-chat" onclick="openTradeChat(<?php echo (int)$t['id']; ?>)"><i class="fas fa-comment"></i> Chat</button>
+            <?php $unreadCount = (int)($t['unread_count'] ?? 0); ?>
+            <button class="p2p-btn-chat" onclick="openTradeChat(<?php echo (int)$t['id']; ?>)">
+                <i class="fas fa-comment"></i> Chat
+                <span class="chat-badge" id="chat-badge-<?php echo (int)$t['id']; ?>" style="display: <?php echo ($unreadCount > 0) ? 'inline-flex' : 'none'; ?>; background: #ef4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.65rem; font-weight: 700; margin-left: 5px; vertical-align: middle; min-width: 14px; height: 14px; align-items: center; justify-content: center; line-height: 1;">
+                    <?php echo $unreadCount; ?>
+                </span>
+            </button>
             <?php echo $tradeActions; ?>
         </div>
-        <?php endif; ?>
     </div>
     <?php endforeach; endif; ?>
     <?php if (count($myTrades) >= 30): ?>
@@ -987,13 +991,13 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
 <!-- ═══ CHAT MODAL — Redesigned ═══ -->
 <!-- ════════════════════════════════════ -->
 <div class="p2p-detail-overlay" id="chatOverlay">
-    <div class="p2p-detail-panel" style="max-width:420px;max-height:min(92vh,700px);padding:0;background:var(--p2p-card);overflow:hidden">
+    <div class="p2p-detail-panel" style="max-width:420px;height:min(92vh,700px);padding:0;background:var(--p2p-card);overflow:hidden">
         <div class="p2p-chat-modal">
             <div class="p2p-chat-top" id="chatTop">
                 <div class="p2p-chat-top-avatar" id="chatTopAvatar">?</div>
                 <div class="p2p-chat-top-info">
                     <div class="p2p-chat-top-name" id="chatTopName">Trade Partner</div>
-                    <div class="p2p-chat-top-sub" id="chatTopSub">#<span id="chatTradeId">0</span></div>
+                    <div class="p2p-chat-top-sub">#<span id="chatTradeId">0</span><span id="chatTopSubMeta" style="margin-left:5px"></span></div>
                 </div>
                 <button class="p2p-detail-close" onclick="closeChat()" style="position:static"><i class="fas fa-xmark"></i></button>
             </div>
@@ -1262,6 +1266,8 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
     var currentChatTradeId = null;
     var chatInterval = null;
     var chatRequestToken = 0;
+    var chatLastMsgCount = -1;   // -1 = force render on first load of each trade
+    var chatLastMsgTradeId = null; // which trade the count belongs to
 
     // ═══ TABS ═══
     document.querySelectorAll('.p2p-tabbar-btn').forEach(function(btn){
@@ -1308,11 +1314,15 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
 
     function showOfferDetail(offerId, type, coin, price, remaining, minAmt, maxAmt, agent, agentId) {
         var coinLabels = {bronze:'Bronze',silver:'Silver',gold:'Gold'};
-        var coinIcons = {bronze:'🥉',silver:'🥈',gold:'🥇'};
+        var coinIcons = {
+            bronze: '<img src="assets/images/coin-bronze.svg" class="p2p-coin-svg" alt="" style="width:20px;height:20px;vertical-align:middle;margin-right:4px">',
+            silver: '<img src="assets/images/coin-silver.svg" class="p2p-coin-svg" alt="" style="width:20px;height:20px;vertical-align:middle;margin-right:4px">',
+            gold: '<img src="assets/images/coin-gold.svg" class="p2p-coin-svg" alt="" style="width:20px;height:20px;vertical-align:middle;margin-right:4px">'
+        };
         var actionLabel = type === 'buy' ? 'Buy' : 'Sell';
         var over = document.getElementById('offerDetailOverlay');
         var panel = document.getElementById('detailBody');
-        document.getElementById('detailTitle').innerHTML = (type === 'buy' ? 'Buy' : 'Sell') + ' ' + coinIcons[coin] + ' ' + coinLabels[coin];
+        document.getElementById('detailTitle').innerHTML = (type === 'buy' ? 'Buy ' : 'Sell ') + coinIcons[coin] + ' ' + coinLabels[coin];
 
         panel.innerHTML =
             '<div class="seller-card">' +
@@ -1411,7 +1421,11 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
 
     function showPaymentForm(tradeId, paySettings, totalPrice, coinType, qty, type, offerType) {
         var panel = document.getElementById('detailBody');
-        var coinLabels = {bronze:'🥉 Bronze',silver:'🥈 Silver',gold:'🥇 Gold'};
+        var coinLabels = {
+            bronze: '<img src="assets/images/coin-bronze.svg" class="p2p-coin-svg" alt="" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"> Bronze',
+            silver: '<img src="assets/images/coin-silver.svg" class="p2p-coin-svg" alt="" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"> Silver',
+            gold: '<img src="assets/images/coin-gold.svg" class="p2p-coin-svg" alt="" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"> Gold'
+        };
         var isBuyOrder = type === 'buy'; // User is buying coins from merchant
 
         // ── ORDER SUMMARY ──
@@ -1469,7 +1483,11 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
     // ═══ SHOW ORDER PLACED (for sellers — buy offers) ═══
     function showOrderPlacedSeller(tradeId, totalPrice, coinType, qty) {
         var panel = document.getElementById('detailBody');
-        var coinLabels = {bronze:'🥉 Bronze',silver:'🥈 Silver',gold:'🥇 Gold'};
+        var coinLabels = {
+            bronze: '<img src="assets/images/coin-bronze.svg" class="p2p-coin-svg" alt="" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"> Bronze',
+            silver: '<img src="assets/images/coin-silver.svg" class="p2p-coin-svg" alt="" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"> Silver',
+            gold: '<img src="assets/images/coin-gold.svg" class="p2p-coin-svg" alt="" style="width:16px;height:16px;vertical-align:middle;margin-right:4px"> Gold'
+        };
         var html = '<div class="p2p-order-steps"><div class="p2p-order-step done"><span class="num">1</span> Order Placed</div><div class="p2p-order-step active"><span class="num">2</span> Awaiting Payment</div><div class="p2p-order-step"><span class="num">3</span> Complete</div></div>';
         html += '<div style="text-align:center;padding:24px 16px">';
         html += '<div style="width:64px;height:64px;border-radius:50%;background:#d1fae5;display:flex;align-items:center;justify-content:center;margin:0 auto 14px"><i class="fas fa-check" style="font-size:1.5rem;color:#059669"></i></div>';
@@ -1561,23 +1579,34 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
 
     // ═══ CHAT ═══
     window.openTradeChat = function(tradeId) {
+        tradeId = parseInt(tradeId);
+        // Hide badge immediately on open
+        var badge = document.getElementById('chat-badge-' + tradeId);
+        if (badge) badge.style.display = 'none';
+        // Step 1: stop any existing poll first
         if (chatInterval) { clearInterval(chatInterval); chatInterval = null; }
-        currentChatTradeId = tradeId;
+        // Step 2: increment token BEFORE setting currentChatTradeId so any in-flight
+        //         responses from the OLD trade get discarded in loadChatMessages()
         chatRequestToken++;
         var requestToken = chatRequestToken;
-        document.getElementById('chatOverlay').style.display = 'flex';
-        document.body.style.overflow = 'hidden';
+        // Step 3: reset state
+        currentChatTradeId = tradeId;
+        chatLastMsgCount = -1;      // force fresh render for new trade
+        chatLastMsgTradeId = tradeId;
+        // Step 4: clear UI immediately so old messages never flash
+        var chatMessages = document.getElementById('chatMessages');
+        chatMessages.innerHTML = '<div class="p2p-chat-empty"><i class="fas fa-spinner fa-pulse"></i><p>Loading...</p></div>';
+        chatMessages.setAttribute('data-trade-id', tradeId);
+        document.getElementById('chatInput').value = '';
+        document.getElementById('chatImageInput').value = '';
         document.getElementById('chatTradeId').textContent = tradeId;
         document.getElementById('chatTopName').textContent = 'Trade #' + tradeId;
         document.getElementById('chatTopAvatar').textContent = '#';
-        document.getElementById('chatTopSub').textContent = '';
-        document.getElementById('chatInput').value = '';
-        document.getElementById('chatImageInput').value = '';
-        // Clear old messages immediately
-        var chatMessages = document.getElementById('chatMessages');
-        chatMessages.setAttribute('data-trade-id', tradeId);
-        chatMessages.innerHTML = '<div class="p2p-chat-empty"><i class="fas fa-spinner fa-pulse"></i><p>Loading...</p></div>';
-        // Fetch trade details to show partner info
+        document.getElementById('chatTopSubMeta').textContent = '';
+        // Step 5: show overlay
+        document.getElementById('chatOverlay').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        // Step 6: fetch trade meta (partner info)
         fetch('handlers/p2p_handler.php', {
             method: 'POST',
             headers: {'Content-Type': 'application/json','X-Requested-With': 'XMLHttpRequest'},
@@ -1585,16 +1614,27 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
         })
         .then(function(r){ return r.json(); })
         .then(function(res){
+            // Guard: only apply if we're still looking at the same trade
+            if (currentChatTradeId !== tradeId || chatRequestToken !== requestToken) return;
             if (res.success && res.trade) {
                 var t = res.trade;
-                var partner = t.buyer_id == userId ? (t.seller_name || 'Seller') : (t.buyer_name || 'Buyer');
+                var partner = parseInt(t.buyer_id) === userId ? (t.seller_name || 'Seller') : (t.buyer_name || 'Buyer');
                 document.getElementById('chatTopName').textContent = partner;
                 document.getElementById('chatTopAvatar').textContent = partner.charAt(0).toUpperCase();
-                document.getElementById('chatTopSub').textContent = t.coin_type.charAt(0).toUpperCase() + t.coin_type.slice(1) + ' \u00B7 ' + t.quantity + ' coins \u00B7 ' + t.status;
+                document.getElementById('chatTopSubMeta').textContent = ' · ' + t.coin_type.charAt(0).toUpperCase() + t.coin_type.slice(1) + ' · ' + t.quantity + ' coins · ' + t.status;
             }
-        });
+        })
+        .catch(function(){});
+        // Step 7: load messages & start polling (2s for real-time feel)
         loadChatMessages(tradeId, requestToken);
-        chatInterval = setInterval(function(){ loadChatMessages(tradeId, requestToken); }, 3000);
+        chatInterval = setInterval(function(){
+            if (currentChatTradeId === tradeId && chatRequestToken === requestToken) {
+                loadChatMessages(tradeId, requestToken);
+            } else {
+                clearInterval(chatInterval);
+                chatInterval = null;
+            }
+        }, 2000);
     };
 
     window.closeChat = function() {
@@ -1602,6 +1642,8 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
         document.body.style.overflow = '';
         if (chatInterval) { clearInterval(chatInterval); chatInterval = null; }
         currentChatTradeId = null;
+        chatLastMsgCount = -1;
+        chatLastMsgTradeId = null;
     };
     document.getElementById('chatOverlay').addEventListener('click', function(e) { if (e.target === this) closeChat(); });
 
@@ -1618,8 +1660,9 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
         .then(function(res){
             if (res.success) {
                 input.value = '';
-                if (res.messages) renderChatMessages(res.messages);
-                else loadChatMessages(currentChatTradeId);
+                chatLastMsgCount = -1; // force re-render on next poll
+                if (res.messages) { chatLastMsgCount = res.messages.length; chatLastMsgTradeId = currentChatTradeId; renderChatMessages(res.messages); }
+                else loadChatMessages(currentChatTradeId, chatRequestToken);
             } else {
                 alert(res.message || 'Could not send message.');
             }
@@ -1654,8 +1697,9 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
             btn.disabled = false;
             input.value = '';
             if (res.success) {
-                if (res.messages) renderChatMessages(res.messages);
-                else loadChatMessages(currentChatTradeId);
+                chatLastMsgCount = -1; // force re-render on next poll
+                if (res.messages) { chatLastMsgCount = res.messages.length; chatLastMsgTradeId = currentChatTradeId; renderChatMessages(res.messages); }
+                else loadChatMessages(currentChatTradeId, chatRequestToken);
             }
             else { alert(res.message); }
         })
@@ -1714,18 +1758,60 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
     }
 
     function loadChatMessages(tradeId, token) {
+        tradeId = parseInt(tradeId);
+        // Capture token snapshot at call time
+        var capturedToken = (token !== undefined) ? token : chatRequestToken;
         fetch('handlers/p2p_handler.php?action=get_p2p_messages&trade_id=' + encodeURIComponent(tradeId) + '&csrf_token=' + encodeURIComponent(csrfToken))
         .then(function(r){ return r.json(); })
         .then(function(res){
-            if (currentChatTradeId != tradeId || (token !== undefined && token !== chatRequestToken)) return;
+            // Double guard: trade must still match AND token must still be valid
+            if (currentChatTradeId !== tradeId) return;
+            if (capturedToken !== chatRequestToken) return;
             if (!res.success || !res.messages) {
+                if (chatLastMsgCount > 0 && chatLastMsgTradeId === tradeId) return; // keep existing msgs on transient error
                 renderChatMessages([]);
                 return;
             }
+            // Skip re-render only if count is same AND it's the same trade session
+            if (chatLastMsgTradeId === tradeId && res.messages.length === chatLastMsgCount) return;
+            chatLastMsgCount = res.messages.length;
+            chatLastMsgTradeId = tradeId;
             renderChatMessages(res.messages);
         })
         .catch(function(){});
     }
+
+    function pollUnreadChatCounts() {
+        if (!userId) return;
+        fetch('handlers/p2p_handler.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json','X-Requested-With': 'XMLHttpRequest'},
+            body: JSON.stringify({action: 'get_unread_chat_counts', csrf_token: csrfToken})
+        })
+        .then(function(r){ return r.json(); })
+        .then(function(res){
+            if (res.success && res.counts) {
+                document.querySelectorAll('.chat-badge').forEach(function(badge){
+                    var tradeId = badge.id.replace('chat-badge-', '');
+                    if (parseInt(tradeId) === currentChatTradeId) {
+                        badge.style.display = 'none';
+                        return;
+                    }
+                    var count = parseInt(res.counts[tradeId]) || 0;
+                    if (count > 0) {
+                        badge.textContent = count;
+                        badge.style.display = 'inline-flex';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                });
+            }
+        })
+        .catch(function(){});
+    }
+    // Poll unread chat counts every 5 seconds
+    pollUnreadChatCounts();
+    setInterval(pollUnreadChatCounts, 5000);
 
     // ═══ CREATE OFFER ═══
     var createForm = document.getElementById('p2pCreateForm');
@@ -1896,13 +1982,57 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
         var status = document.getElementById('tradeFilterStatus').value;
         var coin = document.getElementById('tradeFilterCoin').value;
         var date = document.getElementById('tradeFilterDate').value;
+        var visibleCount = 0;
         document.querySelectorAll('#tabOrders .p2p-trade-item').forEach(function(item) {
             var show = true;
             if (status !== 'all' && item.getAttribute('data-status') !== status) show = false;
             if (coin !== 'all' && item.getAttribute('data-coin') !== coin) show = false;
             if (date && item.getAttribute('data-created') !== date) show = false;
             item.style.display = show ? '' : 'none';
+            if (show) visibleCount++;
         });
+        // Show/hide empty state
+        var emptyEl = document.getElementById('tradeFilterEmpty');
+        if (!emptyEl) {
+            emptyEl = document.createElement('div');
+            emptyEl.id = 'tradeFilterEmpty';
+            emptyEl.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3rem 1.5rem;gap:12px;">' +
+                '<div style="width:64px;height:64px;border-radius:20px;background:linear-gradient(135deg,rgba(139,92,246,.1),rgba(99,102,241,.08));display:flex;align-items:center;justify-content:center;font-size:28px;">🔍</div>' +
+                '<p style="margin:0;font-size:.9rem;font-weight:700;color:var(--p2p-text);">No orders found</p>' +
+                '<p style="margin:0;font-size:.78rem;color:var(--p2p-muted);text-align:center;">No trades match the selected filters.<br>Try changing or resetting the filters.</p>' +
+                '<button onclick="resetTradeFilters()" style="margin-top:4px;padding:8px 20px;border-radius:10px;border:1.5px solid var(--p2p-border);background:var(--p2p-card);color:var(--p2p-accent);font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;" onmouseover="this.style.borderColor=\'var(--p2p-accent)\';this.style.background=\'rgba(139,92,246,.06)\'" onmouseout="this.style.borderColor=\'var(--p2p-border)\';this.style.background=\'var(--p2p-card)\'"><i class="fas fa-rotate-left"></i> Reset Filters</button>' +
+                '</div>';
+            var filterBar = document.querySelector('#tabOrders .p2p-section-card-body');
+            if (filterBar) filterBar.appendChild(emptyEl);
+        }
+        emptyEl.style.display = visibleCount === 0 ? '' : 'none';
+    };
+
+    window.resetTradeFilters = function() {
+        // Reset status
+        document.getElementById('tradeFilterStatus').value = 'all';
+        var statusWrap = document.getElementById('tradeFilterStatusWrap');
+        if (statusWrap) {
+            var trigger = statusWrap.querySelector('.p2p-select-trigger span');
+            if (trigger) trigger.textContent = 'All Status';
+            statusWrap.querySelectorAll('.p2p-select-option').forEach(function(o) {
+                o.classList.toggle('active', o.getAttribute('data-value') === 'all');
+            });
+        }
+        // Reset coin
+        document.getElementById('tradeFilterCoin').value = 'all';
+        var coinWrap = document.getElementById('tradeFilterCoinWrap');
+        if (coinWrap) {
+            var trigger2 = coinWrap.querySelector('.p2p-select-trigger span');
+            if (trigger2) trigger2.textContent = 'All Coins';
+            coinWrap.querySelectorAll('.p2p-select-option').forEach(function(o) {
+                o.classList.toggle('active', o.getAttribute('data-value') === 'all');
+            });
+        }
+        // Reset date
+        document.getElementById('tradeFilterDate').value = '';
+        // Re-apply
+        applyTradeFilters();
     };
 
     // ═══ LOAD MORE OFFERS ═══
@@ -1921,7 +2051,11 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
             if (res.success && res.offers && res.offers.length > 0) {
                 var grid = document.getElementById('tab'+(type==='sell'?'Buy':'Sell')).querySelector('.p2p-offer-grid-v3');
                 if (!grid) return;
-                var coinIcons = {bronze:'🥉',silver:'🥈',gold:'🥇'};
+                var coinIcons = {
+                    bronze: '<img src="assets/images/coin-bronze.svg" class="p2p-coin-svg" alt="">',
+                    silver: '<img src="assets/images/coin-silver.svg" class="p2p-coin-svg" alt="">',
+                    gold: '<img src="assets/images/coin-gold.svg" class="p2p-coin-svg" alt="">'
+                };
                 var coinLabels = {bronze:'Bronze',silver:'Silver',gold:'Gold'};
                 res.offers.forEach(function(o){
                     var uname = o.full_name || o.username;
@@ -1993,11 +2127,13 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
                     if (st === 'paid' && isSeller) actions += '<button class="p2p-btn-confirm" onclick="confirmReceived('+t.id+')"><i class="fas fa-check"></i> Release Coins</button>';
                     if (st === 'paid' && isBuyer) actions += '<span style="font-size:.7rem;font-weight:600;color:#d97706"><i class="fas fa-clock"></i> Waiting...</span>';
                     if (st === 'pending' || st === 'paid') actions += '<span style="flex:1"></span><button class="p2p-btn-cancel" onclick="cancelOrder('+t.id+')"><i class="fas fa-xmark"></i> Cancel</button>';
-                    actions += '<button class="p2p-btn-chat" onclick="openTradeChat('+t.id+')"><i class="fas fa-comment"></i> Chat</button>';
+                    if (st === 'completed' || st === 'cancelled') actions += '<span style="flex:1"></span>';
                     if (st === 'paid' || st === 'pending') actions += '<button class="p2p-btn-report" onclick="disputeTrade('+t.id+')" style="background:#ef444415;color:#ef4444;"><i class="fas fa-gavel"></i> Appeal</button>';
 
                     var icon = isBuyer ? 'fa-cart-shopping' : 'fa-coins';
                     var stIcon = st==='completed'?'fa-check-circle':(st==='pending'?'fa-clock':(st==='paid'?'fa-credit-card':(st==='cancelled'?'fa-xmark-circle':'fa-flag')));
+                    var unreadCount = parseInt(t.unread_count) || 0;
+                    var badgeStyle = unreadCount > 0 ? 'inline-flex' : 'none';
                     var html = '<div class="p2p-trade-item" data-trade-id="' + t.id + '" data-status="' + st + '" data-coin="' + t.coin_type + '" data-created="' + t.created_at.substring(0,10) + '">' +
                         '<div class="p2p-trade-top">' +
                             '<div class="p2p-trade-icon ' + (offerType==='buy'?'sell':'') + '"><i class="fas ' + icon + '"></i></div>' +
@@ -2013,10 +2149,16 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
                         '<div class="p2p-trade-detail">' +
                             '<span class="chip"><i class="fas fa-coins"></i> <strong>' + (coinLabels[t.coin_type]||t.coin_type) + '</strong></span>' +
                             '<span class="chip"><i class="fas fa-cube"></i> Qty: <strong>' + t.quantity + '</strong></span>' +
-                            '<span class="chip"><i class="fas fa-bangladeshi-taka-sign"></i> <strong>\u09F3' + parseFloat(t.total_price).toFixed(0) + '</strong></span>' +
+                            '<span class="chip"><i class="fas fa-bangladeshi-taka-sign"></i> <strong>৳' + parseFloat(t.total_price).toFixed(0) + '</strong></span>' +
                             '<span class="chip"><i class="fas fa-arrow-right-arrow-left"></i> ' + (isBuyer?'Buy':'Sell') + '</span>' +
                         '</div>' +
-                        '<div class="p2p-trade-actions"><button class="p2p-btn-chat" onclick="openTradeChat('+t.id+')"><i class="fas fa-comment"></i> Chat</button>' + actions + '</div>' +
+                        '<div class="p2p-trade-actions">' +
+                            '<button class="p2p-btn-chat" onclick="openTradeChat('+t.id+')">' +
+                                '<i class="fas fa-comment"></i> Chat' +
+                                '<span class="chat-badge" id="chat-badge-'+t.id+'" style="display: '+badgeStyle+'; background: #ef4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.65rem; font-weight: 700; margin-left: 5px; vertical-align: middle; min-width: 14px; height: 14px; align-items: center; justify-content: center; line-height: 1;">' + unreadCount + '</span>' +
+                            '</button>' +
+                            actions +
+                        '</div>' +
                     '</div>';
                     container.insertAdjacentHTML('beforeend', html);
                 });
