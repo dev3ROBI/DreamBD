@@ -291,6 +291,125 @@ function ensureTournamentFeatureSchema(PDO $db): void {
     }
 }
 
+function ensureP2PSchema(PDO $db): void {
+    $queries = [
+        "CREATE TABLE IF NOT EXISTS p2p_offers (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            agent_id INT UNSIGNED NOT NULL,
+            type ENUM('buy','sell') NOT NULL DEFAULT 'sell',
+            coin_type ENUM('bronze','silver','gold') NOT NULL DEFAULT 'bronze',
+            price_per_coin DECIMAL(10,2) NOT NULL,
+            quantity INT UNSIGNED NOT NULL,
+            remaining INT UNSIGNED NOT NULL,
+            min_amount INT UNSIGNED NOT NULL DEFAULT 1,
+            max_amount INT UNSIGNED NOT NULL DEFAULT 0,
+            status ENUM('active','completed','cancelled') NOT NULL DEFAULT 'active',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_agent (agent_id),
+            INDEX idx_type_status (type, status)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+        "CREATE TABLE IF NOT EXISTS p2p_payment_settings (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            user_id INT UNSIGNED NOT NULL,
+            method VARCHAR(30) NOT NULL,
+            number VARCHAR(50) NOT NULL,
+            instruction VARCHAR(30) DEFAULT 'send_money',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_user_method (user_id, method)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+        "CREATE TABLE IF NOT EXISTS p2p_chat_messages (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            trade_id INT UNSIGNED NOT NULL,
+            sender_id INT UNSIGNED NOT NULL,
+            message TEXT,
+            image_path VARCHAR(255) DEFAULT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_trade (trade_id),
+            INDEX idx_sender (sender_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+        "CREATE TABLE IF NOT EXISTS p2p_reports (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            trade_id INT UNSIGNED NOT NULL,
+            reporter_id INT UNSIGNED NOT NULL,
+            reported_id INT UNSIGNED NOT NULL,
+            reason VARCHAR(100) NOT NULL,
+            details TEXT,
+            status ENUM('open','resolved','dismissed') DEFAULT 'open',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_trade (trade_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+        "CREATE TABLE IF NOT EXISTS p2p_reviews (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            trade_id INT UNSIGNED NOT NULL,
+            reviewer_id INT UNSIGNED NOT NULL,
+            merchant_id INT UNSIGNED NOT NULL,
+            rating TINYINT UNSIGNED NOT NULL CHECK (rating >= 1 AND rating <= 5),
+            comment VARCHAR(500) DEFAULT '',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_reviewer_merchant (reviewer_id, merchant_id),
+            INDEX idx_merchant (merchant_id),
+            INDEX idx_reviewer (reviewer_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+        "CREATE TABLE IF NOT EXISTS coin_transactions (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            from_user_id INT UNSIGNED,
+            to_user_id INT UNSIGNED,
+            type VARCHAR(30) NOT NULL,
+            coin_type ENUM('bronze','silver','gold') NOT NULL,
+            amount INT UNSIGNED NOT NULL,
+            price DECIMAL(10,2),
+            description VARCHAR(255),
+            ref_id INT UNSIGNED,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_from (from_user_id),
+            INDEX idx_to (to_user_id),
+            INDEX idx_type (type)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    ];
+    foreach ($queries as $sql) {
+        try { $db->exec($sql); } catch (Throwable $e) {}
+    }
+
+    // Add missing columns to p2p_trades
+    $tradeMigrations = [
+        "ALTER TABLE p2p_trades ADD COLUMN IF NOT EXISTS offer_id INT UNSIGNED NOT NULL AFTER id",
+        "ALTER TABLE p2p_trades ADD COLUMN IF NOT EXISTS coin_type ENUM('bronze','silver','gold') NOT NULL DEFAULT 'bronze' AFTER buyer_id",
+        "ALTER TABLE p2p_trades ADD COLUMN IF NOT EXISTS total_price DECIMAL(12,2) NOT NULL AFTER quantity",
+        "ALTER TABLE p2p_trades ADD COLUMN IF NOT EXISTS payment_method VARCHAR(30) AFTER status",
+        "ALTER TABLE p2p_trades ADD COLUMN IF NOT EXISTS sender_phone VARCHAR(30) AFTER payment_method",
+        "ALTER TABLE p2p_trades ADD COLUMN IF NOT EXISTS txid VARCHAR(100) AFTER sender_phone",
+        "ALTER TABLE p2p_trades ADD COLUMN IF NOT EXISTS completed_at DATETIME AFTER txid",
+        "ALTER TABLE p2p_trades MODIFY status ENUM('pending','paid','completed','cancelled','disputed') NOT NULL DEFAULT 'pending'"
+    ];
+    foreach ($tradeMigrations as $sql) {
+        try { $db->exec($sql); } catch (Throwable $e) {}
+    }
+
+    try {
+        if (!dream_column_exists($db, 'p2p_chat_messages', 'image_path')) {
+            $db->exec("ALTER TABLE p2p_chat_messages ADD COLUMN image_path VARCHAR(255) DEFAULT NULL AFTER message");
+        }
+    } catch (Throwable $e) {}
+
+    // Add missing columns to p2p_reports
+    $reportMigrations = [
+        "ALTER TABLE p2p_reports ADD COLUMN IF NOT EXISTS resolved_at DATETIME AFTER status",
+        "ALTER TABLE p2p_reports ADD COLUMN IF NOT EXISTS resolved_by INT UNSIGNED AFTER resolved_at",
+        "ALTER TABLE p2p_reports ADD COLUMN IF NOT EXISTS admin_note VARCHAR(500) AFTER resolved_by"
+    ];
+    foreach ($reportMigrations as $sql) {
+        try { $db->exec($sql); } catch (Throwable $e) {}
+    }
+
+    // Migrate p2p_reviews unique key to per-user-per-merchant
+    try {
+        $db->exec("ALTER TABLE p2p_reviews DROP INDEX IF EXISTS uniq_trade_review");
+    } catch (Throwable $e) {}
+    try {
+        $db->exec("ALTER TABLE p2p_reviews ADD UNIQUE KEY IF NOT EXISTS uniq_reviewer_merchant (reviewer_id, merchant_id)");
+    } catch (Throwable $e) {}
+}
+
 // Composer autoload
 $composerAutoload = __DIR__ . '/../vendor/autoload.php';
 if (file_exists($composerAutoload)) {
@@ -368,6 +487,7 @@ try {
         try { $db->exec($sql); } catch (Throwable $e) {}
     }
 
+    ensureP2PSchema($db);
     ensureUserSessionsSchema($db);
     ensureTournamentFeatureSchema($db);
 } catch (Exception $e) {

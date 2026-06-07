@@ -12,17 +12,68 @@ $db = Database::getInstance()->getConnection();
 $messages = $messages ?? [];
 $errors = $errors ?? [];
 
-// Handle resolve/dismiss actions
+// Handle resolve/dismiss + trade actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $security->validateCSRFToken($_POST['csrf_token'] ?? '')) {
     $action = $_POST['action'] ?? '';
     $reportId = (int)($_POST['report_id'] ?? 0);
-    if ($reportId > 0) {
-        if ($action === 'resolve') {
-            $db->prepare("UPDATE p2p_reports SET status = 'resolved', resolved_at = NOW(), resolved_by = ? WHERE id = ? AND status = 'open'")->execute([$userId, $reportId]);
+    $tradeId = (int)($_POST['trade_id'] ?? 0);
+    $adminNote = trim($_POST['admin_note'] ?? '');
+
+    if ($action === 'resolve') {
+        if ($reportId > 0) {
+            $db->prepare("UPDATE p2p_reports SET status = 'resolved', resolved_at = NOW(), resolved_by = ?, admin_note = ? WHERE id = ? AND status = 'open'")->execute([$userId, $adminNote, $reportId]);
             $messages[] = 'Report #' . $reportId . ' resolved.';
-        } elseif ($action === 'dismiss') {
-            $db->prepare("UPDATE p2p_reports SET status = 'dismissed', resolved_at = NOW(), resolved_by = ? WHERE id = ? AND status = 'open'")->execute([$userId, $reportId]);
+        }
+    } elseif ($action === 'dismiss') {
+        if ($reportId > 0) {
+            $db->prepare("UPDATE p2p_reports SET status = 'dismissed', resolved_at = NOW(), resolved_by = ?, admin_note = ? WHERE id = ? AND status = 'open'")->execute([$userId, $adminNote, $reportId]);
             $messages[] = 'Report #' . $reportId . ' dismissed.';
+        }
+    } elseif ($action === 'force_complete') {
+        // Admin force-completes the trade: release escrowed coins to buyer
+        if ($tradeId > 0) {
+            try {
+                $db->beginTransaction();
+                $stmt = $db->prepare("SELECT * FROM p2p_trades WHERE id = ? AND status IN ('disputed','paid') FOR UPDATE");
+                $stmt->execute([$tradeId]);
+                $trade = $stmt->fetch();
+                if ($trade) {
+                    $coinCol = $trade['coin_type'] . '_coins';
+                    $qty = (int)$trade['quantity'];
+                    // Release coins to buyer
+                    $db->prepare("UPDATE users SET $coinCol = $coinCol + ? WHERE id = ?")->execute([$qty, (int)$trade['buyer_id']]);
+                    $db->prepare("UPDATE p2p_trades SET status = 'completed', completed_at = NOW() WHERE id = ?")->execute([$tradeId]);
+                    if ($reportId > 0) {
+                        $db->prepare("UPDATE p2p_reports SET status = 'resolved', resolved_at = NOW(), resolved_by = ?, admin_note = ? WHERE id = ?")->execute([$userId, $adminNote, $reportId]);
+                    }
+                    $db->commit();
+                    $messages[] = 'Trade #' . $tradeId . ' force-completed. Coins released to buyer.';
+                } else { $db->rollBack(); $errors[] = 'Trade not found or not disputable.'; }
+            } catch (Throwable $e) { $db->rollBack(); $errors[] = 'Server error.'; }
+        }
+    } elseif ($action === 'force_refund') {
+        // Admin force-refunds: return escrowed coins to seller
+        if ($tradeId > 0) {
+            try {
+                $db->beginTransaction();
+                $stmt = $db->prepare("SELECT * FROM p2p_trades WHERE id = ? AND status IN ('disputed','paid') FOR UPDATE");
+                $stmt->execute([$tradeId]);
+                $trade = $stmt->fetch();
+                if ($trade) {
+                    $coinCol = $trade['coin_type'] . '_coins';
+                    $qty = (int)$trade['quantity'];
+                    // Return coins to seller
+                    $db->prepare("UPDATE users SET $coinCol = $coinCol + ? WHERE id = ?")->execute([$qty, (int)$trade['seller_id']]);
+                    // Restore offer remaining
+                    $db->prepare("UPDATE p2p_offers SET remaining = remaining + ?, status = 'active' WHERE id = ?")->execute([$qty, (int)$trade['offer_id']]);
+                    $db->prepare("UPDATE p2p_trades SET status = 'cancelled' WHERE id = ?")->execute([$tradeId]);
+                    if ($reportId > 0) {
+                        $db->prepare("UPDATE p2p_reports SET status = 'resolved', resolved_at = NOW(), resolved_by = ?, admin_note = ? WHERE id = ?")->execute([$userId, $adminNote, $reportId]);
+                    }
+                    $db->commit();
+                    $messages[] = 'Trade #' . $tradeId . ' force-refunded. Coins returned to seller.';
+                } else { $db->rollBack(); $errors[] = 'Trade not found or not disputable.'; }
+            } catch (Throwable $e) { $db->rollBack(); $errors[] = 'Server error.'; }
         }
     }
 }
@@ -30,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $security->validateCSRFToken($_POST
 // Fetch reports
 $reports = [];
 try {
-    $stmt = $db->query("SELECT r.*, ru.username AS reporter_name, ru2.username AS reported_name, t.id AS trade_ref, t.status AS trade_status FROM p2p_reports r LEFT JOIN users ru ON ru.id = r.reporter_id LEFT JOIN users ru2 ON ru2.id = r.reported_id LEFT JOIN p2p_trades t ON t.id = r.trade_id ORDER BY r.created_at DESC LIMIT 50");
+    $stmt = $db->query("SELECT r.*, ru.username AS reporter_name, ru2.username AS reported_name, t.id AS trade_ref, t.status AS trade_status, t.seller_id, t.buyer_id FROM p2p_reports r LEFT JOIN users ru ON ru.id = r.reporter_id LEFT JOIN users ru2 ON ru2.id = r.reported_id LEFT JOIN p2p_trades t ON t.id = r.trade_id ORDER BY r.created_at DESC LIMIT 50");
     $reports = $stmt->fetchAll();
 } catch (Throwable $e) {
     $errors[] = 'Could not load reports.';
@@ -97,14 +148,24 @@ try {
                         <td class="px-6 py-4 text-gray-500 dark:text-gray-400 whitespace-nowrap"><?php echo date('M j, g:ia', strtotime($r['created_at'])); ?></td>
                         <td class="px-6 py-4 text-center">
                             <?php if ($st === 'open'): ?>
-                            <form method="post" class="inline-flex gap-1">
+                            <form method="post" class="flex flex-col gap-1.5 items-center">
                                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
                                 <input type="hidden" name="report_id" value="<?php echo (int)$r['id']; ?>">
-                                <button type="submit" name="action" value="resolve" class="px-3 py-1.5 rounded-lg bg-emerald-500 text-white text-xs font-bold hover:bg-emerald-600 transition-colors" onclick="return confirm('Resolve this report?')"><i class="fas fa-check"></i> Resolve</button>
-                                <button type="submit" name="action" value="dismiss" class="px-3 py-1.5 rounded-lg bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs font-bold hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors" onclick="return confirm('Dismiss this report?')"><i class="fas fa-times"></i> Dismiss</button>
+                                <input type="hidden" name="trade_id" value="<?php echo (int)$r['trade_ref']; ?>">
+                                <input type="text" name="admin_note" placeholder="Note (optional)" class="w-full px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white mb-1">
+                                <div class="flex gap-1 flex-wrap justify-center">
+                                    <button type="submit" name="action" value="resolve" class="px-3 py-1.5 rounded-lg bg-emerald-500 text-white text-xs font-bold hover:bg-emerald-600 transition-colors" onclick="return confirm('Resolve this report?')"><i class="fas fa-check"></i> Resolve</button>
+                                    <button type="submit" name="action" value="dismiss" class="px-3 py-1.5 rounded-lg bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs font-bold hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors" onclick="return confirm('Dismiss this report?')"><i class="fas fa-times"></i> Dismiss</button>
+                                </div>
+                                <?php if ($r['trade_status'] === 'disputed' || $r['trade_status'] === 'paid'): ?>
+                                <div class="flex gap-1 flex-wrap justify-center mt-1 pt-1 border-t border-gray-200 dark:border-gray-700">
+                                    <button type="submit" name="action" value="force_complete" class="px-3 py-1.5 rounded-lg bg-blue-500 text-white text-xs font-bold hover:bg-blue-600 transition-colors" onclick="return confirm('Force-complete trade #<?php echo (int)$r['trade_ref']; ?>? Coins will go to buyer.')"><i class="fas fa-check-double"></i> Complete</button>
+                                    <button type="submit" name="action" value="force_refund" class="px-3 py-1.5 rounded-lg bg-red-500 text-white text-xs font-bold hover:bg-red-600 transition-colors" onclick="return confirm('Force-refund trade #<?php echo (int)$r['trade_ref']; ?>? Coins will return to seller.')"><i class="fas fa-rotate-left"></i> Refund</button>
+                                </div>
+                                <?php endif; ?>
                             </form>
                             <?php else: ?>
-                            <span class="text-xs text-gray-400">by <?php echo htmlspecialchars($r['resolved_by'] ? 'Admin' : 'System'); ?></span>
+                            <span class="text-xs text-gray-400"><?php echo htmlspecialchars($r['admin_note'] ?: 'Resolved'); ?></span>
                             <?php endif; ?>
                         </td>
                     </tr>

@@ -8351,10 +8351,10 @@ body.gp-modal-open .header.scrolled {
 .dark .gp-modal-header { border-color:#334155 }
 .gp-modal-header-title { display:flex; align-items:center; gap:8px; font-weight:700; font-size:1.05rem; color:#111827 }
 .dark .gp-modal-header-title { color:#f1f5f9 }
-.gp-modal-close-btn { width:32px; height:32px; border-radius:50%; border:0; background:#f1f5f9; color:#64748b; font-size:18px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s }
-.gp-modal-close-btn:hover { background:#e2e8f0; color:#374151 }
-.dark .gp-modal-close-btn { background:#334155; color:#94a3b8 }
-.dark .gp-modal-close-btn:hover { background:#475569; color:#e2e8f0 }
+.gp-modal-close-btn { width:34px; height:34px; border-radius:50%; border:0; background:rgba(0,0,0,.05); cursor:pointer; display:flex; align-items:center; justify-content:center; color:#6b7280; font-size:14px; transition:all .2s; backdrop-filter:blur(4px); flex-shrink:0 }
+.gp-modal-close-btn:hover { background:rgba(239,68,68,.12); color:#dc2626; transform:rotate(90deg) }
+.dark .gp-modal-close-btn { background:rgba(255,255,255,.08); color:#9ca3af }
+.dark .gp-modal-close-btn:hover { background:rgba(239,68,68,.2); color:#fca5a5 }
 .gp-modal-box::-webkit-scrollbar, .gp-success-overlay::-webkit-scrollbar, .gp-success-box::-webkit-scrollbar { display:none }
 
 /* ─── SUCCESS/FAIL OVERLAY ─── */
@@ -8374,7 +8374,7 @@ body.gp-modal-open .header.scrolled {
 .dark .gp-modal-box--premium { background:#1e293b }
 .gp-modal-header--premium { display:flex; justify-content:space-between; align-items:center; padding:1rem 1.5rem; border-bottom:1px solid #e2e8f0; flex-shrink:0 }
 .dark .gp-modal-header--premium { border-color:#334155 }
-.gp-modal-body--premium { padding:4px; flex:1; overflow-y:auto; overflow-x:hidden; -ms-overflow-style:none; scrollbar-width:none }
+.gp-modal-body--premium { padding:20px 22px 24px; flex:1; overflow-y:auto; overflow-x:hidden; -ms-overflow-style:none; scrollbar-width:none }
 .gp-modal-body--premium::-webkit-scrollbar { display:none }
 .ba-pay-note--addmoney { display:flex; align-items:center; gap:8px; background:linear-gradient(135deg,#fef3c7,#fde68a); border:1px solid #fcd34d; border-radius:12px; padding:10px 14px; margin-bottom:16px; font-size:12px; font-weight:700; color:#92400e; text-align:center; justify-content:center }
 .dark .ba-pay-note--addmoney { background:rgba(251,191,36,.1); border-color:rgba(245,158,11,.3); color:#fbbf24 }

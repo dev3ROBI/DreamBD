@@ -92,10 +92,10 @@ $avatarPath = $userAvatar && $userAvatar !== 'default.png'
 .tx-detail-copy { margin-left:6px; color:var(--primary); cursor:pointer; font-size:12px }
 
 /* ── Close button premium ── */
-.gp-modal-close-btn { width:36px; height:36px; border-radius:50%; border:0; background:#f1f5f9; color:#64748b; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .2s cubic-bezier(.34,1.56,.64,1); flex-shrink:0 }
-.gp-modal-close-btn:hover { background:#e2e8f0; color:#1f2937; transform:rotate(90deg) scale(1.1); box-shadow:0 4px 12px rgba(0,0,0,.1) }
-.dark .gp-modal-close-btn { background:#374151; color:#94a3b8 }
-.dark .gp-modal-close-btn:hover { background:#4b5563; color:#e2e8f0 }
+.gp-modal-close-btn { width:34px; height:34px; border-radius:50%; border:0; background:rgba(0,0,0,.05); cursor:pointer; display:flex; align-items:center; justify-content:center; color:#6b7280; font-size:14px; transition:all .2s; backdrop-filter:blur(4px); flex-shrink:0 }
+.gp-modal-close-btn:hover { background:rgba(239,68,68,.12); color:#dc2626; transform:rotate(90deg) }
+.dark .gp-modal-close-btn { background:rgba(255,255,255,.08); color:#9ca3af }
+.dark .gp-modal-close-btn:hover { background:rgba(239,68,68,.2); color:#fca5a5 }
 
 /* ── Result Box Premium ── */
 .gp-result-box { background:#fff; border-radius:32px; padding:2.2rem 2rem 1.8rem; max-width:340px; width:100%; text-align:center; box-shadow:0 50px 100px rgba(0,0,0,.3); animation:gpModalIn .4s cubic-bezier(.34,1.56,.64,1); position:relative; overflow:hidden }
@@ -158,6 +158,9 @@ $avatarPath = $userAvatar && $userAvatar !== 'default.png'
 .sc-qty-preset:hover { border-color:#8b5cf6; color:#7c3aed; background:#f5f3ff }
 .dark .sc-qty-preset { background:#1e293b; border-color:#334155; color:#94a3b8 }
 .dark .sc-qty-preset:hover { border-color:#a78bfa; color:#c4b5fd; background:rgba(139,92,246,.1) }
+@media(max-width:480px) {
+  .gp-modal-box, .gp-modal-box--premium { max-width:none; max-height:none; border-radius:0; width:100vw; height:100dvh; }
+}
 </style>
 
 <input type="hidden" name="csrf_token" value="<?php echo $csrfToken; ?>">

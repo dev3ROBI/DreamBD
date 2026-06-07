@@ -10,7 +10,7 @@ $response = ['success' => false, 'message' => ''];
 $security = new Security();
 $raw = file_get_contents('php://input');
 $json = json_decode($raw, true);
-$req = is_array($json) ? $json : $_POST;
+$req = is_array($json) ? $json : array_merge($_POST, $_GET);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$security->validateCSRFToken($req['csrf_token'] ?? '')) {
     $response['message'] = 'Invalid security token';
@@ -38,6 +38,12 @@ try {
             $db->prepare("UPDATE p2p_trades SET status = 'cancelled' WHERE id = ?")->execute([$et['id']]);
         }
     } catch (Throwable $e) { /* ignore auto cancel errors silently */ }
+
+    $loadP2PMessages = function (int $tradeId) use ($db): array {
+        $stmt = $db->prepare("SELECT m.id, m.trade_id, m.sender_id, m.message, m.image_path, m.created_at, u.username, u.full_name FROM p2p_chat_messages m JOIN users u ON u.id = m.sender_id WHERE m.trade_id = ? ORDER BY m.created_at ASC");
+        $stmt->execute([$tradeId]);
+        return $stmt->fetchAll();
+    };
 
     switch ($action) {
 
@@ -136,6 +142,32 @@ try {
                 $db->commit();
                 $orderType = $offer['type'] === 'sell' ? 'buy' : 'sell';
                 createNotification($db, (int)$offer['agent_id'], $userId, 'p2p_order_placed', 'New ' . $orderType . ' order placed for ' . $qty . ' ' . $offer['coin_type'] . ' coins (৳' . number_format($totalPrice, 0) . ').');
+
+                // Email notification
+                require_once __DIR__ . '/../includes/mailer.php';
+                require_once __DIR__ . '/../includes/mail_templates.php';
+                if ($offer['type'] === 'sell') {
+                    // User is buying → email to buyer
+                    $userEmail = $_SESSION['email'] ?? '';
+                    if ($userEmail) {
+                        try {
+                            $mailer = Mailer::getInstance();
+                            $body = MailTemplates::orderPlaced($_SESSION['username'] ?? 'User', 'buy', $offer['coin_type'], $qty, $totalPrice, (int)$tradeId);
+                            $mailer->send($userEmail, 'Order Placed - P2P Trade #' . $tradeId, $body);
+                        } catch (Throwable $e) { error_log("Order email error: " . $e->getMessage()); }
+                    }
+                } else {
+                    // User is selling → email to user (seller)
+                    $userEmail = $_SESSION['email'] ?? '';
+                    if ($userEmail) {
+                        try {
+                            $mailer = Mailer::getInstance();
+                            $body = MailTemplates::orderPlaced($_SESSION['username'] ?? 'User', 'sell', $offer['coin_type'], $qty, $totalPrice, (int)$tradeId);
+                            $mailer->send($userEmail, 'Order Placed - P2P Trade #' . $tradeId, $body);
+                        } catch (Throwable $e) { error_log("Order email error: " . $e->getMessage()); }
+                    }
+                }
+
                 $response = ['success' => true, 'message' => 'Order placed!', 'trade_id' => $tradeId, 'total_price' => $totalPrice, 'coin_type' => $offer['coin_type'], 'quantity' => $qty, 'offer_type' => $offer['type'], 'agent_id' => (int)$offer['agent_id']];
             } catch (Throwable $e) { $db->rollBack(); $response['message'] = 'Server error.'; }
             break;
@@ -157,6 +189,21 @@ try {
                 $stmt = $db->prepare("UPDATE p2p_trades SET status = 'paid', payment_method = ?, sender_phone = ?, txid = ? WHERE id = ?");
                 $stmt->execute([$method, $senderPhone, $txid, $tradeId]);
                 createNotification($db, (int)$trade['seller_id'], $userId, 'p2p_payment_received', 'Payment marked for trade #' . $tradeId . '. ' . ($trade['offer_type'] === 'sell' ? 'Release coins to buyer.' : 'Release coins to complete the trade.'));
+
+                // Email to seller
+                $stmt = $db->prepare("SELECT email, username, full_name FROM users WHERE id = ?");
+                $stmt->execute([(int)$trade['seller_id']]);
+                $sellerUser = $stmt->fetch();
+                if ($sellerUser) {
+                    require_once __DIR__ . '/../includes/mailer.php';
+                    require_once __DIR__ . '/../includes/mail_templates.php';
+                    try {
+                        $mailer = Mailer::getInstance();
+                        $body = MailTemplates::paymentConfirmed($sellerUser['full_name'] ?: $sellerUser['username'], $tradeId, (int)$trade['quantity'], $trade['coin_type']);
+                        $mailer->send($sellerUser['email'], 'Payment Confirmed - Trade #' . $tradeId, $body);
+                    } catch (Throwable $e) { error_log("Payment email error: " . $e->getMessage()); }
+                }
+
                 $response = ['success' => true, 'message' => 'Payment confirmed!'];
             } catch (Throwable $e) { $response['message'] = 'Server error (' . $e->getMessage() . ').'; }
             break;
@@ -188,6 +235,34 @@ try {
 
                 $db->commit();
                 createNotification($db, (int)$trade['buyer_id'], $userId, 'p2p_trade_completed', 'Trade #' . $tradeId . ' completed! ' . $qty . ' ' . $trade['coin_type'] . ' coins released.');
+
+                // Email to buyer
+                $stmt = $db->prepare("SELECT email, username, full_name FROM users WHERE id = ?");
+                $stmt->execute([(int)$trade['buyer_id']]);
+                $buyerUser = $stmt->fetch();
+                if ($buyerUser) {
+                    require_once __DIR__ . '/../includes/mailer.php';
+                    require_once __DIR__ . '/../includes/mail_templates.php';
+                    try {
+                        $mailer = Mailer::getInstance();
+                        $body = MailTemplates::tradeCompleted($buyerUser['full_name'] ?: $buyerUser['username'], 'buyer', $tradeId, $qty, $trade['coin_type']);
+                        $mailer->send($buyerUser['email'], 'Trade Completed - #' . $tradeId, $body);
+                    } catch (Throwable $e) { error_log("Complete email error: " . $e->getMessage()); }
+                }
+                // Email to seller
+                $stmt = $db->prepare("SELECT email, username, full_name FROM users WHERE id = ?");
+                $stmt->execute([$userId]);
+                $sellerUser = $stmt->fetch();
+                if ($sellerUser) {
+                    require_once __DIR__ . '/../includes/mailer.php';
+                    require_once __DIR__ . '/../includes/mail_templates.php';
+                    try {
+                        $mailer = Mailer::getInstance();
+                        $body = MailTemplates::tradeCompleted($sellerUser['full_name'] ?: $sellerUser['username'], 'seller', $tradeId, $qty, $trade['coin_type']);
+                        $mailer->send($sellerUser['email'], 'Trade Completed - #' . $tradeId, $body);
+                    } catch (Throwable $e) { error_log("Complete email error: " . $e->getMessage()); }
+                }
+
                 $response = ['success' => true, 'message' => 'Coins released to buyer!'];
             } catch (Throwable $e) { $db->rollBack(); $response['message'] = 'Server error.'; }
             break;
@@ -289,7 +364,7 @@ try {
                 if (!$stmt->fetch()) { $response['message'] = 'Trade not found.'; break; }
                 $stmt = $db->prepare("INSERT INTO p2p_chat_messages (trade_id, sender_id, message) VALUES (?, ?, ?)");
                 $stmt->execute([$tradeId, $userId, $message]);
-                $response = ['success' => true, 'message' => 'Message sent!'];
+                $response = ['success' => true, 'message' => 'Message sent!', 'messages' => $loadP2PMessages($tradeId)];
             } catch (Throwable $e) { $response['message'] = 'Server error.'; }
             break;
 
@@ -301,10 +376,7 @@ try {
                 $stmt = $db->prepare("SELECT id FROM p2p_trades WHERE id = ? AND (buyer_id = ? OR seller_id = ?)");
                 $stmt->execute([$tradeId, $userId, $userId]);
                 if (!$stmt->fetch()) { $response['message'] = 'Trade not found.'; break; }
-                $stmt = $db->prepare("SELECT m.id, m.trade_id, m.sender_id, m.message, m.image_path, m.created_at, u.username, u.full_name FROM p2p_chat_messages m JOIN users u ON u.id = m.sender_id WHERE m.trade_id = ? ORDER BY m.created_at ASC");
-                $stmt->execute([$tradeId]);
-                $msgs = $stmt->fetchAll();
-                $response = ['success' => true, 'messages' => $msgs];
+                $response = ['success' => true, 'messages' => $loadP2PMessages($tradeId)];
             } catch (Throwable $e) { $response['message'] = 'Server error.'; }
             break;
 
@@ -330,7 +402,7 @@ try {
                 if (move_uploaded_file($_FILES['chat_image']['tmp_name'], $uploadDir . $filename)) {
                     $stmt = $db->prepare("INSERT INTO p2p_chat_messages (trade_id, sender_id, message, image_path) VALUES (?, ?, '', ?)");
                     $stmt->execute([$tradeId, $userId, $filename]);
-                    $response = ['success' => true, 'message' => 'Image sent!'];
+                    $response = ['success' => true, 'message' => 'Image sent!', 'messages' => $loadP2PMessages($tradeId)];
                 } else {
                     $response['message'] = 'Failed to save image.';
                 }
@@ -376,16 +448,54 @@ try {
             $settings = $req['settings'] ?? [];
             if (empty($settings) || !is_array($settings)) { $response['message'] = 'Invalid settings.'; break; }
             try {
+                $isNew = false;
                 foreach ($settings as $s) {
                     $method = trim($s['method'] ?? '');
                     $number = trim($s['number'] ?? '');
                     $instruction = trim($s['instruction'] ?? 'send_money');
                     if (!in_array($method, ['bkash','nagad','rocket'])) continue;
                     if ($number === '') continue;
+                    $stmt = $db->prepare("SELECT id FROM p2p_payment_settings WHERE user_id = ? AND method = ?");
+                    $stmt->execute([$userId, $method]);
+                    if (!$stmt->fetch()) $isNew = true;
                     $stmt = $db->prepare("INSERT INTO p2p_payment_settings (user_id, method, number, instruction) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE number = VALUES(number), instruction = VALUES(instruction)");
                     $stmt->execute([$userId, $method, $number, $instruction]);
                 }
                 $response = ['success' => true, 'message' => 'Payment settings saved!'];
+                $username = $_SESSION['username'] ?? 'User';
+                $action = $isNew ? 'added' : 'updated';
+                $methodLabels = ['bkash'=>'bKash','nagad'=>'Nagad','rocket'=>'Rocket'];
+                $instLabels = ['send_money'=>'Send Money','cashout'=>'Cash Out'];
+                $details = [];
+                foreach ($settings as $s) {
+                    $m = trim($s['method'] ?? ''); $n = trim($s['number'] ?? ''); $i = trim($s['instruction'] ?? 'send_money');
+                    if (!in_array($m, ['bkash','nagad','rocket']) || $n === '') continue;
+                    $details[] = ($methodLabels[$m] ?? $m) . ': ' . $n . ' (' . ($instLabels[$i] ?? $i) . ')';
+                }
+                $detailStr = implode(', ', $details);
+                createNotification($db, $userId, $userId, 'p2p_payment_updated', "Payment method $action: $detailStr");
+                $userEmail = $_SESSION['email'] ?? '';
+                if ($userEmail) {
+                    require_once __DIR__ . '/../includes/mailer.php';
+                    require_once __DIR__ . '/../includes/mail_templates.php';
+                    try {
+                        $validMethods = array_filter($settings, function($s) {
+                            $m = trim($s['method'] ?? ''); $n = trim($s['number'] ?? '');
+                            return in_array($m, ['bkash','nagad','rocket']) && $n !== '';
+                        });
+                        if ($validMethods) {
+                            $mailer = Mailer::getInstance();
+                            $body = MailTemplates::paymentMethodUpdated($username, $isNew ? 'added' : 'updated', $validMethods);
+                            $imgDir = __DIR__ . '/../assets/images/payment-icon';
+                            $embedded = [];
+                            foreach (['bkash','nagad','rocket'] as $m) {
+                                $f = $imgDir . '/' . $m . '-logo-mobile-banking.png';
+                                if (file_exists($f)) $embedded[$m . '-logo'] = $f;
+                            }
+                            $mailer->send($userEmail, 'Payment Method ' . ($isNew ? 'Added' : 'Updated'), $body, null, null, $embedded);
+                        }
+                    } catch (Throwable $e) { error_log("Payment settings email error: " . $e->getMessage()); }
+                }
             } catch (Throwable $e) { $response['message'] = 'Server error.'; }
             break;
 
@@ -426,6 +536,135 @@ try {
                 createNotification($db, $userId, $userId, 'coin_conversion', "Converted $qty $fromType → $resultQty $toType coins.$remainderNote");
                 $response = ['success' => true, 'message' => "Converted $qty $fromType → $resultQty $toType!$remainderNote"];
             } catch (Throwable $e) { $db->rollBack(); $response['message'] = 'Server error.'; }
+            break;
+
+        // ─── EDIT P2P OFFER ───
+        case 'edit_p2p_offer':
+            if (!$userId) { $response['message'] = 'Please log in.'; break; }
+            $userRole = $_SESSION['role'] ?? 'user';
+            if ($userRole !== 'merchant' && $userRole !== 'admin') { $response['message'] = 'Only merchants can edit offers.'; break; }
+            $offerId = (int)($req['offer_id'] ?? 0);
+            $price = abs((float)($req['price'] ?? 0));
+            $minAmt = abs((int)($req['min_amount'] ?? 1));
+            $maxAmt = abs((int)($req['max_amount'] ?? 0));
+            if ($offerId < 1 || $price < 1) { $response['message'] = 'Invalid price.'; break; }
+            if ($maxAmt > 0 && $maxAmt < $minAmt) { $response['message'] = 'Max must be >= Min.'; break; }
+            try {
+                $stmt = $db->prepare("UPDATE p2p_offers SET price_per_coin = ?, min_amount = ?, max_amount = ? WHERE id = ? AND agent_id = ? AND status = 'active'");
+                $stmt->execute([$price, $minAmt, $maxAmt, $offerId, $userId]);
+                if ($stmt->rowCount()) {
+                    $response = ['success' => true, 'message' => 'Offer updated!'];
+                } else {
+                    $response['message'] = 'Offer not found or inactive.';
+                }
+            } catch (Throwable $e) { $response['message'] = 'Server error.'; }
+            break;
+
+        // ─── SUBMIT P2P REVIEW ───
+        case 'submit_p2p_review':
+            if (!$userId) { $response['message'] = 'Please log in.'; break; }
+            $tradeId = (int)($req['trade_id'] ?? 0);
+            $rating = (int)($req['rating'] ?? 0);
+            $comment = trim($req['comment'] ?? '');
+            if ($rating < 1 || $rating > 5) { $response['message'] = 'Rating must be 1-5.'; break; }
+            try {
+                $stmt = $db->prepare("SELECT * FROM p2p_trades WHERE id = ? AND (buyer_id = ? OR seller_id = ?) AND status = 'completed'");
+                $stmt->execute([$tradeId, $userId, $userId]);
+                $trade = $stmt->fetch();
+                if (!$trade) { $response['message'] = 'Trade not found or not completed.'; break; }
+                $stmt = $db->prepare("SELECT id, agent_id FROM p2p_offers WHERE id = ?");
+                $stmt->execute([$trade['offer_id']]);
+                $offer = $stmt->fetch();
+                if (!$offer) { $response['message'] = 'Offer not found.'; break; }
+                // Determine merchant: the offer creator (agent) is always the merchant
+                $merchantId = (int)$offer['agent_id'];
+                // Check if user already reviewed this merchant
+                $stmt = $db->prepare("SELECT id FROM p2p_reviews WHERE reviewer_id = ? AND merchant_id = ?");
+                $stmt->execute([$userId, $merchantId]);
+                if ($stmt->fetch()) { $response['message'] = 'You have already reviewed this merchant.'; break; }
+                $stmt = $db->prepare("INSERT INTO p2p_reviews (trade_id, reviewer_id, merchant_id, rating, comment) VALUES (?, ?, ?, ?, ?)");
+                $stmt->execute([$tradeId, $userId, $merchantId, $rating, $comment]);
+                $response = ['success' => true, 'message' => 'Review submitted! Thank you.'];
+            } catch (Throwable $e) { $response['message'] = 'Server error.'; }
+            break;
+
+        // ─── GET MERCHANT RATING ───
+        case 'get_merchant_rating':
+            $merchantId = (int)($req['merchant_id'] ?? 0);
+            if (!$merchantId) { $response['message'] = 'Invalid merchant.'; break; }
+            try {
+                $stmt = $db->prepare("SELECT ROUND(AVG(rating),1) AS avg_rating, COUNT(*) AS total_reviews FROM p2p_reviews WHERE merchant_id = ?");
+                $stmt->execute([$merchantId]);
+                $row = $stmt->fetch();
+                $response = ['success' => true, 'avg_rating' => (float)($row['avg_rating'] ?? 0), 'total_reviews' => (int)($row['total_reviews'] ?? 0)];
+            } catch (Throwable $e) { $response['message'] = 'Server error.'; }
+            break;
+
+        // ─── GET MERCHANT PROFILE ───
+        case 'get_merchant_profile':
+            $merchantId = (int)($req['merchant_id'] ?? 0);
+            if (!$merchantId) { $response['message'] = 'Invalid merchant.'; break; }
+            try {
+                $stmt = $db->prepare("SELECT id, username, full_name, avatar, registered_at, role FROM users WHERE id = ? AND role IN ('merchant','admin')");
+                $stmt->execute([$merchantId]);
+                $merchant = $stmt->fetch();
+                if (!$merchant) { $response['message'] = 'Merchant not found.'; break; }
+
+                // Trade stats
+                $stmt = $db->prepare("SELECT COUNT(*) AS total, SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) AS completed, COALESCE(SUM(CASE WHEN status='completed' THEN total_price ELSE 0 END),0) AS volume FROM p2p_trades WHERE seller_id = ? OR buyer_id = ?");
+                $stmt->execute([$merchantId, $merchantId]);
+                $stats = $stmt->fetch();
+                $totalTrades = (int)($stats['total'] ?? 0);
+                $completedTrades = (int)($stats['completed'] ?? 0);
+                $volume = (float)($stats['volume'] ?? 0);
+                $completionRate = $totalTrades > 0 ? round(($completedTrades / $totalTrades) * 100) : 0;
+
+                // Active offers
+                $stmt = $db->prepare("SELECT COUNT(*) FROM p2p_offers WHERE agent_id = ? AND status = 'active' AND remaining > 0");
+                $stmt->execute([$merchantId]);
+                $activeOffers = (int)$stmt->fetchColumn();
+
+                // Rating
+                $stmt = $db->prepare("SELECT ROUND(AVG(rating),1) AS avg_rating, COUNT(*) AS total_reviews FROM p2p_reviews WHERE merchant_id = ?");
+                $stmt->execute([$merchantId]);
+                $ratingRow = $stmt->fetch();
+                $avgRating = (float)($ratingRow['avg_rating'] ?? 0);
+                $totalReviews = (int)($ratingRow['total_reviews'] ?? 0);
+
+                // Recent reviews with reviewer info
+                $stmt = $db->prepare("SELECT r.id, r.rating, r.comment, r.created_at, u.full_name, u.username, u.avatar FROM p2p_reviews r JOIN users u ON u.id = r.reviewer_id WHERE r.merchant_id = ? ORDER BY r.created_at DESC LIMIT 10");
+                $stmt->execute([$merchantId]);
+                $reviews = $stmt->fetchAll();
+
+                $response = ['success' => true, 'merchant' => $merchant, 'stats' => ['total_trades' => $totalTrades, 'completed_trades' => $completedTrades, 'completion_rate' => $completionRate, 'volume' => $volume, 'active_offers' => $activeOffers, 'avg_rating' => $avgRating, 'total_reviews' => $totalReviews], 'reviews' => $reviews];
+            } catch (Throwable $e) { $response['message'] = 'Server error.'; }
+            break;
+
+        // ─── LOAD MORE OFFERS ───
+        case 'load_more_offers':
+            $type = $req['type'] ?? 'sell';
+            $offset = (int)($req['offset'] ?? 0);
+            $limit = 20;
+            $orderDir = $type === 'sell' ? 'ASC' : 'DESC';
+            try {
+                $stmt = $db->prepare("SELECT o.*, u.username, u.full_name FROM p2p_offers o JOIN users u ON u.id = o.agent_id WHERE o.type = ? AND o.status = 'active' AND o.remaining > 0 ORDER BY o.price_per_coin $orderDir LIMIT ? OFFSET ?");
+                $stmt->execute([$type, $limit, $offset]);
+                $offers = $stmt->fetchAll();
+                $response = ['success' => true, 'offers' => $offers, 'has_more' => count($offers) === $limit];
+            } catch (Throwable $e) { $response['message'] = 'Server error.'; }
+            break;
+
+        // ─── LOAD MORE TRADES ───
+        case 'load_more_trades':
+            if (!$userId) { $response['message'] = 'Please log in.'; break; }
+            $offset = (int)($req['offset'] ?? 0);
+            $limit = 20;
+            try {
+                $stmt = $db->prepare("SELECT t.*, o.type AS offer_type, ob.username AS buyer_name, os.username AS seller_name FROM p2p_trades t JOIN p2p_offers o ON o.id = t.offer_id LEFT JOIN users ob ON ob.id = t.buyer_id LEFT JOIN users os ON os.id = t.seller_id WHERE t.buyer_id = ? OR t.seller_id = ? ORDER BY t.created_at DESC LIMIT ? OFFSET ?");
+                $stmt->execute([$userId, $userId, $limit, $offset]);
+                $trades = $stmt->fetchAll();
+                $response = ['success' => true, 'trades' => $trades, 'has_more' => count($trades) === $limit];
+            } catch (Throwable $e) { $response['message'] = 'Server error.'; }
             break;
 
         default:

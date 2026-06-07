@@ -18,7 +18,7 @@ class Mailer {
         return self::$instance;
     }
 
-    public function send(string $to, string $subject, string $body, ?string $from = null, ?string $fromName = null): array {
+    public function send(string $to, string $subject, string $body, ?string $from = null, ?string $fromName = null, array $embeddedImages = []): array {
         $mail = new PHPMailer(true);
 
         try {
@@ -51,6 +51,13 @@ class Mailer {
             $mail->setFrom($from ?? $this->from, $fromName ?? $this->fromName);
             $mail->addAddress($to);
             $mail->isHTML(true);
+
+            foreach ($embeddedImages as $cid => $filePath) {
+                if (file_exists($filePath)) {
+                    $mail->addEmbeddedImage($filePath, $cid);
+                }
+            }
+
             $mail->Subject = $subject;
             $mail->Body = $body;
             $mail->AltBody = strip_tags(str_replace(['<br>', '<br/>', '<br />'], "\n", $body));
