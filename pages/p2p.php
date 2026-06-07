@@ -566,10 +566,10 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
 <!-- ════════════════════════════════════ -->
 <div class="p2p-tab-panel active" id="tabBuy">
     <div class="p2p-coin-filter">
-        <button class="p2p-coin-filter-btn active" data-coin="all">🔁 All</button>
-        <button class="p2p-coin-filter-btn" data-coin="bronze">🥉 Bronze</button>
-        <button class="p2p-coin-filter-btn" data-coin="silver">🥈 Silver</button>
-        <button class="p2p-coin-filter-btn" data-coin="gold">🥇 Gold</button>
+        <button class="p2p-coin-filter-btn active" data-coin="all">All</button>
+        <button class="p2p-coin-filter-btn" data-coin="bronze">Bronze</button>
+        <button class="p2p-coin-filter-btn" data-coin="silver">Silver</button>
+        <button class="p2p-coin-filter-btn" data-coin="gold">Gold</button>
         <div style="flex:1;min-width:140px;position:relative">
             <input type="text" class="p2p-search-input" placeholder="🔍 Search merchant..." style="width:100%;padding:5px 12px;border-radius:999px;border:1.5px solid var(--p2p-border);font-size:.72rem;font-weight:600;outline:none;font-family:'Plus Jakarta Sans',sans-serif;background:var(--p2p-card);color:var(--p2p-text);box-sizing:border-box;transition:all .15s" oninput="filterOffers(this)">
         </div>
@@ -624,10 +624,10 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
 <!-- ════════════════════════════════════ -->
 <div class="p2p-tab-panel" id="tabSell">
     <div class="p2p-coin-filter">
-        <button class="p2p-coin-filter-btn active" data-coin="all">🔁 All</button>
-        <button class="p2p-coin-filter-btn" data-coin="bronze">🥉 Bronze</button>
-        <button class="p2p-coin-filter-btn" data-coin="silver">🥈 Silver</button>
-        <button class="p2p-coin-filter-btn" data-coin="gold">🥇 Gold</button>
+        <button class="p2p-coin-filter-btn active" data-coin="all">All</button>
+        <button class="p2p-coin-filter-btn" data-coin="bronze">Bronze</button>
+        <button class="p2p-coin-filter-btn" data-coin="silver">Silver</button>
+        <button class="p2p-coin-filter-btn" data-coin="gold">Gold</button>
         <div style="flex:1;min-width:140px;position:relative">
             <input type="text" class="p2p-search-input" placeholder="🔍 Search merchant..." style="width:100%;padding:5px 12px;border-radius:999px;border:1.5px solid var(--p2p-border);font-size:.72rem;font-weight:600;outline:none;font-family:'Plus Jakarta Sans',sans-serif;background:var(--p2p-card);color:var(--p2p-text);box-sizing:border-box;transition:all .15s" oninput="filterOffers(this)">
         </div>
@@ -780,13 +780,13 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
         <div class="p2p-convert-grid" style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;margin-bottom:16px">
             <div class="p2p-custom-select" id="selectConvFrom">
                 <div class="p2p-select-trigger" data-value="bronze">
-                    <span>🥉 Bronze</span>
+                    <span>Bronze</span>
 
                 </div>
                 <div class="p2p-select-options">
-                    <div class="p2p-select-option active" data-value="bronze">🥉 Bronze</div>
-                    <div class="p2p-select-option" data-value="silver">🥈 Silver</div>
-                    <div class="p2p-select-option" data-value="gold">🥇 Gold</div>
+                    <div class="p2p-select-option active" data-value="bronze">Bronze</div>
+                    <div class="p2p-select-option" data-value="silver">Silver</div>
+                    <div class="p2p-select-option" data-value="gold">Gold</div>
                 </div>
                 <input type="hidden" id="convFrom" value="bronze">
             </div>
@@ -797,7 +797,7 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
 
             <div class="p2p-custom-select" id="selectConvTo">
                 <div class="p2p-select-trigger" data-value="gold">
-                    <span>🥇 Gold</span>
+                    <span>Gold</span>
 
                 </div>
                 <div class="p2p-select-options">
@@ -848,13 +848,13 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
                     <label style="font-size:.72rem;font-weight:700;color:var(--p2p-muted);display:block;margin-bottom:4px">Coin</label>
                     <div class="p2p-custom-select" id="selectOfferCoin">
                         <div class="p2p-select-trigger" data-value="bronze">
-                            <span>🥉 Bronze</span>
+                            <span>Bronze</span>
         
                         </div>
                         <div class="p2p-select-options">
-                            <div class="p2p-select-option active" data-value="bronze">🥉 Bronze</div>
-                            <div class="p2p-select-option" data-value="silver">🥈 Silver</div>
-                            <div class="p2p-select-option" data-value="gold">🥇 Gold</div>
+                            <div class="p2p-select-option active" data-value="bronze">Bronze</div>
+                            <div class="p2p-select-option" data-value="silver">Silver</div>
+                            <div class="p2p-select-option" data-value="gold">Gold</div>
                         </div>
                         <input type="hidden" id="p2pOfferCoin" value="bronze">
                     </div>
