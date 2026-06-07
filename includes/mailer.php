@@ -48,6 +48,7 @@ class Mailer {
                 ],
             ];
 
+            $mail->CharSet = 'UTF-8';
             $mail->setFrom($from ?? $this->from, $fromName ?? $this->fromName);
             $mail->addAddress($to);
             $mail->isHTML(true);

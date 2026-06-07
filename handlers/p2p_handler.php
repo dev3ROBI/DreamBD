@@ -25,9 +25,12 @@ try {
 
     // ─── AUTO-CANCEL PENDING TRADES OLDER THAN 15 MINS ───
     try {
-        $stmt = $db->prepare("SELECT id, offer_id, seller_id, coin_type, quantity FROM p2p_trades WHERE status = 'pending' AND created_at < NOW() - INTERVAL 15 MINUTE FOR UPDATE");
+        $stmt = $db->prepare("SELECT id, offer_id, seller_id, buyer_id, coin_type, quantity FROM p2p_trades WHERE status = 'pending' AND created_at < NOW() - INTERVAL 15 MINUTE FOR UPDATE");
         $stmt->execute();
         $expiredTrades = $stmt->fetchAll();
+        require_once __DIR__ . '/../includes/mail_templates.php';
+        require_once __DIR__ . '/../includes/mailer.php';
+        $mailer = Mailer::getInstance();
         foreach ($expiredTrades as $et) {
             $coinCol = $et['coin_type'] . '_coins';
             // Escrow refund to seller
@@ -36,6 +39,16 @@ try {
             $db->prepare("UPDATE p2p_offers SET remaining = remaining + ?, status = 'active' WHERE id = ?")->execute([$et['quantity'], $et['offer_id']]);
             // Mark cancelled
             $db->prepare("UPDATE p2p_trades SET status = 'cancelled' WHERE id = ?")->execute([$et['id']]);
+            // Notify both parties
+            $stmtU = $db->prepare("SELECT id, username, email FROM users WHERE id IN (?, ?)");
+            $stmtU->execute([$et['buyer_id'], $et['seller_id']]);
+            $users = $stmtU->fetchAll();
+            foreach ($users as $u) {
+                try {
+                    $body = MailTemplates::orderCancelled($u['username'], (int)$et['id'], (int)$et['quantity'], $et['coin_type'], 'auto_timeout');
+                    $mailer->send($u['email'], 'Trade #' . $et['id'] . ' Auto-Cancelled', $body, 'noreply@robicodes.xyz', 'RobiCodes P2P');
+                } catch (Throwable $em) { /* skip mail error */ }
+            }
         }
     } catch (Throwable $e) { /* ignore auto cancel errors silently */ }
 
@@ -291,6 +304,26 @@ try {
                 $stmt = $db->prepare("UPDATE p2p_trades SET status = 'cancelled' WHERE id = ?");
                 $stmt->execute([$tradeId]);
                 $db->commit();
+
+                // Decide who cancelled
+                $cancellerId = (int)$userId;
+                $isBuyerCancel = $cancellerId === (int)$trade['buyer_id'];
+                $reason = $isBuyerCancel ? 'user_cancelled' : 'merchant_cancelled';
+
+                // Notify both parties
+                require_once __DIR__ . '/../includes/mail_templates.php';
+                require_once __DIR__ . '/../includes/mailer.php';
+                $mailer = Mailer::getInstance();
+                $stmtU = $db->prepare("SELECT id, username, email FROM users WHERE id IN (?, ?)");
+                $stmtU->execute([$trade['buyer_id'], $trade['seller_id']]);
+                $users = $stmtU->fetchAll();
+                foreach ($users as $u) {
+                    try {
+                        $body = MailTemplates::orderCancelled($u['username'], $tradeId, $qty, $trade['coin_type'], $reason);
+                        $mailer->send($u['email'], 'Trade #' . $tradeId . ' Cancelled', $body, 'noreply@robicodes.xyz', 'RobiCodes P2P');
+                    } catch (Throwable $em) { /* skip mail error */ }
+                }
+
                 $response = ['success' => true, 'message' => 'Order cancelled.'];
             } catch (Throwable $e) { $db->rollBack(); $response['message'] = 'Server error.'; }
             break;
@@ -621,7 +654,7 @@ try {
             $merchantId = (int)($req['merchant_id'] ?? 0);
             if (!$merchantId) { $response['message'] = 'Invalid merchant.'; break; }
             try {
-                $stmt = $db->prepare("SELECT id, username, full_name, avatar, registered_at, role FROM users WHERE id = ? AND role IN ('merchant','admin')");
+                $stmt = $db->prepare("SELECT id, username, full_name, avatar, registered_at, role, EXISTS(SELECT 1 FROM user_sessions us WHERE us.user_id = users.id AND us.expires_at > NOW() AND us.last_activity >= (UNIX_TIMESTAMP() - 300)) AS is_online FROM users WHERE id = ? AND role IN ('merchant','admin')");
                 $stmt->execute([$merchantId]);
                 $merchant = $stmt->fetch();
                 if (!$merchant) { $response['message'] = 'Merchant not found.'; break; }
@@ -663,7 +696,7 @@ try {
             $limit = 20;
             $orderDir = $type === 'sell' ? 'ASC' : 'DESC';
             try {
-                $stmt = $db->prepare("SELECT o.*, u.username, u.full_name FROM p2p_offers o JOIN users u ON u.id = o.agent_id WHERE o.type = ? AND o.status = 'active' AND o.remaining > 0 ORDER BY o.price_per_coin $orderDir LIMIT ? OFFSET ?");
+                $stmt = $db->prepare("SELECT o.*, u.username, u.full_name, u.avatar, EXISTS(SELECT 1 FROM user_sessions us WHERE us.user_id = u.id AND us.expires_at > NOW() AND us.last_activity >= (UNIX_TIMESTAMP() - 300)) AS is_online FROM p2p_offers o JOIN users u ON u.id = o.agent_id WHERE o.type = ? AND o.status = 'active' AND o.remaining > 0 ORDER BY o.price_per_coin $orderDir LIMIT ? OFFSET ?");
                 $stmt->execute([$type, $limit, $offset]);
                 $offers = $stmt->fetchAll();
                 $response = ['success' => true, 'offers' => $offers, 'has_more' => count($offers) === $limit];

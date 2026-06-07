@@ -22,6 +22,9 @@ class MailTemplates {
   <!--[if mso]>
   <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
   <![endif]-->
+  <!--[if !mso]><!-->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="none" onload="if(media!='all')media='all'">
+  <!--<![endif]-->
   <style type="text/css">
     /* Reset */
     body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
@@ -131,7 +134,7 @@ HTML;
 
     /** Reusable: info/detail box */
     private static function infoBox(array $rows, string $bg = '#f8fafc', string $border = '#e5e7eb'): string {
-        $html = '<table class="info-table" role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:' . $bg . ';border:1px solid ' . $border . ';border-radius:14px;overflow:hidden;margin:20px 0;">';
+        $html = '<table class="info-table" role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:' . $bg . ';border:1px solid ' . $border . ';border-radius:14px;margin:20px 0;">';
         foreach ($rows as $i => $row) {
             $isLast = $i === array_key_last($rows);
             $borderBottom = $isLast ? '' : 'border-bottom:1px solid ' . $border . ';';
@@ -153,7 +156,7 @@ HTML;
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
         <tr>
           <td width="32" valign="top" style="padding-right:12px;">
-            <div style="width:28px;height:28px;border-radius:50%;background:{$border};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:{$textColor};text-align:center;line-height:28px;">{$icon}</div>
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="width:28px;height:28px;"><tr><td style="background:{$border};border-radius:50%;width:28px;height:28px;text-align:center;vertical-align:middle;font-size:14px;font-weight:800;color:{$textColor};line-height:28px;">{$icon}</td></tr></table>
           </td>
           <td style="font-size:14px;color:{$textColor};font-weight:600;line-height:1.6;">{$text}</td>
         </tr>
@@ -171,12 +174,12 @@ HTML;
         $btn = self::ctaButton('&#10003; Verify Email Address', $verifyUrl, 'linear-gradient(135deg,#3b82f6,#8b5cf6)');
         $content = $greeting . <<<HTML
 <p style="margin:0 0 24px;font-size:15px;color:#4b5563;line-height:1.7;">
-  Welcome to <strong>RobiCodes</strong>! One quick step — please verify your email address to unlock all features and secure your account.
+  Welcome to <strong>RobiCodes</strong>! One quick step &mdash; please verify your email address to unlock all features and secure your account.
 </p>
 {$btn}
 <p style="margin:20px 0 8px;font-size:13px;color:#9ca3af;">Or copy and paste this URL into your browser:</p>
 <p style="margin:0 0 24px;font-size:13px;color:#3b82f6;word-break:break-all;background:#f0f9ff;padding:12px 14px;border-radius:10px;border:1px solid #bfdbfe;">{$verifyUrl}</p>
-<p style="margin:0;font-size:13px;color:#6b7280;line-height:1.6;">&#128274; This link expires in <strong>24 hours</strong>. If you did not create an account, no action is needed.</p>
+<p style="margin:0;font-size:13px;color:#6b7280;line-height:1.6;">&#x1F512; This link expires in <strong>24 hours</strong>. If you did not create an account, no action is needed.</p>
 HTML;
         return self::baseTemplate('Verify Your Email', $content, '#3b82f6', '#8b5cf6');
     }
@@ -185,7 +188,7 @@ HTML;
         $greeting = self::greeting($username);
         $content = $greeting . <<<HTML
 <p style="margin:0 0 24px;font-size:15px;color:#4b5563;line-height:1.7;">
-  We received a request to reset your password. Use the code below — it expires in <strong>10 minutes</strong>.
+  We received a request to reset your password. Use the code below &mdash; it expires in <strong>10 minutes</strong>.
 </p>
 <!-- OTP box -->
 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:0 0 24px;">
@@ -222,63 +225,101 @@ HTML;
         return self::baseTemplate('Password Changed', $content, '#8b5cf6', '#6366f1');
     }
 
+    private static function statusBadge(string $label, string $bg, string $color): string {
+        return '<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="display:inline-block;"><tr><td style="background:' . $bg . ';border-radius:999px;padding:5px 16px;"><span style="font-size:12px;font-weight:700;color:' . $color . ';text-decoration:none;">' . $label . '</span></td></tr></table>';
+    }
+
+    private static function iconCircle(string $text, string $bg): string {
+        return '<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="display:inline-block;"><tr><td style="background:' . $bg . ';border-radius:50%;width:54px;height:54px;text-align:center;vertical-align:middle;"><span style="font-family:Arial,Helvetica,sans-serif;font-size:20px;font-weight:900;color:#ffffff;line-height:54px;letter-spacing:0.5px;">' . $text . '</span></td></tr></table>';
+    }
+
     public static function orderPlaced(string $username, string $orderType, string $coinType, int $qty, float $total, int $tradeId): string {
         $url = env('APP_URL', 'http://localhost/Dream');
         $isBuy = $orderType === 'buy';
-        $typeLabel = $isBuy ? '🟢 Buy Order' : '🔴 Sell Order';
         $accentColor = $isBuy ? '#059669' : '#dc2626';
-        $accentLight = $isBuy ? '#10b981' : '#ef4444';
+        $accentLight = $isBuy ? '#34d399' : '#f87171';
+        $accentBg = $isBuy ? '#f0fdf4' : '#fef2f2';
+        $accentBorder = $isBuy ? '#a7f3d0' : '#fecaca';
+        $accentBadge = $isBuy ? '#d1fae5' : '#fee2e2';
+        $typeLabel = $isBuy ? 'Buy Order' : 'Sell Order';
+        $circleLabel = $isBuy ? 'B' : 'S';
+        $circleBg = $isBuy ? '#059669' : '#dc2626';
         $instruction = $isBuy
-            ? 'Please pay the merchant using the payment details shown in your <strong>P2P Dashboard → Orders</strong>. Your order will be completed once the merchant releases the coins.'
-            : 'Your coins are now held in <strong>escrow</strong>. Wait for the buyer to send payment, then log in to verify and release the coins.';
+            ? 'Send <strong>BDT ' . number_format($total, 2) . '</strong> to the merchant using the payment details shown in your dashboard. Once the merchant confirms receipt, the coins will be released to your wallet automatically.'
+            : 'Your <strong>' . $qty . ' ' . ucfirst($coinType) . '</strong> coins are now held in <strong>escrow</strong> &mdash; a secure hold. Wait for the buyer to send payment, then log in to verify and release the coins.';
         $coinLabel = ucfirst($coinType) . ' Coin';
         $totalFmt = number_format($total, 2);
         $greeting = self::greeting($username);
-        $infoBox = self::infoBox([
-            ['Trade ID', '#' . $tradeId],
-            ['Order Type', $typeLabel],
-            ['Coin Type', $coinLabel],
+
+        $hero = '
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:0 0 24px;">
+  <tr>
+    <td style="background:' . $accentBg . ';border:1px solid ' . $accentBorder . ';border-radius:16px;padding:24px;text-align:center;">
+      ' . self::iconCircle($circleLabel, $circleBg) . '
+      <h2 style="margin:12px 0 4px;font-size:20px;font-weight:800;color:#1f2937;">Order Placed Successfully</h2>
+      <p style="margin:0;font-size:14px;color:#6b7280;">Trade <strong>#' . $tradeId . '</strong> &middot; ' . $typeLabel . '</p>
+    </td>
+  </tr>
+</table>';
+
+        $info = self::infoBox([
+            ['Trade ID', '<span style="font-weight:800;">#' . $tradeId . '</span>'],
+            ['Type', '<span style="color:' . $accentColor . ';font-weight:700;">' . $typeLabel . '</span>'],
+            ['Coin', $coinLabel],
             ['Quantity', $qty . ' coins'],
-            ['Total Amount', '<span style="font-size:18px;color:' . $accentColor . ';">৳' . $totalFmt . '</span>'],
-        ]);
-        $btn = self::ctaButton('&#128202; View in P2P Dashboard', $url . '/index.php?page=p2p', $accentColor);
-        $instBox = self::alertBox($instruction, $isBuy ? '#f0fdf4' : '#fff7ed', $isBuy ? '#86efac' : '#fdba74', $isBuy ? '#15803d' : '#c2410c', $isBuy ? '💳' : '🔒');
-        $content = $greeting . <<<HTML
-<p style="margin:0 0 20px;font-size:15px;color:#4b5563;line-height:1.7;">
-  Your P2P {$orderType} order has been <strong>placed successfully</strong>! Here's a summary:
-</p>
-{$infoBox}
-{$instBox}
-{$btn}
-HTML;
-        return self::baseTemplate('Order Placed — #' . $tradeId, $content, $accentColor, $accentLight);
+            ['Total', '<span style="font-size:18px;font-weight:900;color:' . $accentColor . ';">BDT ' . $totalFmt . '</span>'],
+        ], '#ffffff', $accentBorder);
+
+        $instBox = self::alertBox($instruction, $accentBg, $accentBorder, $isBuy ? '#065f46' : '#991b1b', 'i');
+        $btn = self::ctaButton('View in P2P Dashboard', $url . '/index.php?page=p2p', $circleBg);
+
+        return self::baseTemplate($typeLabel . ' Placed &mdash; #' . $tradeId, $greeting . $hero . $info . $instBox . $btn, $accentColor, $accentLight);
     }
 
     public static function paymentConfirmed(string $username, int $tradeId, int $qty, string $coinType): string {
         $url = env('APP_URL', 'http://localhost/Dream');
         $coinLabel = ucfirst($coinType);
         $greeting = self::greeting($username);
-        $infoBox = self::infoBox([
-            ['Trade ID', '#' . $tradeId],
-            ['Coin Type', $coinLabel],
+
+        $hero = '
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:0 0 24px;">
+  <tr>
+    <td style="background:#fefce8;border:1px solid #fde68a;border-radius:16px;padding:24px;text-align:center;">
+      ' . self::iconCircle('$', '#d97706') . '
+      <h2 style="margin:12px 0 4px;font-size:20px;font-weight:800;color:#92400e;">Payment Confirmed</h2>
+      <p style="margin:0;font-size:14px;color:#a16207;">Buyer has sent payment for Trade <strong>#' . $tradeId . '</strong></p>
+    </td>
+  </tr>
+</table>';
+
+        $info = self::infoBox([
+            ['Trade ID', '<span style="font-weight:800;">#' . $tradeId . '</span>'],
+            ['Coin', $coinLabel],
             ['Quantity', $qty . ' coins'],
-            ['Status', '<span style="background:#dbeafe;color:#1e40af;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700;">Payment Received &#128197;</span>'],
-        ]);
+            ['Status', self::statusBadge('Payment Received', '#dbeafe', '#1e40af')],
+        ], '#ffffff', '#fde68a');
+
         $alertBox = self::alertBox(
-            'The buyer has confirmed payment. Please log in, verify you received the payment, then click <strong>"Release Coins"</strong> to complete the trade.',
-            '#fff7ed', '#fed7aa', '#c2410c', '⚡'
+            'Verify the payment in your mobile wallet, then click <strong>"Release Coins"</strong> in your P2P dashboard to complete the trade. The buyer is waiting for you.',
+            '#fefce8', '#fde68a', '#92400e', '!'
         );
-        $btn = self::ctaButton('&#10003; Go to P2P Dashboard', $url . '/index.php?page=p2p', 'linear-gradient(135deg,#f59e0b,#d97706)');
-        $content = $greeting . <<<HTML
-<p style="margin:0 0 20px;font-size:15px;color:#4b5563;line-height:1.7;">
-  Good news! Payment has been marked as confirmed for <strong>Trade #{$tradeId}</strong>. Action required on your part:
-</p>
-{$infoBox}
-{$alertBox}
-{$btn}
-<p style="margin:16px 0 0;font-size:13px;color:#6b7280;line-height:1.6;">&#128275; Only release coins after you have verified the payment in your bank/mobile wallet app.</p>
-HTML;
-        return self::baseTemplate('Payment Confirmed — Trade #' . $tradeId, $content, '#f59e0b', '#d97706');
+        $btn = self::ctaButton('Release Coins Now', $url . '/index.php?page=p2p', '#d97706');
+
+        $note = '
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:20px 0 0;">
+  <tr>
+    <td style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:14px 18px;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+        <tr>
+          <td width="20" valign="top" style="padding-right:10px;"><span style="color:#dc2626;font-size:16px;font-weight:700;">!</span></td>
+          <td><span style="font-size:13px;color:#6b7280;line-height:1.6;">Only release coins after you have <strong>verified the payment</strong> in your bKash / Nagad / Rocket account.</span></td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>';
+
+        return self::baseTemplate('Payment Confirmed &mdash; Trade #' . $tradeId, $greeting . $hero . $info . $alertBox . $btn . $note, '#d97706', '#f59e0b');
     }
 
     public static function tradeCompleted(string $username, string $side, int $tradeId, int $qty, string $coinType): string {
@@ -286,42 +327,104 @@ HTML;
         $coinLabel = ucfirst($coinType);
         $isBuyer = $side === 'buyer';
         $summaryMsg = $isBuyer
-            ? "<strong>{$qty} {$coinLabel} coins</strong> have been added to your wallet. Enjoy!"
-            : "You have successfully sold <strong>{$qty} {$coinLabel} coins</strong>. Payment should be in your account.";
-        $sideLabel = $isBuyer ? '🛒 Buyer' : '💰 Seller';
+            ? '<strong>' . $qty . ' ' . $coinLabel . '</strong> coins have been credited to your wallet.'
+            : 'You have successfully sold <strong>' . $qty . ' ' . $coinLabel . '</strong> coins. The payment has been sent to your account.';
+        $sideLabel = $isBuyer ? 'Buyer' : 'Seller';
         $greeting = self::greeting($username);
-        $infoBox = self::infoBox([
-            ['Trade ID', '#' . $tradeId],
-            ['Your Role', $sideLabel],
-            ['Coin Type', $coinLabel],
+
+        $hero = '
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:0 0 24px;">
+  <tr>
+    <td style="background:#f0fdf4;border:1px solid #86efac;border-radius:16px;padding:24px;text-align:center;">
+      ' . self::iconCircle('OK', '#059669') . '
+      <h2 style="margin:12px 0 4px;font-size:20px;font-weight:800;color:#065f46;">Trade Completed</h2>
+      <p style="margin:0;font-size:14px;color:#047857;">Trade <strong>#' . $tradeId . '</strong> &middot; ' . $sideLabel . '</p>
+    </td>
+  </tr>
+</table>';
+
+        $info = self::infoBox([
+            ['Trade ID', '<span style="font-weight:800;">#' . $tradeId . '</span>'],
+            ['Role', '<span style="font-weight:700;">' . $sideLabel . '</span>'],
+            ['Coin', $coinLabel],
             ['Quantity', $qty . ' coins'],
-            ['Status', '<span style="background:#d1fae5;color:#065f46;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700;">&#10003; Completed</span>'],
-        ]);
-        $alertBox = self::alertBox($summaryMsg, '#f0fdf4', '#86efac', '#065f46', '🎉');
-        $btn = self::ctaButton('&#128200; View Trade History', $url . '/index.php?page=p2p', 'linear-gradient(135deg,#059669,#10b981)');
-        $content = $greeting . <<<HTML
-<p style="margin:0 0 20px;font-size:15px;color:#4b5563;line-height:1.7;">
-  <strong>Trade #{$tradeId} has been completed!</strong> Thank you for trading on RobiCodes P2P.
-</p>
-{$infoBox}
-{$alertBox}
-{$btn}
-<p style="margin:16px 0 0;font-size:13px;color:#6b7280;line-height:1.6;">&#11088; Was your experience good? Consider leaving a review for your trade partner from the P2P Orders tab.</p>
-HTML;
-        return self::baseTemplate('Trade Completed — #' . $tradeId, $content, '#059669', '#10b981');
+            ['Status', self::statusBadge('Completed', '#d1fae5', '#065f46')],
+        ], '#ffffff', '#86efac');
+
+        $resultBox = self::alertBox($summaryMsg, '#f0fdf4', '#86efac', '#065f46', 'V');
+        $btn = self::ctaButton('View Trade History', $url . '/index.php?page=p2p', '#059669');
+
+        $reviewNote = '
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:20px 0 0;">
+  <tr>
+    <td style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:14px 18px;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+        <tr>
+          <td width="20" valign="top" style="padding-right:10px;"><span style="color:#d97706;font-size:16px;font-weight:700;">*</span></td>
+          <td><span style="font-size:13px;color:#92400e;line-height:1.6;">Was your experience good? <a href="' . $url . '/index.php?page=p2p" style="color:#d97706;font-weight:700;text-decoration:underline;">Leave a review</a> for your trade partner.</span></td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>';
+
+        return self::baseTemplate('Trade Completed &mdash; #' . $tradeId, $greeting . $hero . $info . $resultBox . $btn . $reviewNote, '#059669', '#10b981');
+    }
+
+    public static function orderCancelled(string $username, int $tradeId, int $qty, string $coinType, string $reason): string {
+        $url = env('APP_URL', 'http://localhost/Dream');
+        $coinLabel = ucfirst($coinType);
+        $greeting = self::greeting($username);
+
+        if ($reason === 'user_cancelled') {
+            $reasonLabel = 'Cancelled by you';
+            $bg = '#fef2f2'; $border = '#fecaca'; $color = '#991b1b'; $accent = '#dc2626'; $clrLabel = 'X';
+        } elseif ($reason === 'merchant_cancelled') {
+            $reasonLabel = 'Cancelled by merchant';
+            $bg = '#fef2f2'; $border = '#fecaca'; $color = '#991b1b'; $accent = '#dc2626'; $clrLabel = 'X';
+        } else {
+            $reasonLabel = 'Auto-cancelled (15 min timeout)';
+            $bg = '#fff7ed'; $border = '#fed7aa'; $color = '#9a3412'; $accent = '#d97706'; $clrLabel = '!';
+        }
+
+        $hero = '
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:0 0 24px;">
+  <tr>
+    <td style="background:' . $bg . ';border:1px solid ' . $border . ';border-radius:16px;padding:24px;text-align:center;">
+      ' . self::iconCircle($clrLabel, $accent) . '
+      <h2 style="margin:12px 0 4px;font-size:20px;font-weight:800;color:' . $color . ';">Order Cancelled</h2>
+      <p style="margin:0;font-size:14px;color:' . $color . ';">' . $reasonLabel . ' &middot; Trade <strong>#' . $tradeId . '</strong></p>
+    </td>
+  </tr>
+</table>';
+
+        $info = self::infoBox([
+            ['Trade ID', '<span style="font-weight:800;">#' . $tradeId . '</span>'],
+            ['Coin', $coinLabel],
+            ['Quantity', $qty . ' coins'],
+            ['Reason', self::statusBadge($reasonLabel, $bg, $color)],
+        ], '#ffffff', $border);
+
+        $safetyBox = self::alertBox(
+            'No coins have been transferred or lost. All funds are safe in your wallet. You may place a new order at any time.',
+            '#f0fdf4', '#bbf7d0', '#065f46', 'V'
+        );
+        $btn = self::ctaButton('View Orders', $url . '/index.php?page=p2p', $accent);
+
+        $subject = $reason === 'auto_timeout' ? 'Order Auto-Cancelled &mdash; #' . $tradeId : 'Order Cancelled &mdash; #' . $tradeId;
+        return self::baseTemplate($subject, $greeting . $hero . $info . $safetyBox . $btn, $accent, '#fbbf24');
     }
 
     public static function paymentMethodUpdated(string $username, string $action, array $methods): string {
         $url = env('APP_URL', 'http://localhost/Dream');
-        $actionLabel = $action === 'added' ? 'added' : 'updated';
+        $actionLabel = $action === 'added' ? 'Added' : 'Updated';
         $greeting = self::greeting($username);
 
-        // Build method rows
         $methodRows = '';
         $methodMeta = [
-            'bkash'  => ['label' => 'bKash',  'color' => '#E2136E', 'bg' => '#fce7f3', 'icon' => '📱'],
-            'nagad'  => ['label' => 'Nagad',  'color' => '#F37124', 'bg' => '#fff7ed', 'icon' => '💳'],
-            'rocket' => ['label' => 'Rocket', 'color' => '#8B1FA8', 'bg' => '#f5f3ff', 'icon' => '🚀'],
+            'bkash'  => ['label' => 'bKash',  'color' => '#E2136E', 'bg' => '#fdf2f8', 'badgeBg' => '#fce7f3', 'short' => 'BK'],
+            'nagad'  => ['label' => 'Nagad',  'color' => '#F37124', 'bg' => '#fff7ed', 'badgeBg' => '#ffedd5', 'short' => 'NG'],
+            'rocket' => ['label' => 'Rocket', 'color' => '#8B1FA8', 'bg' => '#f5f3ff', 'badgeBg' => '#ede9fe', 'short' => 'RK'],
         ];
         foreach ($methods as $m) {
             $key = strtolower(trim($m['method'] ?? ''));
@@ -331,46 +434,53 @@ HTML;
             $instBg = ($m['instruction'] ?? '') === 'send_money' ? '#d1fae5' : '#fef2f2';
             $instColor = ($m['instruction'] ?? '') === 'send_money' ? '#065f46' : '#991b1b';
             $number = htmlspecialchars($m['number'] ?? '');
-            $methodRows .= <<<ROW
-<tr>
-  <td style="padding:14px 18px;border-bottom:1px solid #f3f4f6;">
-    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-      <tr>
-        <td width="44" valign="middle" style="padding-right:14px;">
-          <div style="width:44px;height:44px;border-radius:12px;background:{$meta['bg']};display:block;text-align:center;line-height:44px;font-size:22px;">{$meta['icon']}</div>
-        </td>
-        <td valign="middle">
-          <p style="margin:0 0 2px;font-size:15px;font-weight:700;color:{$meta['color']};">{$meta['label']}</p>
-          <p style="margin:0;font-size:13px;color:#4b5563;font-family:'Courier New',Courier,monospace;letter-spacing:0.5px;">{$number}</p>
-        </td>
-        <td align="right" valign="middle">
-          <span style="display:inline-block;padding:4px 12px;border-radius:999px;font-size:11px;font-weight:700;background:{$instBg};color:{$instColor};">{$instLabel}</span>
-        </td>
-      </tr>
-    </table>
-  </td>
-</tr>
-ROW;
+            $methodRows .= '
+  <tr>
+    <td style="padding:0 0 0 0;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:' . $meta['bg'] . ';border:1px solid ' . $meta['badgeBg'] . ';border-radius:12px;margin-bottom:10px;">
+        <tr>
+          <td width="50" valign="middle" style="padding:12px 0 12px 14px;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+              <tr><td style="background:' . $meta['badgeBg'] . ';border-radius:10px;width:38px;height:38px;text-align:center;"><span style="font-size:12px;font-weight:800;color:' . $meta['color'] . ';line-height:38px;">' . $meta['short'] . '</span></td></tr>
+            </table>
+          </td>
+          <td valign="middle" style="padding:12px 10px;">
+            <p style="margin:0 0 2px;font-size:14px;font-weight:800;color:' . $meta['color'] . ';">' . $meta['label'] . '</p>
+            <p style="margin:0;font-size:13px;color:#374151;font-family:Courier,monospace;font-weight:600;">' . $number . '</p>
+          </td>
+          <td align="right" valign="middle" style="padding:12px 14px 12px 6px;white-space:nowrap;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="display:inline-block;">
+              <tr><td style="background:' . $instBg . ';border-radius:999px;padding:3px 12px;"><span style="font-size:11px;font-weight:700;color:' . $instColor . ';">' . $instLabel . '</span></td></tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>';
         }
 
-        $alertBox = self::alertBox(
-            'If you did not make this change, please <a href="' . $url . '/index.php?page=p2p" style="color:#dc2626;font-weight:700;">contact support</a> immediately to secure your account.',
-            '#fef2f2', '#fecaca', '#991b1b', '⚠'
-        );
-        $btn = self::ctaButton('&#9881; Manage Payment Methods', $url . '/index.php?page=p2p', '#8b5cf6');
+        $hero = '
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:0 0 24px;">
+  <tr>
+    <td style="background:#f5f3ff;border:1px solid #c4b5fd;border-radius:16px;padding:24px;text-align:center;">
+      ' . self::iconCircle('P', '#7c3aed') . '
+      <h2 style="margin:12px 0 4px;font-size:20px;font-weight:800;color:#5b21b6;">Payment Methods ' . $actionLabel . '</h2>
+      <p style="margin:0;font-size:14px;color:#7c3aed;">Your P2P payment details have been ' . strtolower($actionLabel) . ' successfully</p>
+    </td>
+  </tr>
+</table>';
 
-        $content = $greeting . <<<HTML
-<p style="margin:0 0 20px;font-size:15px;color:#4b5563;line-height:1.7;">
-  Your P2P payment method(s) have been <strong>{$actionLabel}</strong> successfully. Here are the current details on your account:
-</p>
-<!-- Method list -->
-<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;margin:0 0 20px;">
-  {$methodRows}
-</table>
-{$alertBox}
-{$btn}
-HTML;
-        return self::baseTemplate('Payment Method ' . ucfirst($actionLabel), $content, '#8b5cf6', '#6366f1');
+        $alertBox = self::alertBox(
+            'If you did not make this change, please <a href="' . $url . '/index.php?page=p2p" style="color:#dc2626;font-weight:700;text-decoration:underline;">contact support</a> immediately.',
+            '#fef2f2', '#fecaca', '#991b1b', '!'
+        );
+        $btn = self::ctaButton('Manage Payment Methods', $url . '/index.php?page=p2p', '#7c3aed');
+
+        $content = $greeting . $hero .
+            '<p style="margin:0 0 16px;font-size:15px;color:#4b5563;">Here are your current payment methods:</p>' .
+            '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:0 0 20px;">' . $methodRows . '</table>' .
+            $alertBox . $btn;
+        return self::baseTemplate('Payment Methods ' . $actionLabel, $content, '#7c3aed', '#a78bfa');
     }
 
     public static function welcomeVerified(string $username): string {
@@ -387,7 +497,7 @@ HTML;
   <tr>
     <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;">
       <table role="presentation" cellspacing="0" cellpadding="0" border="0"><tr>
-        <td style="font-size:18px;padding-right:12px;width:32px;">🏆</td>
+        <td style="font-size:16px;padding-right:12px;width:32px;font-weight:700;color:#8b5cf6;">[1]</td>
         <td><p style="margin:0;font-size:14px;color:#374151;font-weight:600;">Join Tournaments</p><p style="margin:2px 0 0;font-size:12px;color:#6b7280;">Compete and win exciting prizes</p></td>
       </tr></table>
     </td>
@@ -395,7 +505,7 @@ HTML;
   <tr>
     <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;">
       <table role="presentation" cellspacing="0" cellpadding="0" border="0"><tr>
-        <td style="font-size:18px;padding-right:12px;width:32px;">🪙</td>
+        <td style="font-size:16px;padding-right:12px;width:32px;font-weight:700;color:#059669;">[2]</td>
         <td><p style="margin:0;font-size:14px;color:#374151;font-weight:600;">P2P Coin Trading</p><p style="margin:2px 0 0;font-size:12px;color:#6b7280;">Buy and sell coins with verified merchants</p></td>
       </tr></table>
     </td>
@@ -403,7 +513,7 @@ HTML;
   <tr>
     <td style="padding:10px 0;">
       <table role="presentation" cellspacing="0" cellpadding="0" border="0"><tr>
-        <td style="font-size:18px;padding-right:12px;width:32px;">👥</td>
+        <td style="font-size:16px;padding-right:12px;width:32px;font-weight:700;color:#3b82f6;">[3]</td>
         <td><p style="margin:0;font-size:14px;color:#374151;font-weight:600;">Community</p><p style="margin:2px 0 0;font-size:12px;color:#6b7280;">Connect with friends and fellow gamers</p></td>
       </tr></table>
     </td>
@@ -412,6 +522,6 @@ HTML;
 {$alertBox}
 {$btn}
 HTML;
-        return self::baseTemplate('Welcome to RobiCodes! 🎉', $content, '#3b82f6', '#8b5cf6');
+        return self::baseTemplate('Welcome to RobiCodes!', $content, '#3b82f6', '#8b5cf6');
     }
 }

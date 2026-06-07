@@ -21,9 +21,9 @@ if ($viewerId) {
     $userAvatar = $u['avatar'] ?? 'default.png';
     $userJoined = $u['registered_at'] ?? null;
 }
-$stmt = $db->prepare("SELECT o.*, u.username, u.full_name, u.avatar, u.registered_at FROM p2p_offers o JOIN users u ON u.id = o.agent_id WHERE o.type = 'sell' AND o.status = 'active' AND o.remaining > 0 ORDER BY o.price_per_coin ASC LIMIT 50");
+$stmt = $db->prepare("SELECT o.*, u.username, u.full_name, u.avatar, u.registered_at, EXISTS(SELECT 1 FROM user_sessions us WHERE us.user_id = u.id AND us.expires_at > NOW() AND us.last_activity >= (UNIX_TIMESTAMP() - 300)) AS is_online FROM p2p_offers o JOIN users u ON u.id = o.agent_id WHERE o.type = 'sell' AND o.status = 'active' AND o.remaining > 0 ORDER BY o.price_per_coin ASC LIMIT 50");
 $stmt->execute(); $sellOffers = $stmt->fetchAll();
-$stmt = $db->prepare("SELECT o.*, u.username, u.full_name, u.avatar, u.registered_at FROM p2p_offers o JOIN users u ON u.id = o.agent_id WHERE o.type = 'buy' AND o.status = 'active' AND o.remaining > 0 ORDER BY o.price_per_coin DESC LIMIT 50");
+$stmt = $db->prepare("SELECT o.*, u.username, u.full_name, u.avatar, u.registered_at, EXISTS(SELECT 1 FROM user_sessions us WHERE us.user_id = u.id AND us.expires_at > NOW() AND us.last_activity >= (UNIX_TIMESTAMP() - 300)) AS is_online FROM p2p_offers o JOIN users u ON u.id = o.agent_id WHERE o.type = 'buy' AND o.status = 'active' AND o.remaining > 0 ORDER BY o.price_per_coin DESC LIMIT 50");
 $stmt->execute(); $buyOffers = $stmt->fetchAll();
 
 if ($viewerId) {
@@ -423,9 +423,12 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
 .info-grid .box .lbl { font-size:.58rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--p2p-muted); margin-bottom:3px }
 .info-grid .box .val { font-size:.9rem; font-weight:800; color:var(--p2p-text) }
 .info-grid .box .val.green { color:var(--p2p-green) }
-.qty-presets { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px }
-.qty-presets button { padding:6px 12px; border-radius:8px; border:1.5px solid var(--p2p-border); background:var(--p2p-card); font-size:.72rem; font-weight:700; cursor:pointer; color:var(--p2p-muted); transition:all .15s; font-family:'Plus Jakarta Sans',sans-serif }
-.qty-presets button:hover { border-color:var(--p2p-accent); color:var(--p2p-accent) }
+.qty-presets { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; padding:4px; background:var(--p2p-bg); border-radius:14px; justify-content:center }
+.qty-preset-btn { flex:1; min-width:48px; max-width:72px; padding:10px 6px; border-radius:10px; border:2px solid transparent; background:transparent; font-size:.85rem; font-weight:800; cursor:pointer; color:var(--p2p-muted); transition:all .2s; font-family:'Plus Jakarta Sans',sans-serif; position:relative; text-align:center }
+.qty-preset-btn:hover { color:var(--p2p-accent); background:rgba(139,92,246,.06) }
+.qty-preset-btn.active { border-color:var(--p2p-accent); background:rgba(139,92,246,.1); color:var(--p2p-accent); box-shadow:0 2px 8px rgba(139,92,246,.15) }
+.qty-preset-btn::after { content:''; position:absolute; bottom:2px; left:50%; transform:translateX(-50%); width:0; height:2px; border-radius:2px; background:var(--p2p-accent); transition:width .2s }
+.qty-preset-btn.active::after { width:20px }
 .qty-input { width:100%; padding:12px 14px; border-radius:12px; border:2px solid var(--p2p-border); font-size:.95rem; font-weight:700; outline:none; box-sizing:border-box; font-family:'Plus Jakarta Sans',sans-serif; background:var(--p2p-card); color:var(--p2p-text); margin-bottom:10px; transition:all .2s }
 .qty-input:focus { border-color:var(--p2p-accent); box-shadow:0 0 0 4px rgba(139,92,246,.1) }
 .total-display { background:var(--p2p-bg); border-radius:12px; padding:12px 14px; font-size:.9rem; font-weight:800; color:var(--p2p-text); margin-bottom:12px; display:flex; align-items:center; justify-content:space-between }
@@ -583,12 +586,13 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
         $initial = strtoupper(mb_substr($uname, 0, 1));
         $ctype = $o['coin_type'];
     ?>
-    <div class="p2p-offer-card-v3" data-offer-id="<?php echo (int)$o['id']; ?>" data-type="buy" data-coin="<?php echo $ctype; ?>" data-price="<?php echo (float)$o['price_per_coin']; ?>" data-remaining="<?php echo (int)$o['remaining']; ?>" data-min="<?php echo (int)$o['min_amount']; ?>" data-max="<?php echo (int)$o['max_amount']; ?>" data-agent="<?php echo $uname; ?>" data-agent-id="<?php echo (int)$o['agent_id']; ?>">
+    <div class="p2p-offer-card-v3" data-offer-id="<?php echo (int)$o['id']; ?>" data-type="buy" data-coin="<?php echo $ctype; ?>" data-price="<?php echo (float)$o['price_per_coin']; ?>" data-remaining="<?php echo (int)$o['remaining']; ?>" data-min="<?php echo (int)$o['min_amount']; ?>" data-max="<?php echo (int)$o['max_amount']; ?>" data-agent="<?php echo $uname; ?>" data-agent-id="<?php echo (int)$o['agent_id']; ?>" data-agent-avatar="<?php echo htmlspecialchars($o['avatar'] ?? 'default.png'); ?>" data-agent-online="<?php echo !empty($o['is_online']) ? '1' : '0'; ?>">
         <div class="p2p-offer-card-v3-inner">
             <div class="p2p-offer-card-v3-top">
-                <div class="p2p-offer-card-v3-avatar" onclick="event.stopPropagation();openMerchantProfile(<?php echo (int)$o['agent_id']; ?>)" style="cursor:pointer">
+                <div class="p2p-offer-card-v3-avatar" onclick="event.stopPropagation();openMerchantProfile(<?php echo (int)$o['agent_id']; ?>)" style="cursor:pointer;position:relative">
                     <img src="assets/avatars/<?php echo htmlspecialchars($o['avatar'] ?? 'default.png'); ?>" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" style="width:100%;height:100%;border-radius:50%;object-fit:cover">
                     <div style="display:none;width:100%;height:100%;border-radius:50%;background:linear-gradient(135deg,#8b5cf6,#6366f1);color:#fff;align-items:center;justify-content:center;font-size:.9rem;font-weight:800"><?php echo $initial; ?></div>
+                    <span style="position:absolute;bottom:0;right:0;width:10px;height:10px;background:<?php echo !empty($o['is_online']) ? '#10b981' : '#9ca3af'; ?>;border:2px solid var(--p2p-card);border-radius:50%;z-index:2"></span>
                 </div>
                 <div class="p2p-offer-card-v3-user">
                     <div class="name"><a onclick="event.stopPropagation();openMerchantProfile(<?php echo (int)$o['agent_id']; ?>)" style="cursor:pointer;color:inherit;text-decoration:none"><?php echo $uname; ?></a> <span class="verified"><i class="fas fa-check"></i></span></div>
@@ -641,12 +645,13 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
         $initial = strtoupper(mb_substr($uname, 0, 1));
         $ctype = $o['coin_type'];
     ?>
-    <div class="p2p-offer-card-v3" data-offer-id="<?php echo (int)$o['id']; ?>" data-type="sell" data-coin="<?php echo $ctype; ?>" data-price="<?php echo (float)$o['price_per_coin']; ?>" data-remaining="<?php echo (int)$o['remaining']; ?>" data-min="<?php echo (int)$o['min_amount']; ?>" data-max="<?php echo (int)$o['max_amount']; ?>" data-agent="<?php echo $uname; ?>" data-agent-id="<?php echo (int)$o['agent_id']; ?>">
+    <div class="p2p-offer-card-v3" data-offer-id="<?php echo (int)$o['id']; ?>" data-type="sell" data-coin="<?php echo $ctype; ?>" data-price="<?php echo (float)$o['price_per_coin']; ?>" data-remaining="<?php echo (int)$o['remaining']; ?>" data-min="<?php echo (int)$o['min_amount']; ?>" data-max="<?php echo (int)$o['max_amount']; ?>" data-agent="<?php echo $uname; ?>" data-agent-id="<?php echo (int)$o['agent_id']; ?>" data-agent-avatar="<?php echo htmlspecialchars($o['avatar'] ?? 'default.png'); ?>" data-agent-online="<?php echo !empty($o['is_online']) ? '1' : '0'; ?>">
         <div class="p2p-offer-card-v3-inner">
             <div class="p2p-offer-card-v3-top">
-                <div class="p2p-offer-card-v3-avatar" onclick="event.stopPropagation();openMerchantProfile(<?php echo (int)$o['agent_id']; ?>)" style="cursor:pointer">
+                <div class="p2p-offer-card-v3-avatar" onclick="event.stopPropagation();openMerchantProfile(<?php echo (int)$o['agent_id']; ?>)" style="cursor:pointer;position:relative">
                     <img src="assets/avatars/<?php echo htmlspecialchars($o['avatar'] ?? 'default.png'); ?>" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" style="width:100%;height:100%;border-radius:50%;object-fit:cover">
                     <div style="display:none;width:100%;height:100%;border-radius:50%;background:linear-gradient(135deg,#8b5cf6,#6366f1);color:#fff;align-items:center;justify-content:center;font-size:.9rem;font-weight:800"><?php echo $initial; ?></div>
+                    <span style="position:absolute;bottom:0;right:0;width:10px;height:10px;background:<?php echo !empty($o['is_online']) ? '#10b981' : '#9ca3af'; ?>;border:2px solid var(--p2p-card);border-radius:50%;z-index:2"></span>
                 </div>
                 <div class="p2p-offer-card-v3-user">
                     <div class="name"><a onclick="event.stopPropagation();openMerchantProfile(<?php echo (int)$o['agent_id']; ?>)" style="cursor:pointer;color:inherit;text-decoration:none"><?php echo $uname; ?></a> <span class="verified"><i class="fas fa-check"></i></span></div>
@@ -698,9 +703,9 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
             <input type="hidden" id="tradeFilterStatus" value="all">
         </div>
         <div class="p2p-custom-select" style="flex:1;min-width:100px;max-width:130px" id="tradeFilterCoinWrap">
-            <div class="p2p-select-trigger"><i class="fas fa-coins"></i> <span>All Coins</span></div>
+            <div class="p2p-select-trigger"><i class="fas fa-coins"></i> <span>All Coin</span></div>
             <div class="p2p-select-options">
-                <div class="p2p-select-option active" data-value="all">All Coins</div>
+                <div class="p2p-select-option active" data-value="all">All Coin</div>
                 <div class="p2p-select-option" data-value="bronze">Bronze</div>
                 <div class="p2p-select-option" data-value="silver">Silver</div>
                 <div class="p2p-select-option" data-value="gold">Gold</div>
@@ -1115,6 +1120,35 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
 </div>
 
 <!-- ════════════════════════════════════ -->
+<!-- ═══ CANCEL CONFIRMATION MODAL ═══ -->
+<!-- ════════════════════════════════════ -->
+<div class="p2p-detail-overlay" id="cancelConfirmOverlay">
+    <div class="p2p-detail-panel" style="max-width:380px">
+        <div class="p2p-detail-head">
+            <h3><i class="fas fa-xmark-circle" style="color:#dc2626"></i> Cancel Order</h3>
+            <button class="p2p-detail-close" onclick="closeCancelConfirm()"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div class="p2p-detail-body" style="text-align:center;padding:28px 22px">
+            <div style="width:64px;height:64px;border-radius:50%;background:#fef2f2;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+                <i class="fas fa-exclamation-triangle" style="font-size:1.6rem;color:#dc2626"></i>
+            </div>
+            <p style="margin:0 0 6px;font-size:1rem;font-weight:800;color:var(--p2p-text)">Are you sure?</p>
+            <p style="margin:0 0 20px;font-size:.82rem;color:var(--p2p-muted);line-height:1.6">
+                This order <strong>#<span id="cancelTradeIdDisplay"></span></strong> will be cancelled and any held coins will be refunded to the seller.
+            </p>
+            <div style="display:flex;gap:10px;justify-content:center">
+                <button onclick="closeCancelConfirm()" style="flex:1;padding:12px;border-radius:12px;border:2px solid var(--p2p-border);background:var(--p2p-card);color:var(--p2p-text);font-size:.82rem;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s">No, Keep Order</button>
+                <button id="confirmCancelBtn" onclick="confirmCancelOrder()" style="flex:1;padding:12px;border-radius:12px;border:0;background:#dc2626;color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px">
+                    <i class="fas fa-spinner fa-spin" id="cancelLoading" style="display:none"></i>
+                    <span id="cancelBtnText">Yes, Cancel Order</span>
+                </button>
+            </div>
+            <div class="p2p-fb" id="cancelConfirmFb" style="margin-top:12px"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════ -->
 <!-- ═══ MERCHANT PROFILE MODAL ═══ -->
 <!-- ════════════════════════════════════ -->
 <div class="p2p-detail-overlay" id="merchantProfileOverlay">
@@ -1248,7 +1282,6 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
         })
         .then(function(r){ return r.json(); })
         .then(function(res){
-            if (requestToken !== chatRequestToken || currentChatTradeId != tradeId) return;
             if (res.success && res.trade) {
                 var t = res.trade;
                 document.getElementById('offerDetailOverlay').style.display = 'flex';
@@ -1308,11 +1341,13 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
             var maxAmt = parseInt(this.getAttribute('data-max'));
             var agent = this.getAttribute('data-agent');
             var agentId = parseInt(this.getAttribute('data-agent-id'));
-            showOfferDetail(offerId, type, coin, price, remaining, minAmt, maxAmt, agent, agentId);
+            var agentAvatar = this.getAttribute('data-agent-avatar') || 'default.png';
+            var agentOnline = this.getAttribute('data-agent-online') === '1';
+            showOfferDetail(offerId, type, coin, price, remaining, minAmt, maxAmt, agent, agentId, agentAvatar, agentOnline);
         });
     });
 
-    function showOfferDetail(offerId, type, coin, price, remaining, minAmt, maxAmt, agent, agentId) {
+    function showOfferDetail(offerId, type, coin, price, remaining, minAmt, maxAmt, agent, agentId, agentAvatar, agentOnline) {
         var coinLabels = {bronze:'Bronze',silver:'Silver',gold:'Gold'};
         var coinIcons = {
             bronze: '<img src="assets/images/coin-bronze.svg" class="p2p-coin-svg" alt="" style="width:20px;height:20px;vertical-align:middle;margin-right:4px">',
@@ -1324,10 +1359,19 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
         var panel = document.getElementById('detailBody');
         document.getElementById('detailTitle').innerHTML = (type === 'buy' ? 'Buy ' : 'Sell ') + coinIcons[coin] + ' ' + coinLabels[coin];
 
+        var avatarFile = agentAvatar || 'default.png';
+        var isOnline = agentOnline || false;
+        var onlineColor = isOnline ? '#10b981' : '#9ca3af';
+        var onlineLabel = isOnline ? 'Active' : 'Offline';
+
         panel.innerHTML =
-            '<div class="seller-card">' +
-                '<div class="avatar">' + agent.charAt(0).toUpperCase() + '</div>' +
-                '<div class="info"><div class="name">' + agent + '</div><div class="stats">' + actionLabel + ' Offer</div></div>' +
+            '<div class="seller-card" style="position:relative">' +
+                '<div style="position:relative;flex-shrink:0">' +
+                    '<img src="assets/avatars/' + avatarFile + '" alt="" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'" style="width:44px;height:44px;border-radius:50%;object-fit:cover">' +
+                    '<div style="display:none;width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#8b5cf6,#6366f1);color:#fff;align-items:center;justify-content:center;font-size:1rem;font-weight:800">' + agent.charAt(0).toUpperCase() + '</div>' +
+                    '<div style="position:absolute;bottom:0;right:0;width:12px;height:12px;background:' + onlineColor + ';border:2px solid var(--p2p-bg);border-radius:50%;z-index:2" title="' + onlineLabel + '"></div>' +
+                '</div>' +
+                '<div class="info"><div class="name">' + agent + '</div><div class="stats" style="display:flex;align-items:center;gap:6px"><span style="display:inline-flex;align-items:center;gap:3px;font-size:.65rem;color:' + onlineColor + '"><span style="width:6px;height:6px;border-radius:50%;background:' + onlineColor + ';display:inline-block"></span>' + onlineLabel + '</span> <span>·</span> <span>' + actionLabel + ' Offer</span></div></div>' +
             '</div>' +
             '<div class="info-grid">' +
                 '<div class="box"><div class="lbl">Coin</div><div class="val">' + coinIcons[coin] + ' ' + coinLabels[coin] + '</div></div>' +
@@ -1336,15 +1380,20 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
                 '<div class="box"><div class="lbl">Limits</div><div class="val">' + minAmt + ' - ' + (maxAmt || '∞') + '</div></div>' +
             '</div>' +
             '<div class="qty-presets">';
-        // Preset buttons
-        var presets = [minAmt, minAmt*5, minAmt*10, minAmt*25];
+        var presets = [1, 5, 10, 25];
         if (maxAmt > 0) presets = presets.filter(function(p){ return p <= maxAmt; });
+        presets = presets.filter(function(p){ return p >= minAmt; });
         presets = presets.filter(function(p,i,a){ return a.indexOf(p)===i; });
+        var firstPreset = true;
         presets.forEach(function(p){
-            if (p <= remaining) panel.innerHTML += '<button type="button" onclick="document.getElementById(\'orderQty\').value=\''+p+'\';updateOrderTotal('+price+','+remaining+','+minAmt+','+(maxAmt||0)+')">' + p + '</button>';
+            if (p <= remaining) {
+                var activeClass = firstPreset ? ' active' : '';
+                panel.innerHTML += '<button type="button" class="qty-preset-btn' + activeClass + '" onclick="document.getElementById(\'orderQty\').value=\''+p+'\';document.querySelectorAll(\'.qty-preset-btn\').forEach(function(b){b.classList.remove(\'active\')});this.classList.add(\'active\');updateOrderTotal('+price+','+remaining+','+minAmt+','+(maxAmt||0)+')">' + p + '</button>';
+                firstPreset = false;
+            }
         });
         panel.innerHTML += '</div>' +
-            '<input type="number" class="qty-input" id="orderQty" value="' + minAmt + '" min="' + minAmt + '" max="' + (maxAmt||remaining) + '" oninput="updateOrderTotal('+price+','+remaining+','+minAmt+','+(maxAmt||0)+')">' +
+            '<input type="number" class="qty-input" id="orderQty" value="' + minAmt + '" min="' + minAmt + '" max="' + (maxAmt||remaining) + '" oninput="document.querySelectorAll(\'.qty-preset-btn\').forEach(function(b){b.classList.remove(\'active\')});updateOrderTotal('+price+','+remaining+','+minAmt+','+(maxAmt||0)+')">' +
             '<div class="total-display" id="orderTotal">Total: ৳' + (price * minAmt).toFixed(0) + ' <span class="sub">Including all fees</span></div>' +
             '<button class="action-btn ' + type + '" id="placeOrderBtn" onclick="placeOrder(' + offerId + ',\'' + type + '\',' + price + ',' + remaining + ',' + minAmt + ',' + (maxAmt||0) + ')"><i class="fas fa-shopping-cart"></i> ' + actionLabel + ' Now</button>' +
             '<div class="p2p-fb" id="orderFb"></div>';
@@ -1567,14 +1616,53 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
     };
 
     window.cancelOrder = function(tradeId) {
-        if (!confirm('Cancel this order?')) return;
+        window._cancelTradeId = tradeId;
+        document.getElementById('cancelTradeIdDisplay').textContent = tradeId;
+        document.getElementById('cancelConfirmOverlay').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        var fb = document.getElementById('cancelConfirmFb');
+        fb.textContent = '';
+        fb.style.display = 'none';
+        document.getElementById('confirmCancelBtn').disabled = false;
+        document.getElementById('cancelLoading').style.display = 'none';
+        document.getElementById('cancelBtnText').textContent = 'Yes, Cancel Order';
+    };
+
+    window.closeCancelConfirm = function() {
+        document.getElementById('cancelConfirmOverlay').style.display = 'none';
+        document.body.style.overflow = '';
+    };
+
+    window.confirmCancelOrder = function() {
+        var tradeId = window._cancelTradeId;
+        if (!tradeId) return;
+        var btn = document.getElementById('confirmCancelBtn');
+        btn.disabled = true;
+        document.getElementById('cancelLoading').style.display = 'inline-block';
+        document.getElementById('cancelBtnText').textContent = 'Cancelling...';
+        var fb = document.getElementById('cancelConfirmFb');
+        fb.style.display = 'none';
         fetch('handlers/p2p_handler.php', {
             method: 'POST',
             headers: {'Content-Type': 'application/json','X-Requested-With': 'XMLHttpRequest'},
             body: JSON.stringify({action: 'cancel_p2p_order', trade_id: tradeId, csrf_token: csrfToken})
         })
         .then(function(r){ return r.json(); })
-        .then(function(res){ if (res.success) location.reload(); else alert(res.message); });
+        .then(function(res){
+            if (res.success) {
+                fb.textContent = '✓ ' + (res.message || 'Order cancelled.');
+                fb.style.color = '#059669';
+                fb.style.display = 'block';
+                setTimeout(function(){ location.reload(); }, 800);
+            } else {
+                fb.textContent = '✗ ' + (res.message || 'Failed to cancel.');
+                fb.style.color = '#dc2626';
+                fb.style.display = 'block';
+                btn.disabled = false;
+                document.getElementById('cancelLoading').style.display = 'none';
+                document.getElementById('cancelBtnText').textContent = 'Yes, Cancel Order';
+            }
+        });
     };
 
     // ═══ CHAT ═══
@@ -2059,12 +2147,17 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
                 var coinLabels = {bronze:'Bronze',silver:'Silver',gold:'Gold'};
                 res.offers.forEach(function(o){
                     var uname = o.full_name || o.username;
-                    var html = '<div class="p2p-offer-card-v3" data-offer-id="' + o.id + '" data-type="' + (type==='sell'?'buy':'sell') + '" data-coin="' + o.coin_type + '" data-price="' + o.price_per_coin + '" data-remaining="' + o.remaining + '" data-min="' + o.min_amount + '" data-max="' + o.max_amount + '" data-agent="' + uname + '" data-agent-id="' + o.agent_id + '">' +
+                    var avatar = o.avatar || 'default.png';
+                    var isOnline = o.is_online ? '1' : '0';
+                    var html = '<div class="p2p-offer-card-v3" data-offer-id="' + o.id + '" data-type="' + (type==='sell'?'buy':'sell') + '" data-coin="' + o.coin_type + '" data-price="' + o.price_per_coin + '" data-remaining="' + o.remaining + '" data-min="' + o.min_amount + '" data-max="' + o.max_amount + '" data-agent="' + uname + '" data-agent-id="' + o.agent_id + '" data-agent-avatar="' + avatar + '" data-agent-online="' + isOnline + '">' +
                         '<div class="p2p-offer-card-v3-inner">' +
                             '<div class="p2p-offer-card-v3-top">' +
-                                '<div class="p2p-offer-card-v3-avatar">' + uname.charAt(0).toUpperCase() + '</div>' +
+                                '<div class="p2p-offer-card-v3-avatar" onclick="event.stopPropagation();openMerchantProfile(' + o.agent_id + ')" style="cursor:pointer">' +
+                                    '<img src="assets/avatars/' + avatar + '" alt="" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'" style="width:100%;height:100%;border-radius:50%;object-fit:cover">' +
+                                    '<div style="display:none;width:100%;height:100%;border-radius:50%;background:linear-gradient(135deg,#8b5cf6,#6366f1);color:#fff;align-items:center;justify-content:center;font-size:.9rem;font-weight:800">' + uname.charAt(0).toUpperCase() + '</div>' +
+                                '</div>' +
                                 '<div class="p2p-offer-card-v3-user">' +
-                                    '<div class="name">' + uname + ' <span class="verified"><i class="fas fa-check"></i></span></div>' +
+                                    '<div class="name"><a onclick="event.stopPropagation();openMerchantProfile(' + o.agent_id + ')" style="cursor:pointer;color:inherit;text-decoration:none">' + uname + '</a> <span class="verified"><i class="fas fa-check"></i></span></div>' +
                                     '<div class="role"><span>' + (type==='sell'?'Seller':'Buyer') + '</span></div>' +
                                 '</div>' +
                             '</div>' +
@@ -2088,7 +2181,7 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
                     // Rebind click
                     grid.lastElementChild.addEventListener('click', function(){
                         var d = this.dataset;
-                        showOfferDetail(d.offerId, d.type, d.coin, parseFloat(d.price), parseInt(d.remaining), parseInt(d.min), parseInt(d.max), d.agent, parseInt(d.agentId));
+                        showOfferDetail(d.offerId, d.type, d.coin, parseFloat(d.price), parseInt(d.remaining), parseInt(d.min), parseInt(d.max), d.agent, parseInt(d.agentId), d.agentAvatar, d.agentOnline === '1');
                     });
                 });
                 offerOffsets[type] = off + res.offers.length;
@@ -2318,11 +2411,17 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
                 });
             }
 
+            var isOnline = m.is_online ? true : false;
+            var onlineColor = isOnline ? '#10b981' : '#9ca3af';
+            var onlineLabel = isOnline ? 'Active' : 'Offline';
+
             body.innerHTML =
                 '<div style="text-align:center;padding:12px 0 16px;border-bottom:1px solid var(--p2p-border);margin-bottom:14px">' +
-                    '<div style="width:72px;height:72px;margin:0 auto 10px">' + avatarHtml + '</div>' +
+                    '<div style="width:72px;height:72px;margin:0 auto 10px;position:relative">' + avatarHtml +
+                        '<div style="position:absolute;bottom:2px;right:2px;width:16px;height:16px;background:' + onlineColor + ';border:3px solid var(--p2p-card);border-radius:50%;z-index:2" title="' + onlineLabel + '"></div>' +
+                    '</div>' +
                     '<h3 style="font-size:1.1rem;font-weight:800;color:var(--p2p-text);margin:0">' + (m.full_name||m.username) + '</h3>' +
-                    '<p style="font-size:.72rem;color:var(--p2p-muted);margin:3px 0 6px">@' + m.username + ' · Joined ' + joinedStr + '</p>' +
+                    '<p style="font-size:.72rem;color:var(--p2p-muted);margin:3px 0 6px">@' + m.username + ' · Joined ' + joinedStr + ' · <span style="color:' + onlineColor + ';font-weight:600"><span style="width:6px;height:6px;border-radius:50%;background:' + onlineColor + ';display:inline-block;vertical-align:middle;margin-right:2px"></span> ' + onlineLabel + '</span></p>' +
                     '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">' +
                         '<span style="font-size:.6rem;font-weight:700;background:#059669;color:#fff;padding:2px 10px;border-radius:999px"><i class="fas fa-check-circle"></i> Verified Merchant</span>' +
                         (s.avg_rating > 0 ? '<span style="font-size:.6rem;font-weight:700;background:#fef3c7;color:#92400e;padding:2px 10px;border-radius:999px"><i class="fas fa-star"></i> ' + s.avg_rating + ' (' + s.total_reviews + ')</span>' : '') +
