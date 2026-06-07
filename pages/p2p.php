@@ -183,7 +183,7 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
   transition:all .3s cubic-bezier(.34,1.56,.64,1); position:relative; overflow:hidden;
   border:1px solid var(--p2p-border); box-shadow:0 4px 16px rgba(0,0,0,.03)
 }
-.p2p-offer-card-v3::before { content:''; position:absolute; inset:0; border-radius:20px; padding:1px; background:linear-gradient(135deg,rgba(139,92,246,.15),transparent 40%,transparent 60%,rgba(5,150,105,.1)); -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); -webkit-mask-composite:xor; mask-composite:exclude; pointer-events:none }
+.p2p-offer-card-v3::before { content:''; position:absolute; inset:0; border-radius:20px; padding:1px; background:linear-gradient(135deg,rgba(139,92,246,.15),transparent 40%,transparent 60%,rgba(5,150,105,.1)); -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); -webkit-mask-composite:xor; mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); mask-composite:exclude; pointer-events:none }
 .p2p-offer-card-v3:hover { transform:translateY(-4px); box-shadow:0 16px 48px rgba(139,92,246,.12); border-color:rgba(139,92,246,.3) }
 .p2p-offer-card-v3-inner { padding:18px 20px; position:relative; z-index:1 }
 
