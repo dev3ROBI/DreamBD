@@ -424,7 +424,7 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
 .info-grid .box .val { font-size:.9rem; font-weight:800; color:var(--p2p-text) }
 .info-grid .box .val.green { color:var(--p2p-green) }
 .qty-presets { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; padding:4px; background:var(--p2p-bg); border-radius:14px; justify-content:center }
-.qty-preset-btn { flex:1; min-width:48px; max-width:72px; padding:10px 6px; border-radius:10px; border:2px solid transparent; background:transparent; font-size:.85rem; font-weight:800; cursor:pointer; color:var(--p2p-muted); transition:all .2s; font-family:'Plus Jakarta Sans',sans-serif; position:relative; text-align:center }
+.qty-preset-btn { flex:1; min-width:48px; max-width:72px; margin-bottom:12px; padding:10px 6px; border-radius:10px; border:2px solid transparent; background:transparent; font-size:.85rem; font-weight:800; cursor:pointer; color:var(--p2p-muted); transition:all .2s; font-family:'Plus Jakarta Sans',sans-serif; position:relative; text-align:center }
 .qty-preset-btn:hover { color:var(--p2p-accent); background:rgba(139,92,246,.06) }
 .qty-preset-btn.active { border-color:var(--p2p-accent); background:rgba(139,92,246,.1); color:var(--p2p-accent); box-shadow:0 2px 8px rgba(139,92,246,.15) }
 .qty-preset-btn::after { content:''; position:absolute; bottom:2px; left:50%; transform:translateX(-50%); width:0; height:2px; border-radius:2px; background:var(--p2p-accent); transition:width .2s }
@@ -732,8 +732,8 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
         // User is buyer → they need to pay (pending) or wait for release (paid)
         // User is seller → they need to wait for buyer payment (pending) or release coins (paid)
         if ($st === 'pending' && $isBuyer) $tradeActions = '<button class="p2p-btn-primary" onclick="openPaymentForm('.(int)$t['id'].')"><i class="fas fa-credit-card"></i> Pay Now</button>';
-        if ($st === 'paid' && $isSeller && $offerType === 'sell') $tradeActions = '<button class="p2p-btn-confirm" onclick="confirmReceived('.(int)$t['id'].')"><i class="fas fa-check"></i> Release Coins</button>';
-        if ($st === 'paid' && $isSeller && $offerType === 'buy') $tradeActions = '<button class="p2p-btn-confirm" onclick="confirmReceived('.(int)$t['id'].')"><i class="fas fa-check"></i> Release Coins</button>';
+        if ($st === 'paid' && $isSeller && $offerType === 'sell') $tradeActions = '<button class="p2p-btn-confirm" onclick="confirmReceived('.(int)$t['id'].',this)"><i class="fas fa-check"></i> Release Coins</button>';
+        if ($st === 'paid' && $isSeller && $offerType === 'buy') $tradeActions = '<button class="p2p-btn-confirm" onclick="confirmReceived('.(int)$t['id'].',this)"><i class="fas fa-check"></i> Release Coins</button>';
         if ($st === 'paid' && $isBuyer) $tradeActions = '<span style="font-size:.7rem;font-weight:600;color:#d97706"><i class="fas fa-clock"></i> Waiting for seller to release...</span>';
         if ($st === 'pending' || $st === 'paid') $tradeActions .= '<span style="flex:1"></span><button class="p2p-btn-cancel" onclick="cancelOrder('.(int)$t['id'].')"><i class="fas fa-xmark"></i> Cancel</button>';
         if ($st === 'completed' || $st === 'cancelled') $tradeActions .= '<span style="flex:1"></span>';
@@ -1097,12 +1097,13 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
 <div class="p2p-detail-overlay" id="reviewOverlay">
     <div class="p2p-detail-panel" style="max-width:380px">
         <div class="p2p-detail-head">
-            <h3><i class="fas fa-star" style="color:#d97706"></i> Rate Merchant</h3>
+            <h3 id="reviewModalTitle"><i class="fas fa-star" style="color:#d97706"></i> Rate Merchant</h3>
             <button class="p2p-detail-close" onclick="document.getElementById('reviewOverlay').style.display='none';document.body.style.overflow=''"><i class="fas fa-xmark"></i></button>
         </div>
         <div class="p2p-detail-body" style="text-align:center">
-            <p style="font-size:.85rem;color:var(--p2p-muted);margin:0 0 16px">How was your trading experience?</p>
+            <p id="reviewModalSub" style="font-size:.85rem;color:var(--p2p-muted);margin:0 0 16px">How was your trading experience?</p>
             <input type="hidden" id="reviewTradeId">
+            <input type="hidden" id="reviewEditId" value="0">
             <div id="starRating" style="font-size:2rem;margin-bottom:12px;cursor:pointer;user-select:none">
                 <span data-star="1" onclick="setRating(1)" style="color:#d1d5db">★</span>
                 <span data-star="2" onclick="setRating(2)" style="color:#d1d5db">★</span>
@@ -1155,7 +1156,7 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
     <div class="p2p-detail-panel" style="max-width:460px">
         <div class="p2p-detail-head">
             <h3><i class="fas fa-store" style="color:var(--p2p-accent)"></i> Merchant Profile</h3>
-            <button class="p2p-detail-close" onclick="document.getElementById('merchantProfileOverlay').style.display='none';document.body.style.overflow=''"><i class="fas fa-xmark"></i></button>
+            <button class="p2p-detail-close" onclick="document.getElementById('merchantProfileOverlay').style.display='none';document.body.style.overflow='';currentMerchantProfileId=0"><i class="fas fa-xmark"></i></button>
         </div>
         <div class="p2p-detail-body" id="merchantProfileBody">
             <div style="text-align:center;padding:20px" id="merchantProfileLoading"><i class="fas fa-spinner fa-spin" style="font-size:1.5rem;color:var(--p2p-muted)"></i></div>
@@ -1264,7 +1265,7 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
         .then(function(res){
             if (res.success) {
                 showFb('reportFb', res.message, 'success');
-                setTimeout(function(){ document.getElementById('reportOverlay').style.display='none'; document.body.style.overflow=''; location.reload(); }, 1500);
+                setTimeout(function(){ document.getElementById('reportOverlay').style.display='none'; document.body.style.overflow=''; pollP2PUpdates(); }, 1200);
             } else {
                 showFb('reportFb', res.message, 'error');
                 btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Report';
@@ -1299,8 +1300,11 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
     var currentChatTradeId = null;
     var chatInterval = null;
     var chatRequestToken = 0;
-    var chatLastMsgCount = -1;   // -1 = force render on first load of each trade
-    var chatLastMsgTradeId = null; // which trade the count belongs to
+    var chatLastMsgCount = -1;
+    var chatLastMsgTradeId = null;
+    var knownTrades = {};
+    var currentMerchantProfileId = 0;
+    var _reviewEditData = [];
 
     // ═══ TABS ═══
     document.querySelectorAll('.p2p-tabbar-btn').forEach(function(btn){
@@ -1438,6 +1442,7 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
         .then(function(r){ return r.json(); })
         .then(function(res){
             if (res.success) {
+                pollP2PUpdates();
                 // If user is selling (merchant has buy offer), show different screen
                 if (res.offer_type === 'buy') {
                     showOrderPlacedSeller(res.trade_id, res.total_price, res.coin_type, res.quantity);
@@ -1575,7 +1580,7 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
         .then(function(res){
             if (res.success) {
                 showFb('payFb', 'Payment confirmed! Awaiting seller to release coins.', 'success');
-                setTimeout(function(){ closeDetail(); location.reload(); }, 2000);
+                setTimeout(function(){ closeDetail(); pollP2PUpdates(); }, 1200);
             } else {
                 showFb('payFb', res.message, 'error');
                 if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check-circle"></i> I Have Paid'; }
@@ -1604,15 +1609,25 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
     };
 
     // ═══ ORDER ACTIONS (from Orders tab) ═══
-    window.confirmReceived = function(tradeId) {
-        if (!confirm('Release coins to complete this trade? This action cannot be undone.')) return;
+    window.confirmReceived = function(tradeId, btn) {
+        if (!btn) btn = document.querySelector('.p2p-trade-item[data-trade-id="' + tradeId + '"] .p2p-btn-confirm');
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Releasing...'; }
         fetch('handlers/p2p_handler.php', {
             method: 'POST',
             headers: {'Content-Type': 'application/json','X-Requested-With': 'XMLHttpRequest'},
             body: JSON.stringify({action: 'confirm_p2p_received', trade_id: tradeId, csrf_token: csrfToken})
         })
         .then(function(r){ return r.json(); })
-        .then(function(res){ if (res.success) location.reload(); else alert(res.message); });
+        .then(function(res){
+            if (res.success) {
+                if (btn) { btn.textContent = '\u2713 Done'; btn.style.background = '#059669'; }
+                pollP2PUpdates();
+            } else {
+                alert(res.message);
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Release Coins'; }
+            }
+        })
+        .catch(function(){ alert('Network error.'); if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Release Coins'; } });
     };
 
     window.cancelOrder = function(tradeId) {
@@ -1653,7 +1668,7 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
                 fb.textContent = '✓ ' + (res.message || 'Order cancelled.');
                 fb.style.color = '#059669';
                 fb.style.display = 'block';
-                setTimeout(function(){ location.reload(); }, 800);
+                setTimeout(function(){ closeCancelConfirm(); pollP2PUpdates(); }, 500);
             } else {
                 fb.textContent = '✗ ' + (res.message || 'Failed to cancel.');
                 fb.style.color = '#dc2626';
@@ -1900,6 +1915,135 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
     // Poll unread chat counts every 5 seconds
     pollUnreadChatCounts();
     setInterval(pollUnreadChatCounts, 5000);
+
+    // ═══ AUTO-UPDATE POLLING ═══
+    function buildTradeHtml(t) {
+        var isBuyer = parseInt(t.buyer_id) === userId;
+        var isSeller = parseInt(t.seller_id) === userId;
+        var otherName = isBuyer ? t.buyer_name : t.seller_name;
+        var st = t.status;
+        var stClass = ({pending:'yellow',paid:'blue',completed:'green',cancelled:'red',disputed:'orange'})[st] || 'yellow';
+        var offerType = t.offer_type || 'sell';
+        var actions = '';
+        if (st === 'pending' && isBuyer) actions += '<button class="p2p-btn-primary" onclick="openPaymentForm('+t.id+')"><i class="fas fa-credit-card"></i> Pay Now</button>';
+        if (st === 'paid' && isSeller) actions += '<button class="p2p-btn-confirm" onclick="confirmReceived('+t.id+',this)"><i class="fas fa-check"></i> Release Coins</button>';
+        if (st === 'paid' && isBuyer) actions += '<span style="font-size:.7rem;font-weight:600;color:#d97706"><i class="fas fa-clock"></i> Waiting...</span>';
+        if (st === 'pending' || st === 'paid') actions += '<span style="flex:1"></span><button class="p2p-btn-cancel" onclick="cancelOrder('+t.id+')"><i class="fas fa-xmark"></i> Cancel</button>';
+        if (st === 'completed' || st === 'cancelled') actions += '<span style="flex:1"></span>';
+        if (st === 'paid' || st === 'pending') actions += '<button class="p2p-btn-report" onclick="disputeTrade('+t.id+')" style="background:#ef444415;color:#ef4444;"><i class="fas fa-gavel"></i> Appeal</button>';
+
+        var icon = isBuyer ? 'fa-cart-shopping' : 'fa-coins';
+        var stIcon = st==='completed'?'fa-check-circle':(st==='pending'?'fa-clock':(st==='paid'?'fa-credit-card':(st==='cancelled'?'fa-xmark-circle':'fa-flag')));
+        var unreadCount = parseInt(t.unread_count) || 0;
+        var badgeStyle = unreadCount > 0 ? 'inline-flex' : 'none';
+        var dateStr = t.created_at ? new Date(t.created_at.replace(' ','T')).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+        return '<div class="p2p-trade-item" data-trade-id="' + t.id + '" data-status="' + st + '" data-coin="' + t.coin_type + '" data-created="' + (t.created_at||'').substring(0,10) + '">' +
+            '<div class="p2p-trade-top">' +
+                '<div class="p2p-trade-icon ' + (offerType==='buy'?'sell':'') + '"><i class="fas ' + icon + '"></i></div>' +
+                '<div class="p2p-trade-meta">' +
+                    '<div class="p2p-trade-meta-top">' +
+                        '<span class="p2p-trade-id">#' + t.id + '</span>' +
+                        '<span class="p2p-trade-partner"><span class="avi">' + (otherName||'U').charAt(0).toUpperCase() + '</span> ' + (otherName||'User') + '</span>' +
+                        '<span class="p2p-trade-status ' + stClass + '"><i class="fas ' + stIcon + '"></i> ' + st.charAt(0).toUpperCase() + st.slice(1) + '</span>' +
+                        '<span class="p2p-trade-time"><i class="fas fa-clock"></i> ' + dateStr + '</span>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+            '<div class="p2p-trade-detail">' +
+                '<span class="chip"><i class="fas fa-coins"></i> <strong>' + ({bronze:'Bronze',silver:'Silver',gold:'Gold'}[t.coin_type]||t.coin_type) + '</strong></span>' +
+                '<span class="chip"><i class="fas fa-cube"></i> Qty: <strong>' + t.quantity + '</strong></span>' +
+                '<span class="chip"><i class="fas fa-bangladeshi-taka-sign"></i> <strong>\u09F3' + parseFloat(t.total_price).toFixed(0) + '</strong></span>' +
+                '<span class="chip"><i class="fas fa-arrow-right-arrow-left"></i> ' + (isBuyer?'Buy':'Sell') + '</span>' +
+            '</div>' +
+            '<div class="p2p-trade-actions">' +
+                '<button class="p2p-btn-chat" onclick="openTradeChat('+t.id+')">' +
+                    '<i class="fas fa-comment"></i> Chat' +
+                    '<span class="chat-badge" id="chat-badge-'+t.id+'" style="display: '+badgeStyle+'; background: #ef4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.65rem; font-weight: 700; margin-left: 5px; vertical-align: middle; min-width: 14px; height: 14px; align-items: center; justify-content: center; line-height: 1;">' + unreadCount + '</span>' +
+                '</button>' +
+                actions +
+            '</div>' +
+        '</div>';
+    }
+
+    function applyP2PUpdates(data) {
+        var container = document.querySelector('#tabOrders .p2p-section-card-body');
+        var emptyMsg = container ? container.querySelector('div[style*="text-align:center;padding:2.5rem"]') : null;
+        var hasChanges = false;
+
+        // New trades: prepend to orders list
+        if (data.new_trades && data.new_trades.length > 0) {
+            hasChanges = true;
+            data.new_trades.forEach(function(t){
+                knownTrades[t.id] = t.status;
+                if (!container) return;
+                if (emptyMsg) { emptyMsg.remove(); emptyMsg = null; }
+                if (document.querySelector('.p2p-trade-item[data-trade-id="' + t.id + '"]')) return;
+                container.insertAdjacentHTML('afterbegin', buildTradeHtml(t));
+            });
+        }
+
+        // Changed trades: update in-place
+        if (data.changed_trades && data.changed_trades.length > 0) {
+            hasChanges = true;
+            data.changed_trades.forEach(function(t){
+                knownTrades[t.id] = t.status;
+                var el = document.querySelector('.p2p-trade-item[data-trade-id="' + t.id + '"]');
+                if (el) {
+                    el.outerHTML = buildTradeHtml(t);
+                } else if (container) {
+                    if (emptyMsg) { emptyMsg.remove(); emptyMsg = null; }
+                    container.insertAdjacentHTML('afterbegin', buildTradeHtml(t));
+                }
+            });
+        }
+
+        // Update trade count badge
+        if (data.trade_count !== undefined) {
+            var badge = document.querySelector('.p2p-tabbar-btn[data-tab="orders"] .badge');
+            if (badge) badge.textContent = data.trade_count;
+        }
+
+        // Update coin balances
+        if (data.balances) {
+            var topbarItems = document.querySelectorAll('.p2p-topbar-v3-item');
+            if (topbarItems.length >= 4) {
+                var coinVals = topbarItems[0].querySelector('.p2p-topbar-v3-value');
+                if (coinVals) coinVals.textContent = data.balances.bronze.toLocaleString();
+                coinVals = topbarItems[1].querySelector('.p2p-topbar-v3-value');
+                if (coinVals) coinVals.textContent = data.balances.silver.toLocaleString();
+                coinVals = topbarItems[2].querySelector('.p2p-topbar-v3-value');
+                if (coinVals) coinVals.textContent = data.balances.gold.toLocaleString();
+                coinVals = topbarItems[3].querySelector('.p2p-topbar-v3-value');
+                if (coinVals) coinVals.textContent = '\u09F3' + Math.floor(data.balances.bdt).toLocaleString();
+            }
+            var balDisplay = document.getElementById('p2pBalVal');
+            if (balDisplay) balDisplay.textContent = Math.floor(data.balances.bdt).toLocaleString();
+        }
+    }
+
+    function pollP2PUpdates() {
+        if (!userId) return;
+        fetch('handlers/p2p_handler.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json','X-Requested-With': 'XMLHttpRequest'},
+            body: JSON.stringify({action: 'poll_p2p_updates', known_trades: knownTrades, csrf_token: csrfToken})
+        })
+        .then(function(r){ return r.json(); })
+        .then(function(res){
+            if (res.success && (res.new_trades.length > 0 || res.changed_trades.length > 0)) {
+                applyP2PUpdates(res);
+            }
+        })
+        .catch(function(){});
+    }
+
+    // Initialise knownTrades from existing DOM
+    document.querySelectorAll('.p2p-trade-item').forEach(function(el){
+        knownTrades[parseInt(el.getAttribute('data-trade-id'))] = el.getAttribute('data-status');
+    });
+
+    // Start background polling every 5 seconds
+    setInterval(pollP2PUpdates, 5000);
 
     // ═══ CREATE OFFER ═══
     var createForm = document.getElementById('p2pCreateForm');
@@ -2217,7 +2361,7 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
                     var offerType = t.offer_type || 'sell';
                     var actions = '';
                     if (st === 'pending' && isBuyer) actions += '<button class="p2p-btn-primary" onclick="openPaymentForm('+t.id+')"><i class="fas fa-credit-card"></i> Pay Now</button>';
-                    if (st === 'paid' && isSeller) actions += '<button class="p2p-btn-confirm" onclick="confirmReceived('+t.id+')"><i class="fas fa-check"></i> Release Coins</button>';
+        if (st === 'paid' && isSeller) actions += '<button class="p2p-btn-confirm" onclick="confirmReceived('+t.id+',this)"><i class="fas fa-check"></i> Release Coins</button>';
                     if (st === 'paid' && isBuyer) actions += '<span style="font-size:.7rem;font-weight:600;color:#d97706"><i class="fas fa-clock"></i> Waiting...</span>';
                     if (st === 'pending' || st === 'paid') actions += '<span style="flex:1"></span><button class="p2p-btn-cancel" onclick="cancelOrder('+t.id+')"><i class="fas fa-xmark"></i> Cancel</button>';
                     if (st === 'completed' || st === 'cancelled') actions += '<span style="flex:1"></span>';
@@ -2308,23 +2452,42 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
     };
 
     window.submitReview = function() {
+        var reviewId = document.getElementById('reviewEditId').value;
         var tradeId = document.getElementById('reviewTradeId').value;
         var rating = document.getElementById('reviewRating').value;
         var comment = document.getElementById('reviewComment').value.trim();
         if (!rating || parseInt(rating) < 1) { showFb('reviewFb', 'Please select a rating.', 'error'); return; }
         var btn = document.getElementById('reviewBtn');
-        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...'; hideFb('reviewFb');
+        var isEdit = parseInt(reviewId) > 0;
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + (isEdit ? 'Updating...' : 'Submitting...'); hideFb('reviewFb');
+        var payload = isEdit
+            ? {action: 'update_p2p_review', review_id: reviewId, rating: rating, comment: comment, csrf_token: csrfToken}
+            : {action: 'submit_p2p_review', trade_id: tradeId, rating: rating, comment: comment, csrf_token: csrfToken};
         fetch('handlers/p2p_handler.php', {
             method: 'POST',
             headers: {'Content-Type': 'application/json','X-Requested-With': 'XMLHttpRequest'},
-            body: JSON.stringify({action: 'submit_p2p_review', trade_id: tradeId, rating: rating, comment: comment, csrf_token: csrfToken})
+            body: JSON.stringify(payload)
         })
         .then(function(r){ return r.json(); })
         .then(function(res){
-            if (res.success) { showFb('reviewFb', 'Review submitted! Thank you.', 'success'); setTimeout(function(){ document.getElementById('reviewOverlay').style.display='none'; document.body.style.overflow=''; }, 1500); }
-            else { showFb('reviewFb', res.message, 'error'); btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Review'; }
+            if (res.success) {
+                showFb('reviewFb', res.message, 'success');
+                setTimeout(function(){
+                    document.getElementById('reviewOverlay').style.display='none';
+                    document.body.style.overflow='';
+                    // Re-fetch merchant profile if it was open
+                    if (currentMerchantProfileId > 0) {
+                        openMerchantProfile(currentMerchantProfileId);
+                    }
+                    // Update offer card ratings on the page
+                    pollP2PUpdates();
+                }, 1000);
+            } else {
+                showFb('reviewFb', res.message, 'error');
+                btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> ' + (isEdit ? 'Update Review' : 'Submit Review');
+            }
         })
-        .catch(function(){ showFb('reviewFb', 'Network error.', 'error'); btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Review'; });
+        .catch(function(){ showFb('reviewFb', 'Network error.', 'error'); btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> ' + (isEdit ? 'Update Review' : 'Submit Review'); });
     };
 
     // ═══ ADD REVIEW BUTTON TO COMPLETED TRADES ═══
@@ -2337,7 +2500,12 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
     });
 
     window.openReviewModal = function(tradeId) {
+        document.getElementById('reviewEditId').value = '0';
         document.getElementById('reviewTradeId').value = tradeId;
+        document.getElementById('reviewModalTitle').innerHTML = '<i class="fas fa-star" style="color:#d97706"></i> Rate Merchant';
+        document.getElementById('reviewModalSub').textContent = 'How was your trading experience?';
+        document.getElementById('reviewBtn').disabled = false;
+        document.getElementById('reviewBtn').innerHTML = '<i class="fas fa-paper-plane"></i> Submit Review';
         document.getElementById('reviewRating').value = 0;
         currentRating = 0;
         document.getElementById('reviewComment').value = '';
@@ -2352,10 +2520,33 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
     // Close edit/review modals on overlay click
     document.getElementById('editOfferOverlay').addEventListener('click', function(e) { if (e.target === this) { this.style.display='none'; document.body.style.overflow=''; } });
     document.getElementById('reviewOverlay').addEventListener('click', function(e) { if (e.target === this) { this.style.display='none'; document.body.style.overflow=''; } });
-    document.getElementById('merchantProfileOverlay').addEventListener('click', function(e) { if (e.target === this) { this.style.display='none'; document.body.style.overflow=''; } });
+    document.getElementById('merchantProfileOverlay').addEventListener('click', function(e) { if (e.target === this) { this.style.display='none'; document.body.style.overflow=''; currentMerchantProfileId = 0; } });
+
+    // Edit review: close merchant profile, open edit modal with global data
+    document.getElementById('merchantProfileBody').addEventListener('click', function(e) {
+        var btn = e.target.closest('.p2p-edit-review-btn');
+        if (!btn) return;
+        var idx = parseInt(btn.getAttribute('data-edit-idx'));
+        var data = _reviewEditData[idx];
+        if (!data) return;
+        document.getElementById('merchantProfileOverlay').style.display = 'none';
+        document.body.style.overflow = '';
+        document.getElementById('reviewEditId').value = data.id;
+        document.getElementById('reviewTradeId').value = '';
+        document.getElementById('reviewModalTitle').innerHTML = '<i class="fas fa-pen" style="color:#8b5cf6"></i> Edit Your Review';
+        document.getElementById('reviewModalSub').textContent = 'Update your rating and comment';
+        document.getElementById('reviewBtn').disabled = false;
+        document.getElementById('reviewBtn').innerHTML = '<i class="fas fa-save"></i> Update Review';
+        setRating(data.rating);
+        document.getElementById('reviewComment').value = data.comment;
+        hideFb('reviewFb');
+        document.getElementById('reviewOverlay').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    });
 
     // ═══ MERCHANT PROFILE MODAL ═══
     window.openMerchantProfile = function(merchantId) {
+        currentMerchantProfileId = merchantId;
         var over = document.getElementById('merchantProfileOverlay');
         var body = document.getElementById('merchantProfileBody');
         over.style.display = 'flex';
@@ -2392,17 +2583,23 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
             if (reviews.length === 0) {
                 reviewHtml = '<div style="text-align:center;padding:16px;color:var(--p2p-muted);font-size:.75rem">No reviews yet</div>';
             } else {
+                _reviewEditData = [];
                 reviews.forEach(function(rv){
                     var rvAvatar = '<img src="assets/avatars/' + (rv.avatar||'default.png') + '" alt="" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'" style="width:28px;height:28px;border-radius:50%;object-fit:cover">' +
                         '<div style="display:none;width:28px;height:28px;border-radius:50%;background:#8b5cf6;color:#fff;align-items:center;justify-content:center;font-size:.65rem;font-weight:700">' + (rv.full_name||rv.username).charAt(0).toUpperCase() + '</div>';
                     var rvStars = '';
                     for (var j=0; j<5; j++) rvStars += '<i class="' + (j < parseInt(rv.rating) ? 'fas' : 'far') + ' fa-star" style="color:#d97706;font-size:.6rem"></i>';
+                    var isOwnReview = parseInt(rv.reviewer_id) === userId;
+                    var editIdx = _reviewEditData.length;
+                    _reviewEditData.push({id: rv.id, rating: parseInt(rv.rating), comment: rv.comment||''});
+                    var editBtn = isOwnReview ? '<button class="p2p-edit-review-btn" data-edit-idx="' + editIdx + '" style="background:none;border:none;color:#8b5cf6;cursor:pointer;font-size:.65rem;padding:2px 6px;font-family:\'Plus Jakarta Sans\',sans-serif;font-weight:600;"><i class="fas fa-pen"></i> Edit</button>' : '';
                     reviewHtml += '<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--p2p-border)">' +
                         '<div style="flex-shrink:0;width:28px;height:28px">' + rvAvatar + '</div>' +
                         '<div style="flex:1;min-width:0">' +
                             '<div style="display:flex;align-items:center;gap:6px">' +
                                 '<span style="font-size:.72rem;font-weight:700;color:var(--p2p-text)">' + (rv.full_name||rv.username) + '</span>' +
                                 '<span style="font-size:.55rem;color:var(--p2p-muted)">' + new Date(rv.created_at).toLocaleDateString('en-US', {month:'short', day:'numeric'}) + '</span>' +
+                                editBtn +
                             '</div>' +
                             '<div style="margin:2px 0">' + rvStars + '</div>' +
                             (rv.comment ? '<div style="font-size:.72rem;color:var(--p2p-muted);line-height:1.4">' + rv.comment + '</div>' : '') +

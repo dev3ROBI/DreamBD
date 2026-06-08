@@ -357,6 +357,24 @@ try {
             } catch (Throwable $e) { $db->rollBack(); $response['message'] = 'Server error.'; }
             break;
 
+        // ─── REPORT TRADE (non-dispute) ───
+        case 'report_p2p_trade':
+            if (!$userId) { $response['message'] = 'Please log in.'; break; }
+            $tradeId = (int)($req['trade_id'] ?? 0);
+            $reason = trim($req['reason'] ?? '');
+            $details = trim($req['details'] ?? '');
+            if ($tradeId < 1 || $reason === '') { $response['message'] = 'Please provide a reason.'; break; }
+            try {
+                $stmt = $db->prepare("SELECT * FROM p2p_trades WHERE id = ? AND (buyer_id = ? OR seller_id = ?)");
+                $stmt->execute([$tradeId, $userId, $userId]);
+                $trade = $stmt->fetch();
+                if (!$trade) { $response['message'] = 'Trade not found.'; break; }
+                $reportedId = (int)$trade['buyer_id'] === (int)$userId ? (int)$trade['seller_id'] : (int)$trade['buyer_id'];
+                $stmt = $db->prepare("INSERT INTO p2p_reports (trade_id, reporter_id, reported_id, reason, details) VALUES (?, ?, ?, ?, ?)");
+                $stmt->execute([$tradeId, $userId, $reportedId, $reason, $details]);
+                $response = ['success' => true, 'message' => 'Report submitted. Admin will review.'];
+            } catch (Throwable $e) { $response['message'] = 'Server error.'; }
+            break;
 
         // ─── GET TRADE DETAIL ───
         case 'get_p2p_trade':
@@ -637,6 +655,25 @@ try {
             } catch (Throwable $e) { $response['message'] = 'Server error.'; }
             break;
 
+        // ─── UPDATE P2P REVIEW ───
+        case 'update_p2p_review':
+            if (!$userId) { $response['message'] = 'Please log in.'; break; }
+            $reviewId = (int)($req['review_id'] ?? 0);
+            $rating = (int)($req['rating'] ?? 0);
+            $comment = trim($req['comment'] ?? '');
+            if ($reviewId < 1 || $rating < 1 || $rating > 5) { $response['message'] = 'Invalid rating.'; break; }
+            try {
+                $stmt = $db->prepare("SELECT id, reviewer_id FROM p2p_reviews WHERE id = ?");
+                $stmt->execute([$reviewId]);
+                $review = $stmt->fetch();
+                if (!$review) { $response['message'] = 'Review not found.'; break; }
+                if ((int)$review['reviewer_id'] !== (int)$userId) { $response['message'] = 'You can only edit your own reviews.'; break; }
+                $stmt = $db->prepare("UPDATE p2p_reviews SET rating = ?, comment = ? WHERE id = ?");
+                $stmt->execute([$rating, $comment, $reviewId]);
+                $response = ['success' => true, 'message' => 'Review updated!'];
+            } catch (Throwable $e) { $response['message'] = 'Server error.'; }
+            break;
+
         // ─── GET MERCHANT RATING ───
         case 'get_merchant_rating':
             $merchantId = (int)($req['merchant_id'] ?? 0);
@@ -681,7 +718,7 @@ try {
                 $totalReviews = (int)($ratingRow['total_reviews'] ?? 0);
 
                 // Recent reviews with reviewer info
-                $stmt = $db->prepare("SELECT r.id, r.rating, r.comment, r.created_at, u.full_name, u.username, u.avatar FROM p2p_reviews r JOIN users u ON u.id = r.reviewer_id WHERE r.merchant_id = ? ORDER BY r.created_at DESC LIMIT 10");
+                $stmt = $db->prepare("SELECT r.id, r.reviewer_id, r.rating, r.comment, r.created_at, u.full_name, u.username, u.avatar FROM p2p_reviews r JOIN users u ON u.id = r.reviewer_id WHERE r.merchant_id = ? ORDER BY r.created_at DESC LIMIT 10");
                 $stmt->execute([$merchantId]);
                 $reviews = $stmt->fetchAll();
 
@@ -700,6 +737,44 @@ try {
                 $stmt->execute([$type, $limit, $offset]);
                 $offers = $stmt->fetchAll();
                 $response = ['success' => true, 'offers' => $offers, 'has_more' => count($offers) === $limit];
+            } catch (Throwable $e) { $response['message'] = 'Server error.'; }
+            break;
+
+        // ─── POLL P2P UPDATES (real-time UI refresh) ───
+        case 'poll_p2p_updates':
+            if (!$userId) { $response['message'] = 'Please log in.'; break; }
+            $knownRaw = $req['known_trades'] ?? '{}';
+            $knownTrades = is_string($knownRaw) ? json_decode($knownRaw, true) : $knownRaw;
+            if (!is_array($knownTrades)) $knownTrades = [];
+            try {
+                $stmt = $db->prepare("SELECT t.*, o.type AS offer_type, ob.username AS buyer_name, os.username AS seller_name, (SELECT COUNT(*) FROM p2p_chat_messages cm WHERE cm.trade_id = t.id AND cm.sender_id != ? AND cm.is_read = 0) AS unread_count FROM p2p_trades t JOIN p2p_offers o ON o.id = t.offer_id LEFT JOIN users ob ON ob.id = t.buyer_id LEFT JOIN users os ON os.id = t.seller_id WHERE t.buyer_id = ? OR t.seller_id = ? ORDER BY t.created_at DESC LIMIT 50");
+                $stmt->execute([$userId, $userId, $userId]);
+                $dbTrades = $stmt->fetchAll();
+                $newTrades = [];
+                $changedTrades = [];
+                foreach ($dbTrades as $t) {
+                    $tid = (int)$t['id'];
+                    if (!isset($knownTrades[$tid])) {
+                        $newTrades[] = $t;
+                    } elseif ($knownTrades[$tid] !== $t['status']) {
+                        $changedTrades[] = $t;
+                    }
+                }
+                $stmt = $db->prepare("SELECT bronze_coins, silver_coins, gold_coins, balance FROM users WHERE id = ?");
+                $stmt->execute([$userId]);
+                $u = $stmt->fetch();
+                $response = [
+                    'success' => true,
+                    'new_trades' => $newTrades,
+                    'changed_trades' => $changedTrades,
+                    'balances' => [
+                        'bronze' => (int)($u['bronze_coins'] ?? 0),
+                        'silver' => (int)($u['silver_coins'] ?? 0),
+                        'gold' => (int)($u['gold_coins'] ?? 0),
+                        'bdt' => (float)($u['balance'] ?? 0),
+                    ],
+                    'trade_count' => count($dbTrades),
+                ];
             } catch (Throwable $e) { $response['message'] = 'Server error.'; }
             break;
 
