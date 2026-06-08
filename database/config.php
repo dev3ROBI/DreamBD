@@ -410,6 +410,167 @@ function ensureP2PSchema(PDO $db): void {
     } catch (Throwable $e) {}
 }
 
+function ensureClubFeatureSchema(PDO $db): void {
+    $queries = [
+        // Players table (extends users for market tracking)
+        "CREATE TABLE IF NOT EXISTS players (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            user_id INT UNSIGNED NOT NULL UNIQUE,
+            current_club_id INT UNSIGNED NULL,
+            owner_id INT UNSIGNED NULL,
+            status ENUM('active','free_agent','retired','banned') NOT NULL DEFAULT 'free_agent',
+            market_value DECIMAL(10,2) DEFAULT 0.00,
+            base_price DECIMAL(10,2) DEFAULT 0.00,
+            rating DECIMAL(3,1) DEFAULT 0.0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            INDEX idx_player_club (current_club_id),
+            INDEX idx_player_owner (owner_id),
+            INDEX idx_player_status (status)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+
+        // Clubs
+        "CREATE TABLE IF NOT EXISTS clubs (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(100) NOT NULL,
+            tag VARCHAR(10) NOT NULL UNIQUE,
+            logo VARCHAR(255) DEFAULT 'default-club.png',
+            colour VARCHAR(20) DEFAULT '#7c3aed',
+            description TEXT NULL,
+            owner_id INT UNSIGNED NOT NULL,
+            region VARCHAR(80) NULL,
+            trophies INT DEFAULT 0,
+            total_points INT DEFAULT 0,
+            rank INT DEFAULT 0,
+            status ENUM('active','inactive') NOT NULL DEFAULT 'active',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (owner_id) REFERENCES users(id),
+            INDEX idx_club_owner (owner_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+
+        // Club members
+        "CREATE TABLE IF NOT EXISTS club_members (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            club_id INT UNSIGNED NOT NULL,
+            user_id INT UNSIGNED NOT NULL,
+            role ENUM('owner','manager','player','sub') NOT NULL DEFAULT 'player',
+            joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_club_user (club_id, user_id),
+            FOREIGN KEY (club_id) REFERENCES clubs(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            INDEX idx_club_member_club (club_id),
+            INDEX idx_club_member_user (user_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+
+        // Player stats
+        "CREATE TABLE IF NOT EXISTS player_stats (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            user_id INT UNSIGNED NOT NULL,
+            tournament_id INT UNSIGNED NULL,
+            goals INT DEFAULT 0,
+            assists INT DEFAULT 0,
+            matches_played INT DEFAULT 0,
+            wins INT DEFAULT 0,
+            kills INT DEFAULT 0,
+            score DECIMAL(10,2) DEFAULT 0.00,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE SET NULL,
+            INDEX idx_stats_user (user_id),
+            INDEX idx_stats_tournament (tournament_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+
+        // Game skills per user per game
+        "CREATE TABLE IF NOT EXISTS game_skills (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            user_id INT UNSIGNED NOT NULL,
+            game VARCHAR(80) NOT NULL,
+            skill_level VARCHAR(30) DEFAULT '',
+            game_icon VARCHAR(40) DEFAULT 'fa-gamepad',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            UNIQUE KEY uk_user_game (user_id, game)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+
+        // Player auctions
+        "CREATE TABLE IF NOT EXISTS player_auctions (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            player_id INT UNSIGNED NOT NULL,
+            seller_id INT UNSIGNED NOT NULL,
+            base_price DECIMAL(10,2) NOT NULL,
+            current_price DECIMAL(10,2) NOT NULL,
+            min_increment DECIMAL(10,2) DEFAULT 50.00,
+            start_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+            end_time DATETIME NOT NULL,
+            status ENUM('active','completed','cancelled') NOT NULL DEFAULT 'active',
+            winner_id INT UNSIGNED NULL,
+            final_price DECIMAL(10,2) NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE,
+            FOREIGN KEY (seller_id) REFERENCES users(id),
+            FOREIGN KEY (winner_id) REFERENCES users(id) ON DELETE SET NULL,
+            INDEX idx_auction_player (player_id),
+            INDEX idx_auction_seller (seller_id),
+            INDEX idx_auction_status (status),
+            INDEX idx_auction_end (end_time)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+
+        // Auction bids
+        "CREATE TABLE IF NOT EXISTS auction_bids (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            auction_id INT UNSIGNED NOT NULL,
+            bidder_id INT UNSIGNED NOT NULL,
+            amount DECIMAL(10,2) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (auction_id) REFERENCES player_auctions(id) ON DELETE CASCADE,
+            FOREIGN KEY (bidder_id) REFERENCES users(id),
+            INDEX idx_bid_auction (auction_id),
+            INDEX idx_bid_bidder (bidder_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+
+        // Player transfers history
+        "CREATE TABLE IF NOT EXISTS player_transfers (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            player_id INT UNSIGNED NOT NULL,
+            from_club_id INT UNSIGNED NULL,
+            to_club_id INT UNSIGNED NULL,
+            from_owner_id INT UNSIGNED NULL,
+            to_owner_id INT UNSIGNED NULL,
+            amount DECIMAL(10,2) DEFAULT 0.00,
+            type ENUM('auction','direct_sale','release','hire','free_agent') NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE,
+            FOREIGN KEY (from_club_id) REFERENCES clubs(id) ON DELETE SET NULL,
+            FOREIGN KEY (to_club_id) REFERENCES clubs(id) ON DELETE SET NULL,
+            INDEX idx_transfer_player (player_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+    ];
+
+    foreach ($queries as $sql) {
+        try { $db->exec($sql); } catch (PDOException $e) { error_log("Club Schema: " . $e->getMessage()); }
+    }
+
+    // Always-run column additions
+    $colQueries = [
+        "ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS restricted_club_id INT UNSIGNED NULL AFTER max_teams",
+        "ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS bracket_type VARCHAR(40) DEFAULT 'single_elimination' AFTER game_icon",
+        "ALTER TABLE tournament_participants ADD COLUMN IF NOT EXISTS club_id INT UNSIGNED NULL AFTER team_id",
+    ];
+    foreach ($colQueries as $sql) {
+        try { $db->exec($sql); } catch (Throwable $e) {}
+    }
+
+    // Ensure default player records for existing users
+    try {
+        $stmt = $db->query("SELECT COUNT(*) FROM players");
+        $playerCount = (int) $stmt->fetchColumn();
+        if ($playerCount === 0) {
+            $db->exec("INSERT IGNORE INTO players (user_id, status) SELECT id, 'free_agent' FROM users");
+        }
+    } catch (Throwable $e) {}
+}
+
 // Composer autoload
 $composerAutoload = __DIR__ . '/../vendor/autoload.php';
 if (file_exists($composerAutoload)) {
@@ -490,6 +651,7 @@ try {
     ensureP2PSchema($db);
     ensureUserSessionsSchema($db);
     ensureTournamentFeatureSchema($db);
+    ensureClubFeatureSchema($db);
 } catch (Exception $e) {
     error_log("Config Error: " . $e->getMessage());
 }

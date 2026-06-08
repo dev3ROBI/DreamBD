@@ -62,182 +62,571 @@ $statusBadgeClasses = [
 $categories = ['PUBG','Free Fire','Valorant','Call of Duty','Fortnite','League of Legends','Dota 2','CS:GO','Overwatch','Apex Legends','Minecraft','Rocket League','FIFA','GTA Online','eFootball','Other'];
 $gameIcons = ['fa-gamepad','fa-crosshairs','fa-chess','fa-dice','fa-joystick','fa-headset','fa-keyboard','fa-shield-halved','fa-bullseye','fa-skull','fa-fighter-jet','fa-gun','fa-swords','fa-axe','fa-bow-arrow','fa-futbol'];
 $palette = ['#7c3aed','#2563eb','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4','#f97316','#64748b'];
+
+$gameSkills = [];
+$playerStats = [];
+if ($viewerId) {
+    try {
+        $stmt = $db->prepare("SELECT game, skill_level, game_icon FROM game_skills WHERE user_id = ? ORDER BY game");
+        $stmt->execute([$viewerId]);
+        $gameSkills = $stmt->fetchAll();
+    } catch (Throwable $e) { $gameSkills = []; }
+    try {
+        $stmt = $db->prepare("SELECT COALESCE(SUM(matches_played),0) AS total_matches, COALESCE(SUM(wins),0) AS total_wins, COALESCE(SUM(kills),0) AS total_kills, COALESCE(SUM(goals),0) AS total_goals, COALESCE(SUM(assists),0) AS total_assists, COALESCE(SUM(score),0) AS total_score FROM player_stats WHERE user_id = ?");
+        $stmt->execute([$viewerId]);
+        $playerStats = $stmt->fetch() ?: [];
+    } catch (Throwable $e) { $playerStats = []; }
+}
 ?>
 
 <style>
-/* ===== Hero stat cards - centered, deep colors ===== */
-.gp-hero-stats { gap: 14px; }
-.gp-stat-card { padding: 24px 16px; border-radius: 18px; background: rgba(255,255,255,0.88); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.6); box-shadow: 0 4px 20px rgba(0,0,0,0.05); transition: all .3s cubic-bezier(.34,1.56,.64,1); position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-.dark .gp-stat-card, [data-theme="dark"] .gp-stat-card { background: rgba(15,23,42,0.85); border-color: rgba(71,85,105,0.4); }
-.gp-stat-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.1); }
-.gp-stat-card .gp-stat-icon { font-size: 28px; width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; border-radius: 16px; margin-bottom: 12px; position: relative; }
-.gp-stat-card .gp-stat-icon i { position: relative; z-index: 1; }
-.gp-stat-card:nth-child(1) .gp-stat-icon { background: linear-gradient(135deg,#5b21b6,#7c3aed); color:#fff; box-shadow: 0 6px 20px rgba(91,33,182,.4); }
-.gp-stat-card:nth-child(2) .gp-stat-icon { background: linear-gradient(135deg,#d97706,#f59e0b); color:#fff; box-shadow: 0 6px 20px rgba(217,119,6,.4); }
-.gp-stat-card:nth-child(3) .gp-stat-icon { background: linear-gradient(135deg,#dc2626,#ef4444); color:#fff; box-shadow: 0 6px 20px rgba(220,38,38,.4); }
-.gp-stat-card:nth-child(4) .gp-stat-icon { background: linear-gradient(135deg,#059669,#10b981); color:#fff; box-shadow: 0 6px 20px rgba(5,150,105,.4); }
-.gp-stat-card .gp-stat-value { font-size: 28px; font-weight: 800; line-height: 1.1; color: #0f172a; display: block; }
-.dark .gp-stat-card .gp-stat-value { color: #f1f5f9; }
-.gp-stat-card .gp-stat-label { font-size: 13px; color: #64748b; font-weight: 500; display: block; margin-top: 4px; }
-.dark .gp-stat-card .gp-stat-label { color: #94a3b8; }
+:root { --gp-bg:#f5f7fa; --gp-card:#fff; --gp-border:#e2e8f0; --gp-text:#1f2937; --gp-muted:#6b7280; --gp-accent:#8b5cf6; --gp-green:#059669; --gp-red:#dc2626; --gp-yellow:#d97706; --gp-shadow:0 4px 16px rgba(0,0,0,.03) }
+.dark { --gp-bg:#0f172a; --gp-card:#1e293b; --gp-border:#334155; --gp-text:#f1f5f9; --gp-muted:#94a3b8 }
 
-/* ===== Profile bar - beautiful glass design ===== */
-.gp-profile-bar { display: flex; align-items: center; gap: 14px; padding: 14px 20px; margin: 0 0 18px; border-radius: 18px; background: rgba(255,255,255,0.88); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.6); box-shadow: 0 4px 20px rgba(0,0,0,0.04); }
-.dark .gp-profile-bar, [data-theme="dark"] .gp-profile-bar { background: rgba(15,23,42,0.85); border-color: rgba(71,85,105,0.4); }
-.gp-profile-bar-avatar { width: 48px; height: 48px; border-radius: 50%; overflow: hidden; flex-shrink: 0; border: 2px solid rgba(124,58,237,0.2); box-shadow: 0 2px 8px rgba(124,58,237,0.15); }
-.gp-profile-bar-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-.gp-profile-bar-info { flex: 1; min-width: 0; }
-.gp-profile-bar-info strong { display: block; font-size: 15px; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.dark .gp-profile-bar-info strong { color: #f1f5f9; }
-.gp-profile-bar-balance { display: flex; align-items: center; gap: 6px; margin-left: 8px; padding: 6px 14px; border-radius: 12px; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.15); white-space: nowrap; }
-.gp-profile-bar-balance .gp-balance-label { font-size: 11px; color: #64748b; }
-.gp-profile-bar-balance .gp-balance-value { font-size: 16px; font-weight: 800; color: #059669; }
-.gp-profile-bar-actions { display: flex; align-items: center; gap: 8px; }
-.gp-profile-bar-actions .gp-btn { font-size: 12px; padding: 7px 14px; border-radius: 10px; }
+/* ═══ PAGE ═══ */
+.gp-page { max-width:900px; margin:0 auto; padding:0 12px 2rem }
 
-/* ===== Better filter tabs ===== */
-.gp-tabs { display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-.gp-tabs::-webkit-scrollbar { display: none; }
-.gp-tab { border-radius: 10px; font-weight: 600; transition: all .2s; padding: 8px 18px; font-size: 13px; background: rgba(148,163,184,0.08); color: #64748b; border: 1px solid transparent; cursor: pointer; flex-shrink: 0; white-space: nowrap; }
-.gp-tab:hover { background: rgba(124,58,237,0.1); color: #7c3aed; border-color: rgba(124,58,237,0.15); }
-.gp-tab.active { background: #7c3aed; color: #fff; border-color: #7c3aed; box-shadow: 0 2px 10px rgba(124,58,237,.3); }
+/* ═══ HERO ═══ */
+.gp-hero { position:relative; padding:28px 24px 0; border-radius:0 0 32px 32px; min-height:auto; overflow:hidden }
+.gp-hero-bg { position:absolute; inset:0; z-index:0; background:linear-gradient(135deg,#0f172a,#1e1b4b,#1a0533); min-height:360px; border-radius:0 0 32px 32px }
+.gp-hero-bg::before { content:''; position:absolute; top:-120px; right:-120px; width:320px; height:320px; border-radius:50%; background:radial-gradient(circle,rgba(139,92,246,.18),transparent 70%) }
+.gp-hero-bg::after { content:''; position:absolute; bottom:-80px; left:-80px; width:240px; height:240px; border-radius:50%; background:radial-gradient(circle,rgba(5,150,105,.1),transparent 70%) }
+.gp-hero-content { position:relative; z-index:1; text-align:center; padding:10px 0 4px }
+.gp-hero-badge { display:inline-flex; align-items:center; gap:6px; padding:6px 16px; border-radius:999px; background:rgba(139,92,246,.15); color:#a78bfa; font-size:.72rem; font-weight:700; letter-spacing:.3px; margin-bottom:14px; border:1px solid rgba(139,92,246,.2) }
+.gp-hero-content h1 { font-size:clamp(24px,4vw,38px); font-weight:900; color:#fff; letter-spacing:-.03em; line-height:1.15; margin:0 0 6px }
+.gp-hero-content p { font-size:.85rem; color:#94a3b8; margin:0 0 16px }
+.text-gradient { background:linear-gradient(135deg,#a78bfa,#c084fc); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text }
+.gp-hero-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; padding:20px 0 24px; position:relative; z-index:1 }
+.gp-stat-card { padding:22px 14px; border-radius:20px; background:rgba(255,255,255,.92); backdrop-filter:blur(14px); border:1px solid rgba(255,255,255,.5); box-shadow:0 4px 20px rgba(0,0,0,.04); transition:all .35s cubic-bezier(.34,1.56,.64,1); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center }
+.dark .gp-stat-card { background:rgba(30,41,59,.88); border-color:rgba(71,85,105,.35) }
+.gp-stat-card:hover { transform:translateY(-5px); box-shadow:0 16px 40px rgba(0,0,0,.08) }
+.gp-stat-icon { font-size:26px; width:54px; height:54px; display:flex; align-items:center; justify-content:center; border-radius:16px; margin-bottom:10px }
+.gp-stat-card:nth-child(1) .gp-stat-icon { background:linear-gradient(135deg,#5b21b6,#7c3aed); color:#fff; box-shadow:0 6px 20px rgba(91,33,182,.35) }
+.gp-stat-card:nth-child(2) .gp-stat-icon { background:linear-gradient(135deg,#d97706,#f59e0b); color:#fff; box-shadow:0 6px 20px rgba(217,119,6,.35) }
+.gp-stat-card:nth-child(3) .gp-stat-icon { background:linear-gradient(135deg,#dc2626,#ef4444); color:#fff; box-shadow:0 6px 20px rgba(220,38,38,.35) }
+.gp-stat-card:nth-child(4) .gp-stat-icon { background:linear-gradient(135deg,#059669,#10b981); color:#fff; box-shadow:0 6px 20px rgba(5,150,105,.35) }
+.gp-stat-value { font-size:26px; font-weight:900; line-height:1.1; color:var(--gp-text); display:block }
+.gp-stat-label { font-size:12px; color:var(--gp-muted); font-weight:600; display:block; margin-top:3px }
 
-/* ===== Section header ===== */
-.gp-section-header h2 { font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 8px; color: #0f172a; flex-shrink: 0; }
-.dark .gp-section-header h2 { color: #f1f5f9; }
-.gp-section-header h2 i { font-size: 18px; color: #7c3aed; }
+/* ═══ PROFILE BAR ═══ */
+.gp-profile-bar { display:flex; align-items:center; gap:14px; padding:14px 20px; margin:0 0 18px; border-radius:20px; background:var(--gp-card); border:1px solid var(--gp-border); box-shadow:var(--gp-shadow) }
+.gp-profile-bar-avatar { width:46px; height:46px; border-radius:50%; overflow:hidden; flex-shrink:0; border:2px solid rgba(139,92,246,.2); box-shadow:0 2px 8px rgba(139,92,246,.12) }
+.gp-profile-bar-avatar img { width:100%; height:100%; object-fit:cover }
+.gp-profile-bar-info { flex:1; min-width:0 }
+.gp-profile-bar-info strong { display:block; font-size:14px; font-weight:700; color:var(--gp-text) }
+.gp-profile-bar-balance { display:flex; align-items:center; gap:5px; margin-left:6px; padding:5px 12px; border-radius:12px; background:rgba(16,185,129,.08); border:1px solid rgba(16,185,129,.12) }
+.gp-balance-label { font-size:10px; color:var(--gp-muted) }
+.gp-balance-value { font-size:15px; font-weight:800; color:var(--gp-green) }
+.gp-profile-bar-actions { display:flex; align-items:center; gap:6px }
 
-/* ===== Search bar with clear button ===== */
-.gp-search { position: relative; width: 280px; flex-shrink: 0; border-radius: 14px; border: 1.5px solid rgba(148,163,184,0.2); background: rgba(255,255,255,0.7); backdrop-filter: blur(6px); transition: border-color .2s, box-shadow .2s, background .2s; }
-.gp-search:focus-within { border-color: #7c3aed; box-shadow: 0 0 0 4px rgba(124,58,237,0.12); background: rgba(255,255,255,0.9); }
-.gp-search .gp-search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 15px; color: #94a3b8; pointer-events: none; transition: color .2s; }
-.gp-search:focus-within .gp-search-icon { color: #7c3aed; }
-.gp-search-input { width: 100%; padding: 11px 46px 11px 44px; border: 0; border-radius: 14px; font: inherit; font-size: 13px; background: transparent; color: inherit; box-sizing: border-box; outline: none; }
-.gp-search-input::placeholder { color: #94a3b8; }
-.gp-search-clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; border-radius: 50%; border: 0; background: rgba(148,163,184,0.15); color: #64748b; display: none; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; transition: background .2s, transform .2s; padding: 0; line-height: 1; }
-.gp-search-clear:hover { background: rgba(124,58,237,0.15); color: #7c3aed; transform: translateY(-50%) scale(1.1); }
-.dark .gp-search { background: rgba(15,23,42,0.6); border-color: rgba(148,163,184,0.12); }
-.dark .gp-search:focus-within { background: rgba(15,23,42,0.8); border-color: #a78bfa; box-shadow: 0 0 0 4px rgba(167,139,250,0.1); }
-.dark .gp-search:focus-within .gp-search-icon { color: #a78bfa; }
-.dark .gp-search-clear:hover { background: rgba(167,139,250,0.15); color: #a78bfa; }
+/* ═══ SECTION SWITCHER ═══ */
+.gp-section-switcher { display:flex; gap:8px; margin-bottom:20px; padding:4px; background:var(--gp-card); border:1px solid var(--gp-border); border-radius:16px; overflow:hidden }
+.gp-switcher-btn { flex:1; padding:10px 16px; border-radius:12px; border:0; font-size:.8rem; font-weight:700; cursor:pointer; transition:all .2s; background:transparent; color:var(--gp-muted); display:flex; align-items:center; justify-content:center; gap:6px; font-family:'Plus Jakarta Sans',sans-serif; text-decoration:none }
+.gp-switcher-btn:hover { color:var(--gp-text) }
+.gp-switcher-btn.active { background:rgba(139,92,246,.1); color:var(--gp-accent); box-shadow:0 2px 8px rgba(139,92,246,.08) }
 
-/* Mobile responsive overrides */
-@media (max-width: 768px) {
-  .gp-hero-content h1 { font-size: clamp(20px, 5vw, 32px) !important; }
-  .gp-hero-content p { font-size: 13px !important; }
-  .gp-hero-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 14px 16px 20px !important; }
-  .gp-stat-card { padding: 16px 12px !important; flex-direction: column !important; gap: 6px; text-align: center !important; border-radius: 16px; backdrop-filter: blur(8px); }
-  .gp-stat-card .gp-stat-icon { font-size: 22px; width: 48px; height: 48px; border-radius: 14px; flex-shrink: 0; margin-bottom: 8px; }
-  .gp-stat-card .gp-stat-value { font-size: 20px !important; }
-  .gp-stat-card .gp-stat-label { font-size: 11px !important; }
-  .gp-stat-card:hover { transform: none; }
-  /* Profile bar mobile */
-  .gp-profile-bar { flex-wrap: wrap; gap: 10px; padding: 14px 16px !important; border-radius: 18px; }
-  .gp-profile-bar-avatar { width: 44px; height: 44px; border-width: 2px; }
-  .gp-profile-bar-info strong { font-size: 14px; }
-  .gp-profile-bar-balance { margin-left: 0; padding: 5px 12px; }
-  .gp-profile-bar-balance .gp-balance-value { font-size: 14px; }
-  .gp-profile-bar-actions { width: 100%; display: flex; gap: 6px; flex-wrap: wrap; }
-  .gp-profile-bar-actions .gp-btn { font-size: 11px; padding: 7px 10px; flex: 1; min-width: 0; justify-content: center; white-space: nowrap; border-radius: 10px; font-weight: 600; }
-  /* Section header mobile */
-  .gp-section-switcher { overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 0; padding: 0 4px; }
-  .gp-switcher-btn { white-space: nowrap; font-size: 13px; padding: 10px 14px; flex-shrink: 0; border-radius: 10px; }
-  .gp-section-header { display: flex; flex-direction: column; gap: 12px; padding: 0 16px 14px !important; position: relative; }
-  .gp-section-header h2 { font-size: 17px; letter-spacing: -.02em; }
-  .gp-section-header h2 i { font-size: 16px; }
-  .gp-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; display: flex; gap: 6px; width: 100%; padding-bottom: 4px; margin-top: -2px; }
-  .gp-tab { white-space: nowrap; font-size: 12px; padding: 8px 14px; flex-shrink: 0; border-radius: 9px; }
-  .gp-search { width: 100%; flex-shrink: 1; border-radius: 12px; }
-  .gp-search-input { font-size: 13px; padding: 11px 44px 11px 42px !important; }
-  .gp-search:focus-within { box-shadow: 0 0 0 4px rgba(124,58,237,0.1); }
-  .gp-search .gp-search-icon { left: 13px; font-size: 14px; }
-  .gp-grid { grid-template-columns: 1fr !important; gap: 12px !important; padding: 0 4px !important; }
-  .gp-card { border-radius: 18px !important; }
-  .gp-card-body h3 { font-size: 15px !important; }
-  .gp-card-body p { font-size: 12px !important; display: -webkit-box; line-clamp: 2; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .gp-card-meta { flex-wrap: wrap; gap: 6px; font-size: 12px !important; }
-  .gp-card-meta > div { flex: 1; min-width: calc(50% - 6px); }
-  .gp-card-actions { flex-wrap: wrap; gap: 6px; }
-  .gp-card-actions .gp-btn { font-size: 11px; padding: 7px 12px; border-radius: 10px; }
-  .gp-my-grid { grid-template-columns: 1fr !important; gap: 14px !important; }
-  .gp-my-panel { border-radius: 18px; overflow: hidden; }
-  .gp-my-panel-header { font-size: 14px; padding: 14px 18px !important; }
-  .gp-my-item { flex-wrap: wrap; gap: 8px; padding: 12px 14px !important; }
-  .gp-my-item > div:last-child { width: 100%; display: flex; gap: 6px; }
-  .gp-my-item > div:last-child .gp-btn { flex: 1; justify-content: center; font-size: 11px; padding: 6px 10px; border-radius: 9px; }
-  .gp-my-info strong { font-size: 13px; }
-  .gp-my-info span { font-size: 11px; }
-  .gp-agent-quick { flex-direction: column; gap: 6px; }
-  .gp-agent-quick .gp-btn { width: 100%; justify-content: center; border-radius: 10px; }
-  .gp-modal-panel { margin: 12px !important; max-height: 88vh !important; border-radius: 22px !important; }
-  .gp-modal-body { padding: 16px !important; }
-  .gp-form-grid { grid-template-columns: 1fr !important; gap: 10px !important; }
-  .gp-form-grid.three { grid-template-columns: 1fr !important; }
-  .gp-icon-picker { gap: 4px; }
-  .gp-icon-opt { width: 36px; height: 36px; font-size: 14px; border-radius: 10px; }
-  .gp-color-picker { gap: 4px; }
-  .gp-color-opt { width: 28px; height: 28px; }
-  .ba-method-grid { gap: 8px; }
-  .ba-method-card { padding: 10px; border-radius: 14px; }
-  .gp-radio-group { flex-direction: column; gap: 6px; }
-  .gp-radio { padding: 10px 12px; border-radius: 10px; }
-  .gp-participant { flex-wrap: wrap; gap: 8px; padding: 10px; border-radius: 12px; }
-  .gp-team-member { flex-wrap: wrap; gap: 8px; padding: 10px; border-radius: 12px; }
-  .gp-team-add { flex-direction: column; gap: 8px; }
-  .gp-team-add .gp-btn { width: 100%; justify-content: center; border-radius: 10px; }
-  .gp-txn-item { flex-wrap: wrap; padding: 10px; border-radius: 12px; }
-  .gp-txn-amount { margin-left: auto; }
-  .gp-hero { padding: 20px 16px 0 !important; min-height: auto !important; border-radius: 0 0 28px 28px !important; }
-  .gp-hero-bg { min-height: 300px !important; }
-  .gp-section { padding: 12px 8px !important; }
-  .gp-empty { padding: 32px 16px !important; border-radius: 16px; }
-  .gp-empty i { font-size: 32px !important; }
-  .gp-countdown { font-size: 11px; }
-  .gp-participants { gap: 6px; }
-  .gp-agent-badge-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
-  .gp-agent-hero-title { font-size: 18px !important; }
-  .ba-inputs-grid { grid-template-columns: 1fr !important; gap: 10px; }
-  .ba-merchant-box--premium { padding: 12px !important; border-radius: 14px; }
-  .ba-instr-step { font-size: 12px; }
-  .gp-modal-actions { flex-wrap: wrap; gap: 8px; }
-  .gp-modal-actions .gp-btn { flex: 1; min-width: 0; justify-content: center; font-size: 12px; padding: 9px 12px; border-radius: 10px; }
-  .gp-section-header h2 i { font-size: 16px; }
-  .gp-card-head .gp-card-icon { width: 40px; height: 40px; font-size: 18px; border-radius: 12px; }
-  .gp-card-head .gp-badge { font-size: 10px; padding: 4px 10px; border-radius: 8px; }
-  .gp-card-actions .gp-agent-badge { font-size: 10px; padding: 3px 8px; }
-  .gp-card-meta i { font-size: 11px; }
-  .gp-card-tag { font-size: 11px; }
-  .gp-card-host { font-size: 11px; }
-  .gp-my-panel .gp-my-icon { width: 36px; height: 36px; font-size: 16px; border-radius: 10px; }
-  .gp-badge.sm { font-size: 9px; padding: 2px 8px; }
+/* ═══ SECTION ═══ */
+.gp-section { padding:16px 8px }
+.gp-section-header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0 12px 16px; flex-wrap:wrap }
+.gp-section-header h2 { font-size:1.15rem; font-weight:800; display:flex; align-items:center; gap:8px; color:var(--gp-text); flex-shrink:0; letter-spacing:-.02em }
+.gp-section-header h2 i { font-size:1rem; color:var(--gp-accent) }
+
+/* ═══ TABS ═══ */
+.gp-tabs { display:flex; gap:4px; flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none }
+.gp-tabs::-webkit-scrollbar { display:none }
+.gp-tab { border-radius:10px; font-weight:700; transition:all .18s; padding:7px 16px; font-size:.75rem; background:rgba(148,163,184,.08); color:var(--gp-muted); border:1px solid transparent; cursor:pointer; flex-shrink:0; white-space:nowrap; font-family:'Plus Jakarta Sans',sans-serif }
+.gp-tab:hover { background:rgba(139,92,246,.08); color:var(--gp-accent); border-color:rgba(139,92,246,.1) }
+.gp-tab.active { background:rgba(139,92,246,.1); color:var(--gp-accent); border-color:rgba(139,92,246,.2); box-shadow:0 2px 8px rgba(139,92,246,.1) }
+
+/* ═══ SEARCH ═══ */
+.gp-search { position:relative; width:260px; flex-shrink:0; border-radius:12px; border:2px solid var(--gp-border); background:var(--gp-card); transition:border-color .2s,box-shadow .2s }
+.gp-search:focus-within { border-color:var(--gp-accent); box-shadow:0 0 0 4px rgba(139,92,246,.1) }
+.gp-search-icon { position:absolute; left:13px; top:50%; transform:translateY(-50%); font-size:14px; color:var(--gp-muted); pointer-events:none; transition:color .2s }
+.gp-search:focus-within .gp-search-icon { color:var(--gp-accent) }
+.gp-search-input { width:100%; padding:10px 42px 10px 40px; border:0; border-radius:12px; font:inherit; font-size:.78rem; background:transparent; color:var(--gp-text); box-sizing:border-box; outline:none; font-family:'Plus Jakarta Sans',sans-serif }
+.gp-search-input::placeholder { color:var(--gp-muted) }
+.gp-search-clear { position:absolute; right:8px; top:50%; transform:translateY(-50%); width:22px; height:22px; border-radius:50%; border:0; background:rgba(148,163,184,.12); color:var(--gp-muted); display:none; align-items:center; justify-content:center; cursor:pointer; font-size:10px; transition:background .2s,transform .2s; padding:0; line-height:1 }
+.gp-search-clear:hover { background:rgba(139,92,246,.12); color:var(--gp-accent); transform:translateY(-50%) scale(1.1) }
+
+/* ═══ CARD GRID ═══ */
+.gp-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:16px; padding:0 8px }
+.gp-card { background:var(--gp-card); border-radius:22px; padding:0; transition:all .35s cubic-bezier(.34,1.56,.64,1); position:relative; overflow:hidden; border:1px solid var(--gp-border); box-shadow:0 4px 16px rgba(0,0,0,.02); display:flex; flex-direction:column }
+.gp-card::before { content:''; position:absolute; inset:0; border-radius:22px; padding:1px; background:linear-gradient(135deg,rgba(139,92,246,.12),transparent 40%,transparent 60%,rgba(5,150,105,.08)); -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); -webkit-mask-composite:xor; mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); mask-composite:exclude; pointer-events:none }
+.gp-card:hover { transform:translateY(-4px); box-shadow:0 16px 48px rgba(139,92,246,.08); border-color:rgba(139,92,246,.2) }
+.gp-card-accent { height:4px; flex-shrink:0 }
+.gp-card-head { display:flex; align-items:center; gap:10px; padding:16px 18px 0 }
+.gp-card-icon { width:44px; height:44px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0 }
+.gp-badge { font-size:.6rem; font-weight:700; padding:4px 12px; border-radius:999px; letter-spacing:.3px; display:inline-flex; align-items:center; gap:4px }
+.badge-live { background:rgba(5,150,105,.12); color:#059669 }
+.badge-upcoming { background:rgba(59,130,246,.12); color:#3b82f6 }
+.badge-ongoing { background:rgba(251,191,36,.12); color:#d97706 }
+.badge-completed { background:rgba(139,92,246,.12); color:#7c3aed }
+.badge-cancelled { background:rgba(220,38,38,.12); color:#dc2626 }
+.dark .badge-live { background:rgba(5,150,105,.15); color:#34d399 }
+.dark .badge-upcoming { background:rgba(59,130,246,.15); color:#93c5fd }
+.dark .badge-ongoing { background:rgba(251,191,36,.15); color:#fbbf24 }
+.dark .badge-completed { background:rgba(139,92,246,.15); color:#a78bfa }
+.dark .badge-cancelled { background:rgba(220,38,38,.15); color:#fca5a5 }
+.gp-card-body { padding:10px 18px 6px; flex:1 }
+.gp-card-body h3 { font-size:1rem; font-weight:800; color:var(--gp-text); margin:0 0 4px; letter-spacing:-.02em }
+.gp-card-tag { font-size:.7rem; color:var(--gp-muted); display:inline-flex; align-items:center; gap:4px; margin-right:8px }
+.gp-card-host { font-size:.7rem; color:var(--gp-muted); display:inline-flex; align-items:center; gap:4px }
+.gp-card-body p { font-size:.78rem; color:var(--gp-muted); margin:4px 0 0; line-height:1.45 }
+.gp-card-meta { display:grid; grid-template-columns:1fr 1fr; gap:6px 12px; padding:4px 18px 12px; font-size:.75rem; color:var(--gp-muted) }
+.gp-card-meta > div { display:flex; align-items:center; gap:6px }
+.gp-card-meta i { font-size:.65rem; width:14px; text-align:center; opacity:.7 }
+.gp-countdown { font-size:.68rem; font-weight:700; color:var(--gp-accent); margin-left:auto }
+.gp-card-actions { display:flex; align-items:center; gap:6px; padding:8px 18px 16px; flex-wrap:wrap; border-top:1px solid var(--gp-border); margin:0 18px 0; padding:12px 0 16px }
+
+/* ═══ BUTTONS (P2P style) ═══ */
+.gp-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; border:0; cursor:pointer; transition:all .2s; font-weight:700; font-family:'Plus Jakarta Sans',sans-serif; text-decoration:none; flex-shrink:0; font-size:.78rem; padding:10px 18px; border-radius:12px }
+.gp-btn:active { transform:scale(.97) }
+.gp-btn-primary { background:linear-gradient(135deg,#8b5cf6,#7c3aed); color:#fff; box-shadow:0 4px 12px rgba(139,92,246,.2) }
+.gp-btn-primary:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(139,92,246,.3) }
+.gp-btn-accent { background:linear-gradient(135deg,#8b5cf6,#7c3aed); color:#fff; box-shadow:0 4px 12px rgba(139,92,246,.2) }
+.gp-btn-accent:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(139,92,246,.3) }
+.gp-btn-gradient { background:linear-gradient(135deg,#8b5cf6,#6366f1); color:#fff; box-shadow:0 4px 14px rgba(139,92,246,.25) }
+.gp-btn-gradient:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(139,92,246,.35) }
+.gp-btn-gradient--gold { background:linear-gradient(135deg,#f59e0b,#d97706); box-shadow:0 4px 14px rgba(245,158,11,.25) }
+.gp-btn-gradient--gold:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(245,158,11,.35) }
+.gp-btn-ghost { background:transparent; color:var(--gp-muted); border:1px solid transparent }
+.gp-btn-ghost:hover { background:rgba(148,163,184,.08); color:var(--gp-text) }
+.gp-btn-outline { background:transparent; color:var(--gp-text); border:2px solid var(--gp-border) }
+.gp-btn-outline:hover { border-color:var(--gp-accent); color:var(--gp-accent); background:rgba(139,92,246,.04) }
+.gp-btn-success { background:linear-gradient(135deg,#059669,#10b981); color:#fff; box-shadow:0 4px 12px rgba(5,150,105,.2) }
+.gp-btn-success:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(5,150,105,.3) }
+.gp-btn-disabled { background:rgba(148,163,184,.08); color:var(--gp-muted); cursor:not-allowed; opacity:.6; transform:none !important; box-shadow:none !important }
+.gp-btn-sm { font-size:.72rem; padding:9px 16px; border-radius:10px }
+.gp-btn-xs { font-size:.65rem; padding:6px 12px; border-radius:9px }
+.gp-agent-badge { display:inline-flex; align-items:center; gap:4px; font-size:.6rem; font-weight:700; padding:3px 10px; border-radius:999px; background:rgba(251,191,36,.12); color:#d97706 }
+.gp-modal-actions .gp-btn { min-width:80px; justify-content:center }
+
+/* ═══ ROLE BADGE ═══ */
+.gp-role-badge { display:inline-flex; align-items:center; gap:4px; font-size:.6rem; font-weight:700; padding:2px 10px; border-radius:999px; margin-top:2px }
+.gp-role-agent { background:rgba(251,191,36,.12); color:#d97706 }
+.gp-role-gamer { background:rgba(139,92,246,.1); color:var(--gp-accent) }
+
+/* ═══ MY STUFF ═══ */
+.gp-my-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:0 8px }
+.gp-my-panel { background:var(--gp-card); border:1px solid var(--gp-border); border-radius:20px; overflow:hidden; box-shadow:var(--gp-shadow) }
+.gp-my-panel-header { display:flex; align-items:center; gap:8px; padding:14px 20px; font-size:.85rem; font-weight:800; border-bottom:1px solid var(--gp-border); color:var(--gp-text) }
+.gp-my-panel-header i { color:var(--gp-accent) }
+.gp-my-panel-header .gp-count { margin-left:auto; font-size:.7rem; font-weight:700; background:rgba(139,92,246,.1); color:var(--gp-accent); padding:2px 10px; border-radius:999px }
+.gp-my-list { padding:4px }
+.gp-my-item { display:flex; align-items:center; gap:12px; padding:12px 16px; border-radius:14px; transition:background .15s }
+.gp-my-item:hover { background:var(--gp-bg) }
+.gp-my-icon { width:40px; height:40px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0 }
+.gp-my-info { flex:1; min-width:0 }
+.gp-my-info strong { display:block; font-size:.82rem; font-weight:700; color:var(--gp-text) }
+.gp-my-info span { font-size:.7rem; color:var(--gp-muted); display:flex; align-items:center; gap:4px }
+.gp-my-empty { text-align:center; padding:24px 16px; font-size:.78rem; color:var(--gp-muted) }
+.gp-agent-quick { display:flex; gap:8px; padding:14px 20px }
+.gp-agent-quick .gp-btn { flex:1; justify-content:center }
+
+/* ═══ EMPTY STATE ═══ */
+.gp-empty { text-align:center; padding:48px 20px; color:var(--gp-muted); grid-column:1/-1 }
+.gp-empty i { font-size:2.5rem; display:block; margin-bottom:12px; opacity:.3 }
+.gp-empty h3 { font-size:1.05rem; font-weight:700; color:var(--gp-text); margin:0 0 4px }
+.gp-empty p { font-size:.8rem; margin:0 }
+
+/* ═══ LEADERBOARD ═══ */
+.gp-lb-row { display:grid; grid-template-columns:36px 1fr 80px 90px 60px; gap:8px; padding:12px 16px; align-items:center; border-bottom:1px solid var(--gp-border); transition:background .15s; font-size:.78rem; cursor:pointer; text-decoration:none; color:inherit }
+.gp-lb-row:last-child { border-bottom:none }
+.gp-lb-row:hover { background:var(--gp-bg) }
+.gp-lb-rank { font-weight:800; color:var(--gp-muted); text-align:center }
+.gp-lb-rank.gold { color:#f59e0b } .gp-lb-rank.silver { color:#94a3b8 } .gp-lb-rank.bronze { color:#cd7f32 }
+.gp-lb-cell { font-weight:700; color:var(--gp-text); text-align:center }
+.gp-lb-prize { color:var(--gp-green); text-align:center; font-weight:700 }
+
+/* ═══ MODALS (P2P design) ═══ */
+.gp-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:99998; backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px) }
+.gp-overlay.hidden { display:none }
+.gp-modal { position:fixed; inset:0; z-index:99999; display:flex; align-items:center; justify-content:center; animation:gpModalIn .3s ease }
+.gp-modal.hidden { display:none }
+@keyframes gpModalIn { from { opacity:0; transform:translateY(30px) scale(.98) } to { opacity:1; transform:translateY(0) scale(1) } }
+.gp-modal-panel { background:var(--gp-card); width:100%; max-width:520px; max-height:92vh; border-radius:28px; overflow-y:auto; box-shadow:0 10px 40px rgba(0,0,0,.2); margin:16px; scrollbar-width:none; -ms-overflow-style:none }
+.gp-modal-panel::-webkit-scrollbar { display:none }
+.gp-modal-panel.lg { max-width:640px }
+.gp-modal-panel.sm { max-width:440px }
+.gp-modal-panel--crown { background:linear-gradient(180deg,var(--gp-card),rgba(255,255,255,.95)) }
+.dark .gp-modal-panel--crown { background:linear-gradient(180deg,var(--gp-card),rgba(30,41,59,.98)) }
+.gp-modal-head { display:flex; align-items:center; justify-content:space-between; padding:18px 22px; border-bottom:1px solid var(--gp-border); position:sticky; top:0; background:var(--gp-card); z-index:2 }
+.gp-modal-head h3 { margin:0; font-size:1.05rem; font-weight:800; display:flex; align-items:center; gap:8px; color:var(--gp-text) }
+.gp-modal-close { width:34px; height:34px; border-radius:50%; border:0; background:rgba(0,0,0,.05); cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--gp-muted); font-size:14px; transition:all .2s; backdrop-filter:blur(4px) }
+.gp-modal-close:hover { background:rgba(239,68,68,.12); color:#dc2626; transform:rotate(90deg) }
+.dark .gp-modal-close { background:rgba(255,255,255,.08); color:#9ca3af }
+.dark .gp-modal-close:hover { background:rgba(239,68,68,.2); color:#fca5a5 }
+.gp-modal-body { padding:20px 22px 24px }
+.gp-modal-sub { font-size:.82rem; color:var(--gp-muted); margin:0 0 12px }
+
+/* ═══ FORM ELEMENTS ═══ */
+.gp-form-group { display:flex; flex-direction:column; gap:4px }
+.gp-form-group label { font-size:.72rem; font-weight:700; color:var(--gp-text) }
+.gp-form-hint { font-size:.65rem; color:var(--gp-muted); margin-top:2px }
+.gp-input { width:100%; padding:10px 14px; border-radius:12px; border:2px solid var(--gp-border); font-size:.82rem; font-weight:700; outline:none; box-sizing:border-box; font-family:'Plus Jakarta Sans',sans-serif; background:var(--gp-card); color:var(--gp-text); transition:border-color .2s,box-shadow .2s; box-shadow:0 2px 4px rgba(0,0,0,.02) }
+.gp-input:focus { border-color:var(--gp-accent); box-shadow:0 0 0 4px rgba(139,92,246,.1) }
+.gp-input::placeholder { color:var(--gp-muted); font-weight:400 }
+select.gp-input { cursor:pointer; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 14px center; padding:10px 40px 10px 14px }
+select.gp-input:hover { border-color:var(--gp-accent); background-color:rgba(139,92,246,.02) }
+.dark select.gp-input:hover { background-color:rgba(139,92,246,.04) }
+select.gp-input option { padding:10px 12px; font-weight:500; background:var(--gp-card); color:var(--gp-text) }
+.gp-input-group { display:flex; align-items:stretch; border-radius:12px; overflow:hidden; border:2px solid var(--gp-border); transition:border-color .2s,box-shadow .2s }
+.gp-input-group:focus-within { border-color:var(--gp-accent); box-shadow:0 0 0 4px rgba(139,92,246,.1) }
+.gp-input-group .gp-input { border:none; border-radius:0 }
+.gp-input-group .gp-input:focus { box-shadow:none }
+.gp-input-prefix { display:flex; align-items:center; padding:0 12px; font-size:.82rem; font-weight:700; background:var(--gp-bg); color:var(--gp-muted); border-right:1px solid var(--gp-border) }
+.gp-form-grid { display:grid; gap:12px; margin-bottom:10px }
+.gp-form-grid.two { grid-template-columns:1fr 1fr }
+.gp-form-grid.three { grid-template-columns:1fr 1fr 1fr }
+
+/* ═══ RADIO ═══ */
+.gp-radio-group { display:flex; gap:8px; flex-wrap:wrap }
+.gp-radio { display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px; border:2px solid var(--gp-border); cursor:pointer; transition:all .18s; flex:1; font-size:.78rem; font-weight:600; color:var(--gp-text); background:var(--gp-card) }
+.gp-radio:has(input:checked) { border-color:var(--gp-accent); background:rgba(139,92,246,.06); color:var(--gp-accent) }
+.gp-radio input { accent-color:var(--gp-accent) }
+
+/* ═══ ICON & COLOR PICKERS ═══ */
+.gp-icon-picker { display:flex; gap:6px; flex-wrap:wrap }
+.gp-icon-opt { width:40px; height:40px; border-radius:12px; border:2px solid transparent; background:var(--gp-bg); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px; color:var(--gp-muted); transition:all .15s }
+.gp-icon-opt:hover { border-color:var(--gp-accent); color:var(--gp-accent) }
+.gp-icon-opt.active { border-color:var(--gp-accent); background:rgba(139,92,246,.1); color:var(--gp-accent) }
+.gp-color-picker { display:flex; gap:6px; flex-wrap:wrap }
+.gp-color-opt { width:32px; height:32px; border-radius:50%; border:3px solid transparent; cursor:pointer; transition:all .15s; outline:none }
+.gp-color-opt:hover { transform:scale(1.15) }
+.gp-color-opt.active { border-color:var(--gp-accent); box-shadow:0 0 0 2px rgba(139,92,246,.3); transform:scale(1.1) }
+
+/* ═══ AGENT BADGE GRID ═══ */
+.gp-agent-badge-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px }
+.gp-agent-badge--premium { position:relative; padding:16px; border-radius:18px; background:var(--gp-card); border:1px solid var(--gp-border); overflow:hidden; text-align:center; transition:all .2s }
+.gp-agent-badge--premium:hover { border-color:rgba(139,92,246,.2); transform:translateY(-2px) }
+.gp-agent-badge-glow { position:absolute; top:-30px; right:-30px; width:80px; height:80px; border-radius:50%; background:radial-gradient(circle,rgba(139,92,246,.08),transparent); pointer-events:none }
+.gp-agent-badge-icon { display:block; font-size:1.8rem; margin-bottom:6px }
+.gp-agent-badge-label { font-size:.78rem; font-weight:700; color:var(--gp-text); display:block }
+.gp-agent-badge-desc { font-size:.65rem; color:var(--gp-muted); margin-top:2px }
+
+/* ═══ AGENT FEE ═══ */
+.gp-agent-fee { position:relative; text-align:center; padding:18px; border-radius:18px; background:linear-gradient(135deg,rgba(251,191,36,.08),rgba(245,158,11,.04)); border:1px solid rgba(251,191,36,.2); margin-bottom:16px; overflow:hidden }
+.gp-agent-fee-glow { position:absolute; top:-50%; left:-50%; width:200%; height:200%; background:radial-gradient(circle,rgba(251,191,36,.05),transparent 60%); animation:gpGlow 4s ease-in-out infinite; pointer-events:none }
+@keyframes gpGlow { 0%,100%{opacity:.5;transform:translate(0,0)} 50%{opacity:1;transform:translate(10%,-10%)} }
+.gp-agent-fee-label { display:block; font-size:.72rem; color:var(--gp-muted); margin-bottom:4px; font-weight:600 }
+.gp-agent-fee-amount { display:block; font-size:1.4rem; font-weight:900; color:#d97706 }
+
+/* ═══ AGENT HERO ═══ */
+.gp-agent-hero { text-align:center; padding:24px 16px 20px; position:relative; overflow:hidden; border-radius:18px; background:linear-gradient(135deg,rgba(139,92,246,.04),rgba(99,102,241,.02)); border:1px solid var(--gp-border); margin-bottom:16px }
+.gp-agent-hero-glow { position:absolute; top:-30%; right:-20%; width:180px; height:180px; border-radius:50%; background:radial-gradient(circle,rgba(139,92,246,.08),transparent); pointer-events:none }
+.gp-agent-hero-icon { font-size:2.8rem; display:block; margin-bottom:8px }
+.gp-agent-hero-title { font-size:1.15rem; font-weight:800; color:var(--gp-text); margin-bottom:4px }
+.gp-agent-hero-sub { font-size:.78rem; color:var(--gp-muted) }
+
+/* ═══ PAYMENT (BECOME AGENT) ═══ */
+.gp-pay-note { padding:14px 16px; border-radius:14px; background:rgba(251,191,36,.08); border:1px solid rgba(251,191,36,.15); font-size:.78rem; color:#92400e; margin-bottom:16px; display:flex; align-items:center; gap:8px }
+.dark .gp-pay-note { color:#fbbf24; background:rgba(251,191,36,.06) }
+.gp-pay-note i { font-size:1rem; color:#d97706; flex-shrink:0 }
+.ba-method-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px }
+.ba-method-card { display:flex; align-items:center; justify-content:center; padding:12px; border-radius:16px; border:2px solid var(--gp-border); background:var(--gp-card); cursor:pointer; transition:all .2s; min-height:60px }
+.ba-method-card:hover { border-color:var(--gp-accent); background:rgba(139,92,246,.04) }
+.ba-method-card.active { border-color:#E2136E; background:#fdf2f8 }
+.dark .ba-method-card.active { background:rgba(226,19,110,.1) }
+.ba-method-card img { max-height:36px; max-width:100%; object-fit:contain }
+.ba-merchant-box--premium { padding:16px; border-radius:16px; background:var(--gp-bg); border:1px solid var(--gp-border); margin-bottom:16px; display:none }
+.ba-merchant-header { display:flex; align-items:center; gap:8px; font-size:.85rem; font-weight:800; margin-bottom:12px; color:var(--gp-text) }
+.ba-merchant-header img { height:22px }
+.ba-instr-step { font-size:.75rem; color:var(--gp-muted); padding:5px 0; line-height:1.5 }
+.ba-instr-step strong { color:var(--gp-text) }
+.ba-merchant-num { font-size:.9rem; font-weight:800; letter-spacing:.5px }
+.ba-copy-btn { display:inline-flex; align-items:center; gap:4px; padding:2px 10px; border-radius:8px; border:0; background:rgba(139,92,246,.1); color:var(--gp-accent); font-size:.6rem; font-weight:700; cursor:pointer; transition:all .15s; vertical-align:middle }
+.ba-copy-btn:hover { background:rgba(139,92,246,.2) }
+.ba-instr-footer { margin-top:10px; padding-top:10px; border-top:1px solid var(--gp-border); font-size:.72rem; color:var(--gp-muted) }
+.ba-inputs-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px }
+.ba-input-wrap { position:relative; display:flex; align-items:center; border-radius:12px; border:2px solid var(--gp-border); transition:all .2s }
+.ba-input-wrap:focus-within { border-color:var(--gp-accent); box-shadow:0 0 0 4px rgba(139,92,246,.1) }
+.ba-input-icon { display:flex; align-items:center; justify-content:center; width:42px; flex-shrink:0; color:var(--gp-muted); font-size:1rem }
+.ba-input { flex:1; padding:10px 14px 10px 0; border:0; font-size:.8rem; font-weight:600; outline:none; font-family:'Plus Jakarta Sans',sans-serif; background:transparent; color:var(--gp-text) }
+.ba-input::placeholder { color:var(--gp-muted); font-weight:400 }
+.ba-actions { margin-top:12px }
+.gp-modal-step { display:none; animation:gpModalIn .3s ease }
+.gp-modal-step.active { display:block }
+.gp-balance-notice { font-size:.72rem; color:var(--gp-muted); padding:8px 0; text-align:right }
+
+/* ═══ FEEDBACK & TOAST ═══ */
+.gp-feedback { padding:10px 14px; border-radius:12px; font-size:.75rem; font-weight:600; margin-top:12px; display:none }
+.gp-feedback.success { display:block; background:rgba(5,150,105,.1); color:var(--gp-green); border:1px solid rgba(5,150,105,.2) }
+.gp-feedback.error { display:block; background:rgba(220,38,38,.1); color:var(--gp-red); border:1px solid rgba(220,38,38,.2) }
+.dark .gp-feedback.success { background:rgba(5,150,105,.12); color:#34d399 }
+.dark .gp-feedback.error { background:rgba(220,38,38,.12); color:#fca5a5 }
+.gp-feedback.hidden { display:none }
+.gp-toast { position:fixed; bottom:24px; right:24px; z-index:999999; padding:12px 20px; border-radius:16px; font-size:.82rem; font-weight:700; display:flex; align-items:center; gap:10px; box-shadow:0 8px 32px rgba(0,0,0,.12); animation:gpToastIn .35s ease; max-width:360px; color:#fff }
+.gp-toast.success { background:linear-gradient(135deg,#059669,#10b981) }
+.gp-toast.error { background:linear-gradient(135deg,#dc2626,#ef4444) }
+.gp-toast.info { background:linear-gradient(135deg,#3b82f6,#6366f1) }
+@keyframes gpToastIn { from { opacity:0; transform:translateY(20px) scale(.95) } to { opacity:1; transform:translateY(0) scale(1) } }
+.gp-loading { text-align:center; padding:24px; font-size:.78rem; color:var(--gp-muted) }
+
+/* ═══ SUCCESS OVERLAY ═══ */
+.gp-success-overlay { position:fixed; inset:0; z-index:999999; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.45); backdrop-filter:blur(6px) }
+.gp-success-box { text-align:center; padding:40px 48px; border-radius:28px; background:var(--gp-card); box-shadow:0 20px 60px rgba(0,0,0,.15); max-width:380px; animation:gpModalIn .3s ease }
+.gp-success-icon { width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:1.5rem }
+.gp-success-icon { background:rgba(5,150,105,.1); color:var(--gp-green) }
+.gp-fail-icon { width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:1.5rem; background:rgba(220,38,38,.1); color:var(--gp-red) }
+.gp-success-text { font-size:1.2rem; font-weight:800; color:var(--gp-text); margin-bottom:4px }
+.gp-success-sub { font-size:.78rem; color:var(--gp-muted) }
+
+/* ═══ PARTICIPANT ITEMS ═══ */
+.gp-participants { display:flex; flex-direction:column; gap:8px }
+.gp-participant { display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:14px; background:var(--gp-bg); transition:background .15s }
+.gp-participant img { width:36px; height:36px; border-radius:50%; object-fit:cover; flex-shrink:0 }
+.gp-participant-info { flex:1; min-width:0 }
+.gp-participant-info strong { display:block; font-size:.8rem; font-weight:700; color:var(--gp-text) }
+.gp-participant-info span { font-size:.68rem; color:var(--gp-muted) }
+.gp-team-members { display:flex; flex-direction:column; gap:6px }
+.gp-team-member { display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:14px; background:var(--gp-bg) }
+.gp-team-member img { width:34px; height:34px; border-radius:50%; object-fit:cover; flex-shrink:0 }
+.gp-team-member-info { flex:1; min-width:0 }
+.gp-team-member-info strong { display:block; font-size:.78rem; font-weight:700; color:var(--gp-text) }
+.gp-team-member-role { font-size:.65rem; color:var(--gp-muted); text-transform:capitalize }
+.gp-team-add { display:flex; gap:8px; padding:12px 16px }
+.gp-team-add .gp-input { flex:1 }
+
+/* ═══ TXN ITEMS ═══ */
+.gp-txns { display:flex; flex-direction:column; gap:4px }
+.gp-txn-item { display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:14px; background:var(--gp-bg); transition:background .15s }
+.gp-txn-icon { width:34px; height:34px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0 }
+.gp-txn-icon.credit { background:rgba(5,150,105,.1); color:var(--gp-green) }
+.gp-txn-icon.debit { background:rgba(220,38,38,.1); color:var(--gp-red) }
+.gp-txn-info { flex:1; min-width:0 }
+.gp-txn-info strong { display:block; font-size:.78rem; font-weight:700; color:var(--gp-text) }
+.gp-txn-info span { font-size:.65rem; color:var(--gp-muted) }
+.gp-txn-amount { font-size:.85rem; font-weight:800; flex-shrink:0 }
+.gp-txn-amount.credit { color:var(--gp-green) }
+.gp-txn-amount.debit { color:var(--gp-red) }
+
+/* ═══ MISC ═══ */
+.gp-join-fee { font-size:.78rem; color:var(--gp-muted); padding:8px 14px; border-radius:12px; background:rgba(16,185,129,.06); border:1px solid rgba(16,185,129,.1); margin-bottom:12px }
+.gp-modal-actions { display:flex; gap:8px; margin-top:14px; justify-content:flex-end }
+.hidden { display:none !important }
+/* ═══ PROFILE CARD ═══ */
+.gp-profile-card { text-align:center; margin-bottom:20px; border-radius:20px; overflow:hidden; border:1px solid var(--gp-border); background:var(--gp-card) }
+.gp-profile-card-cover { height:80px; background:linear-gradient(135deg,rgba(139,92,246,.3),rgba(99,102,241,.15)); position:relative; overflow:hidden }
+.gp-profile-card-cover img { display:none }
+.gp-profile-card-avatar { width:72px; height:72px; border-radius:50%; overflow:hidden; border:4px solid var(--gp-card); margin:-40px auto 8px; box-shadow:0 4px 16px rgba(0,0,0,.1); position:relative }
+.gp-profile-card-avatar img { width:100%; height:100%; object-fit:cover }
+.gp-profile-card-body h4 { font-size:1.05rem; font-weight:800; color:var(--gp-text); margin:0; letter-spacing:-.02em }
+.gp-profile-card-tag { font-size:.75rem; color:var(--gp-accent); font-weight:600 }
+
+/* ═══ PROFILE STATS ═══ */
+.gp-profile-stats { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px }
+.gp-profile-stat { padding:14px 12px; border-radius:14px; background:var(--gp-bg); border:1px solid var(--gp-border); text-align:center; transition:all .2s }
+.gp-profile-stat:hover { border-color:rgba(139,92,246,.2) }
+.gp-profile-stat-icon { display:block; font-size:1.2rem; margin-bottom:4px; color:var(--gp-accent) }
+.gp-profile-stat-label { display:block; font-size:.6rem; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--gp-muted); margin-bottom:2px }
+.gp-profile-stat-value { display:block; font-size:.82rem; font-weight:800; color:var(--gp-text) }
+
+/* ═══ PROFILE STATS TITLE ═══ */
+.gp-profile-stats-title { font-size:.78rem; font-weight:700; color:var(--gp-text); display:flex; align-items:center; gap:6px; margin-bottom:8px; padding-top:4px }
+.gp-profile-stats-title i { color:var(--gp-accent); font-size:.7rem }
+
+/* ═══ GAME SKILLS ═══ */
+.gp-profile-game-skills { display:flex; flex-direction:column; gap:6px; margin-bottom:14px }
+.gp-profile-game-skill { display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:12px; background:var(--gp-bg); border:1px solid var(--gp-border); transition:all .15s }
+.gp-profile-game-skill:hover { border-color:rgba(139,92,246,.15) }
+.gp-game-skill-icon { width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; background:rgba(139,92,246,.1); color:var(--gp-accent); font-size:.7rem; flex-shrink:0 }
+.gp-game-skill-name { font-size:.75rem; font-weight:700; color:var(--gp-text); flex:1; min-width:0 }
+.gp-game-skill-level { font-size:.65rem; font-weight:600; color:var(--gp-muted); flex-shrink:0; width:72px; text-align:right }
+.gp-game-skill-bar { flex:0 0 80px; height:4px; border-radius:99px; background:var(--gp-border); overflow:hidden }
+.gp-game-skill-bar span { display:block; height:100%; border-radius:99px; background:linear-gradient(90deg,var(--gp-accent),#a78bfa); transition:width .3s }
+.gp-profile-no-skills { text-align:center; padding:16px; font-size:.72rem; color:var(--gp-muted); border:1px dashed var(--gp-border); border-radius:12px }
+.gp-profile-no-skills a { color:var(--gp-accent); font-weight:600 }
+.gp-profile-info-links { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:14px; font-size:.72rem; color:var(--gp-muted) }
+.gp-profile-info-links i { width:14px; text-align:center }
+
+/* ═══ GAME SKILLS EDITOR ═══ */
+.gp-game-skills-editor { display:flex; flex-direction:column; gap:5px; margin-bottom:12px }
+.gp-game-skill-row { display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:10px; background:var(--gp-bg); border:1px solid var(--gp-border) }
+.gp-game-skill-icon-preview { width:26px; height:26px; border-radius:7px; display:flex; align-items:center; justify-content:center; background:rgba(139,92,246,.1); color:var(--gp-accent); font-size:.65rem; flex-shrink:0 }
+.gp-game-skill-row-name { font-size:.72rem; font-weight:600; color:var(--gp-text); flex:1; min-width:0 }
+.gp-game-skill-row-select { width:125px; font-size:.7rem; padding:6px 28px 6px 10px; border-radius:10px; flex-shrink:0 }
+.gp-add-game-skill-btn { margin-top:2px; font-size:.7rem; padding:6px 12px; border-radius:10px; align-self:flex-start }
+
+/* ═══ PROFILE BIO ═══ */
+.gp-profile-bio { margin-bottom:16px; padding:14px 16px; border-radius:14px; background:var(--gp-bg); border:1px solid var(--gp-border) }
+.gp-profile-bio label { font-size:.65rem; font-weight:700; color:var(--gp-muted); display:flex; align-items:center; gap:4px; margin-bottom:4px }
+.gp-profile-bio label i { font-size:.55rem; opacity:.5 }
+.gp-profile-bio p { font-size:.8rem; color:var(--gp-text); margin:0; line-height:1.5 }
+
+/* ═══ PROFILE BAR (v2) ═══ */
+.gp-profile-bar { display:flex; align-items:center; gap:12px; padding:10px 16px; margin:0 0 16px; border-radius:20px; background:linear-gradient(135deg,var(--gp-card),rgba(139,92,246,.03)); border:1px solid var(--gp-border); box-shadow:0 2px 12px rgba(0,0,0,.02); position:relative; overflow:hidden }
+.gp-profile-bar::before { content:''; position:absolute; inset:0; border-radius:20px; padding:1px; background:linear-gradient(135deg,rgba(139,92,246,.08),transparent 50%,rgba(5,150,105,.04)); -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); -webkit-mask-composite:xor; mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); mask-composite:exclude; pointer-events:none }
+.gp-profile-avatar-wrap { position:relative; width:40px; height:40px; flex-shrink:0; cursor:pointer; transition:transform .2s }
+.gp-profile-avatar-wrap:hover { transform:scale(1.08) }
+.gp-profile-avatar-wrap img { width:100%; height:100%; border-radius:50%; object-fit:cover; position:relative; z-index:1 }
+.gp-profile-avatar-ring { position:absolute; inset:-3px; border-radius:50%; background:linear-gradient(135deg,#8b5cf6,#6366f1,#8b5cf6); z-index:0; animation:gpRingSpin 3s linear infinite; opacity:.7 }
+@keyframes gpRingSpin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
+.gp-profile-meta { flex:1; min-width:0; cursor:pointer }
+.gp-profile-name { display:flex; align-items:baseline; gap:6px; font-size:.85rem; font-weight:700; color:var(--gp-text); white-space:nowrap; overflow:hidden }
+.gp-profile-nick { font-size:.65rem; font-weight:600; color:var(--gp-accent); overflow:hidden; text-overflow:ellipsis }
+.gp-profile-tags { display:flex; align-items:center; gap:4px; margin-top:1px }
+.gp-profile-balance { display:flex; align-items:center; gap:6px; padding:5px 12px; border-radius:999px; background:linear-gradient(135deg,rgba(16,185,129,.08),rgba(5,150,105,.04)); border:1px solid rgba(16,185,129,.12); flex-shrink:0 }
+.gp-balance-icon { font-size:.7rem; color:var(--gp-green) }
+.gp-balance-amount { font-size:.82rem; font-weight:800; color:var(--gp-green); letter-spacing:-.3px }
+.gp-balance-add { display:flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; background:rgba(16,185,129,.12); color:var(--gp-green); font-size:8px; text-decoration:none; transition:all .15s }
+.gp-balance-add:hover { background:var(--gp-green); color:#fff; transform:scale(1.15) }
+.gp-profile-actions { display:flex; align-items:center; gap:5px; flex-shrink:0 }
+.gp-profile-actions .gp-btn { width:34px; height:34px; padding:0; border-radius:10px; font-size:.75rem }
+
+/* ═══ BECOME AGENT IN PROFILE ═══ */
+.gp-profile-become-agent { display:flex; align-items:center; gap:12px; padding:14px 16px; border-radius:16px; background:linear-gradient(135deg,rgba(251,191,36,.06),rgba(245,158,11,.03)); border:1px solid rgba(251,191,36,.15); margin-bottom:14px }
+.gp-profile-agent-icon { width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; background:rgba(251,191,36,.12); color:#d97706; font-size:1.1rem; flex-shrink:0 }
+.gp-profile-become-agent div { flex:1; min-width:0 }
+.gp-profile-become-agent strong { display:block; font-size:.78rem; color:var(--gp-text) }
+.gp-profile-become-agent p { font-size:.68rem; color:var(--gp-muted); margin:2px 0 0 }
+.gp-profile-become-agent .gp-btn { flex-shrink:0 }
+
+/* ═══ FULL-SCREEN MODALS ON MOBILE (P2P style) ═══ */
+@media (max-width:480px) {
+  .gp-modal .gp-modal-panel { max-width:none !important; max-height:none !important; border-radius:0 !important; width:100vw !important; height:100dvh !important; margin:0 !important; box-shadow:none !important }
+  .gp-modal .gp-modal-head { border-radius:0 }
+  body.gp-modal-open { overflow:hidden }
 }
-@media (max-width: 480px) {
-  .gp-hero-stats { padding: 10px 10px 16px !important; gap: 8px; }
-  .gp-stat-card { padding: 14px 10px !important; gap: 6px; border-radius: 14px; }
-  .gp-stat-card .gp-stat-icon { font-size: 18px; width: 40px; height: 40px; border-radius: 12px; margin-bottom: 6px; }
-  .gp-stat-card .gp-stat-value { font-size: 17px !important; }
-  .gp-stat-card .gp-stat-label { font-size: 10px !important; }
-  .gp-card { padding: 14px !important; }
-  .gp-card-head { gap: 8px; }
-  .gp-card-icon { width: 36px; height: 36px; font-size: 16px; }
-  .gp-badge { font-size: 10px; padding: 3px 8px; }
-  .gp-card-actions .gp-btn { font-size: 10px; padding: 6px 10px; }
-  .gp-countdown { font-size: 10px; }
-  .gp-section-header h2 { font-size: 15px; }
-  .gp-tab { font-size: 11px; padding: 7px 12px; }
-  .gp-section-header { padding: 0 12px 12px !important; gap: 10px; }
-  .gp-grid { padding: 0 2px !important; gap: 10px !important; }
-  .gp-card-meta > div { min-width: 100%; }
-  .gp-profile-bar { padding: 12px 14px !important; gap: 8px; }
-  .gp-profile-bar-avatar { width: 38px; height: 38px; }
-  .gp-profile-bar-info strong { font-size: 13px; }
-  .gp-profile-bar-balance { padding: 4px 10px; }
-  .gp-profile-bar-balance .gp-balance-value { font-size: 13px; }
-  .gp-profile-bar-actions .gp-btn { font-size: 10px; padding: 6px 8px; }
+
+/* ═══ CUSTOM SELECT (P2P style) ═══ */
+.gp-custom-select { position:relative; width:100% }
+.gp-select-trigger { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--gp-card); border:2px solid var(--gp-border); border-radius:12px; cursor:pointer; font-size:.78rem; font-weight:700; color:var(--gp-text); transition:all .2s; font-family:'Plus Jakarta Sans',sans-serif }
+.gp-select-trigger:hover { border-color:var(--gp-accent); background:rgba(139,92,246,.04) }
+.gp-select-trigger span { flex:1; text-align:left }
+.gp-select-trigger::after { content:'\f078'; font-family:'Font Awesome 6 Free'; font-weight:900; font-size:10px; opacity:.4; transition:transform .2s; margin-left:4px }
+.gp-custom-select.active .gp-select-trigger::after { transform:rotate(180deg); opacity:1; color:var(--gp-accent) }
+.gp-select-options { position:absolute; top:calc(100% + 6px); left:0; right:0; background:var(--gp-card); border:1px solid var(--gp-border); border-radius:12px; box-shadow:0 12px 32px rgba(0,0,0,.12); z-index:200; display:none; padding:6px; animation:gpSelectIn .2s ease; max-height:220px; overflow-y:auto; scrollbar-width:none }
+.gp-select-options::-webkit-scrollbar { display:none }
+@keyframes gpSelectIn { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:translateY(0) } }
+.gp-select-option { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; cursor:pointer; font-size:.78rem; font-weight:600; color:var(--gp-muted); transition:all .15s; margin-bottom:3px; font-family:'Plus Jakarta Sans',sans-serif }
+.gp-select-option:hover { background:var(--gp-bg); color:var(--gp-accent) }
+.gp-select-option.active { background:rgba(139,92,246,.1); color:var(--gp-accent) }
+.gp-custom-select.active .gp-select-options { display:block }
+.gp-custom-select.active .gp-select-trigger { border-color:var(--gp-accent); box-shadow:0 0 0 4px rgba(139,92,246,.1) }
+.gp-filter-select { flex-shrink:0; width:200px }
+.gp-modal-step-indicator { display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:18px }
+.gp-step-dot { width:8px; height:8px; border-radius:50%; background:var(--gp-border); transition:all .2s }
+.gp-step-dot.active { background:var(--gp-accent); width:24px; border-radius:99px }
+.gp-step-line { width:32px; height:2px; background:var(--gp-border) }
+
+/* ═══ OTP ═══ */
+.gp-otp-wrap { display:flex; gap:8px; justify-content:center; margin:12px 0 }
+.gp-otp-box { width:44px; height:52px; border-radius:14px; border:2px solid var(--gp-border); text-align:center; font-size:1.3rem; font-weight:800; outline:none; font-family:'Plus Jakarta Sans',sans-serif; background:var(--gp-card); color:var(--gp-text); transition:all .2s }
+.gp-otp-box:focus { border-color:var(--gp-accent); box-shadow:0 0 0 4px rgba(139,92,246,.1) }
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width:768px) {
+  .gp-page { padding:0 6px 1.5rem }
+  .gp-hero { padding:16px 12px 0; border-radius:0 0 24px 24px }
+  .gp-hero-bg { min-height:300px; border-radius:0 0 24px 24px }
+  .gp-hero-content h1 { font-size:clamp(18px,5vw,28px) }
+  .gp-hero-content p { font-size:.78rem }
+  .gp-hero-stats { grid-template-columns:1fr 1fr; gap:10px; padding:14px 4px 18px }
+  .gp-stat-card { padding:16px 10px; border-radius:18px }
+  .gp-stat-card .gp-stat-icon { font-size:20px; width:46px; height:46px; border-radius:14px; margin-bottom:8px }
+  .gp-stat-value { font-size:20px }
+  .gp-stat-label { font-size:11px }
+  .gp-stat-card:hover { transform:none }
+  .gp-profile-bar { flex-wrap:wrap; gap:8px; padding:10px 14px; border-radius:18px }
+  .gp-profile-avatar-wrap { width:36px; height:36px }
+  .gp-profile-name { font-size:.78rem }
+  .gp-profile-nick { font-size:.6rem }
+  .gp-profile-balance { padding:4px 10px; gap:4px }
+  .gp-balance-amount { font-size:.75rem }
+  .gp-profile-actions { gap:4px }
+  .gp-profile-actions .gp-btn { width:30px; height:30px; font-size:.65rem; border-radius:9px }
+  .gp-section-switcher { overflow-x:auto; -webkit-overflow-scrolling:touch; gap:0; padding:3px; border-radius:14px }
+  .gp-switcher-btn { white-space:nowrap; font-size:.75rem; padding:8px 12px; flex-shrink:0 }
+  .gp-section { padding:10px 4px }
+  .gp-section-header { flex-direction:column; gap:10px; padding:0 8px 12px }
+  .gp-section-header h2 { font-size:1rem }
+  .gp-filter-select { width:100% }
+  .gp-search { width:100% }
+  .gp-search-input { font-size:.75rem; padding:9px 38px 9px 36px }
+  .gp-grid { grid-template-columns:1fr; gap:12px; padding:0 4px }
+  .gp-card { border-radius:20px }
+  .gp-card-body h3 { font-size:.9rem }
+  .gp-card-body p { font-size:.72rem; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden }
+  .gp-card-meta { font-size:.7rem; grid-template-columns:1fr 1fr; gap:4px 8px }
+  .gp-card-actions .gp-btn { font-size:.65rem; padding:6px 10px; border-radius:10px }
+  .gp-my-grid { grid-template-columns:1fr; gap:14px }
+  .gp-my-panel { border-radius:18px }
+  .gp-my-panel-header { font-size:.82rem; padding:12px 16px }
+  .gp-my-item { gap:8px; padding:10px 14px; border-radius:12px }
+  .gp-my-info strong { font-size:.75rem }
+  .gp-my-info span { font-size:.65rem }
+  .gp-agent-quick { flex-direction:column; gap:6px }
+  .gp-agent-quick .gp-btn { width:100% }
+  .gp-modal-panel { margin:12px; max-height:88vh; border-radius:22px }
+  .gp-modal-body { padding:16px }
+  .gp-form-grid.two { grid-template-columns:1fr }
+  .gp-form-grid.three { grid-template-columns:1fr }
+  .gp-icon-picker { gap:4px }
+  .gp-icon-opt { width:36px; height:36px; font-size:14px; border-radius:10px }
+  .gp-color-picker { gap:4px }
+  .gp-color-opt { width:28px; height:28px }
+  .ba-method-grid { gap:8px }
+  .ba-method-card { padding:10px; border-radius:14px; min-height:50px }
+  .gp-radio-group { flex-direction:column }
+  .gp-radio { padding:10px 12px }
+  .gp-participant { flex-wrap:wrap; gap:8px; padding:10px; border-radius:12px }
+  .gp-team-member { flex-wrap:wrap; gap:8px; padding:10px; border-radius:12px }
+  .gp-team-add { flex-direction:column; gap:8px }
+  .gp-team-add .gp-btn { width:100%; justify-content:center }
+  .gp-txn-item { flex-wrap:wrap; padding:10px; border-radius:12px }
+  .gp-txn-amount { margin-left:auto }
+  .gp-empty { padding:32px 16px; border-radius:16px }
+  .gp-empty i { font-size:2rem }
+  .gp-countdown { font-size:.65rem }
+  .gp-agent-badge-grid { grid-template-columns:1fr 1fr; gap:8px }
+  .gp-agent-hero-title { font-size:1rem }
+  .ba-inputs-grid { grid-template-columns:1fr; gap:10px }
+  .ba-merchant-box--premium { padding:12px; border-radius:14px }
+  .ba-instr-step { font-size:.7rem }
+  .gp-modal-actions { flex-wrap:wrap }
+  .gp-modal-actions .gp-btn { flex:1; justify-content:center; font-size:.7rem; padding:9px 12px; border-radius:10px; min-width:0 }
+  .gp-card-head .gp-card-icon { width:38px; height:38px; font-size:17px; border-radius:12px }
+  .gp-card-head .gp-badge { font-size:9px; padding:3px 9px; border-radius:8px }
+  .gp-card-actions .gp-agent-badge { font-size:9px; padding:2px 7px }
+  .gp-card-meta i { font-size:.6rem }
+  .gp-card-tag { font-size:.65rem }
+  .gp-card-host { font-size:.65rem }
+  .gp-my-panel .gp-my-icon { width:34px; height:34px; font-size:15px; border-radius:10px }
+  .gp-badge.sm { font-size:8px; padding:2px 7px }
+}
+@media (max-width:480px) {
+  .gp-hero-stats { gap:8px; padding:10px 2px 14px }
+  .gp-stat-card { padding:12px 8px; border-radius:16px }
+  .gp-stat-card .gp-stat-icon { font-size:18px; width:40px; height:40px; border-radius:12px; margin-bottom:6px }
+  .gp-stat-value { font-size:17px }
+  .gp-stat-label { font-size:10px }
+  .gp-card { padding:0 }
+  .gp-card-head { gap:8px; padding:12px 14px 0 }
+  .gp-card-body { padding:8px 14px 4px }
+  .gp-card-meta { padding:2px 14px 10px; grid-template-columns:1fr }
+  .gp-card-actions { padding:8px 14px 14px; margin:0 14px 0; gap:5px }
+  .gp-card-icon { width:34px; height:34px; font-size:15px; border-radius:10px }
+  .gp-badge { font-size:9px; padding:3px 8px }
+  .gp-card-actions .gp-btn { font-size:9px; padding:5px 8px; border-radius:8px }
+  .gp-countdown { font-size:9px }
+  .gp-section-header h2 { font-size:.9rem }
+  .gp-section-header { padding:0 6px 10px; gap:8px }
+  .gp-grid { padding:0 2px; gap:10px }
+  .gp-profile-bar { padding:8px 10px; gap:6px; border-radius:16px }
+  .gp-profile-avatar-wrap { width:32px; height:32px }
+  .gp-profile-name { font-size:.72rem; gap:4px }
+  .gp-profile-nick { font-size:.55rem }
+  .gp-profile-balance { padding:3px 8px; gap:3px; border-radius:999px }
+  .gp-balance-amount { font-size:.68rem }
+  .gp-balance-add { width:16px; height:16px; font-size:7px }
+  .gp-profile-actions .gp-btn { width:28px; height:28px; font-size:.6rem; border-radius:8px }
+  .gp-modal-panel { border-radius:18px; margin:8px }
+  .gp-modal-body { padding:14px }
+  .gp-modal-head { padding:14px 16px }
+  .gp-hero { padding:12px 10px 0; border-radius:0 0 20px 20px }
+  .gp-hero-bg { min-height:260px; border-radius:0 0 20px 20px }
 }
 </style>
-<canvas id="gpParticles"></canvas>
-
 <div class="gp-page" id="tournamentsPage" data-csrf="<?php echo htmlspecialchars($csrfToken); ?>" data-user-id="<?php echo (int)($viewerId ?? 0); ?>" data-role="<?php echo htmlspecialchars($userRole); ?>" data-balance="<?php echo $userBalance; ?>">
 
     <!-- ═══ HERO ═══ -->
@@ -265,34 +654,38 @@ $palette = ['#7c3aed','#2563eb','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4
         </div>
     </section>
 
-    <!-- ═══ PROFILE BAR ═══ -->
-    <?php if ($viewerId): ?>
+    <!-- ═══ PROFILE BAR (v2) ═══ -->
+    <?php if ($viewerId):
+        $gpNickname = $_SESSION['nickname'] ?? '';
+        $gpAvatar = htmlspecialchars($_SESSION['avatar'] ?? 'default.png');
+        $gpFullName = htmlspecialchars($_SESSION['full_name'] ?? ($_SESSION['username'] ?? 'User'));
+    ?>
     <section class="gp-profile-bar">
-        <div class="gp-profile-bar-avatar">
-            <img src="assets/avatars/<?php echo htmlspecialchars($_SESSION['avatar'] ?? 'default.png'); ?>" alt="" onerror="this.src='assets/avatars/default.png'">
+        <div class="gp-profile-avatar-wrap" onclick="openGamerProfile()" title="View profile">
+            <img src="assets/avatars/<?php echo $gpAvatar; ?>" alt="" onerror="this.src='assets/avatars/default.png'">
+            <span class="gp-profile-avatar-ring"></span>
         </div>
-        <div class="gp-profile-bar-info">
-            <strong><?php echo htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username'] ?? 'User'); ?></strong>
-            <span class="gp-role-badge <?php echo $userRole === 'agent' ? 'gp-role-agent' : 'gp-role-gamer'; ?>">
-                <i class="fas <?php echo $userRole === 'agent' ? 'fa-crown' : 'fa-gamepad'; ?>"></i>
-                <?php echo $userRole === 'agent' ? 'Agent' : 'Gamer'; ?>
+        <div class="gp-profile-meta" onclick="openGamerProfile()">
+            <span class="gp-profile-name"><?php echo $gpFullName; ?><?php if ($gpNickname): ?><span class="gp-profile-nick">@<?php echo htmlspecialchars($gpNickname); ?></span><?php endif; ?></span>
+            <span class="gp-profile-tags">
+                <span class="gp-role-badge <?php echo $userRole === 'agent' ? 'gp-role-agent' : 'gp-role-gamer'; ?>">
+                    <i class="fas <?php echo $userRole === 'agent' ? 'fa-crown' : 'fa-gamepad'; ?>"></i>
+                    <?php echo $userRole === 'agent' ? 'Agent' : 'Gamer'; ?>
+                </span>
             </span>
         </div>
-        <div class="gp-profile-bar-balance">
-            <span class="gp-balance-label">Balance</span>
-            <span class="gp-balance-value">৳<?php echo number_format($userBalance, 0); ?></span>
-            <a href="index.php?page=balance" class="gp-btn gp-btn-xs gp-btn-gradient" style="margin-left:8px;font-size:11px;padding:2px 8px"><i class="fas fa-plus"></i> Add</a>
+        <div class="gp-profile-balance">
+            <span class="gp-balance-icon"><i class="fas fa-coins"></i></span>
+            <span class="gp-balance-amount">৳<?php echo number_format($userBalance, 0); ?></span>
+            <a href="index.php?page=balance" class="gp-balance-add" title="Add funds"><i class="fas fa-plus"></i></a>
         </div>
-        <div class="gp-profile-bar-actions">
+        <div class="gp-profile-actions">
             <?php if ($userRole === 'agent'): ?>
-                <button type="button" class="gp-btn gp-btn-sm gp-btn-accent" data-open-modal="createTournamentModal"><i class="fas fa-trophy"></i> Add tournament</button>
+                <button type="button" class="gp-btn gp-btn-sm gp-btn-accent" data-open-modal="createTournamentModal"><i class="fas fa-trophy"></i></button>
             <?php elseif ($userRole === 'user'): ?>
-                <button type="button" class="gp-btn gp-btn-sm gp-btn-gradient" data-open-modal="becomeAgentModal"><i class="fas fa-crown"></i> Become an agent</button>
+                <button type="button" class="gp-btn gp-btn-sm gp-btn-gradient" data-open-modal="becomeAgentModal" title="Become an agent"><i class="fas fa-crown"></i></button>
             <?php endif; ?>
-            <button type="button" class="gp-btn gp-btn-sm gp-btn-ghost" data-open-modal="gamerProfileModal"><i class="fas fa-id-card"></i> Profile</button>
-            <?php if ($userRole !== 'agent'): ?>
-                <button type="button" class="gp-btn gp-btn-sm gp-btn-outline" data-open-modal="createTeamModal"><i class="fas fa-users"></i> Create team</button>
-            <?php endif; ?>
+            <button type="button" class="gp-btn gp-btn-sm gp-btn-ghost" data-open-modal="createTeamModal" title="Create team"><i class="fas fa-users"></i></button>
         </div>
     </section>
     <?php endif; ?>
@@ -300,11 +693,17 @@ $palette = ['#7c3aed','#2563eb','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4
     <!-- ═══ SECTION SWITCHER ═══ -->
     <div class="gp-section-switcher">
         <a href="#browse" class="gp-switcher-btn active" data-scroll-to="browse">
-            <i class="fas fa-trophy"></i> Browse tournaments
+            <i class="fas fa-trophy"></i> Tournaments
         </a>
         <?php if ($viewerId): ?>
         <a href="#my-stuff" class="gp-switcher-btn" data-scroll-to="my-stuff">
-            <i class="fas fa-layer-group"></i> My tournaments
+            <i class="fas fa-layer-group"></i> My stuff
+        </a>
+        <a href="index.php?page=clubs" class="gp-switcher-btn" data-no-ajax>
+            <i class="fas fa-flag"></i> Clubs
+        </a>
+        <a href="index.php?page=player-market" class="gp-switcher-btn" data-no-ajax>
+            <i class="fas fa-gavel"></i> Market
         </a>
         <?php endif; ?>
     </div>
@@ -313,13 +712,20 @@ $palette = ['#7c3aed','#2563eb','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4
     <section id="browse" class="gp-section">
         <div class="gp-section-header">
             <h2><i class="fas fa-trophy"></i> Tournaments</h2>
-            <div class="gp-tabs" role="tablist">
-                <button class="gp-tab active" data-filter="all" role="tab">All</button>
-                <button class="gp-tab" data-filter="live" role="tab">Live</button>
-                <button class="gp-tab" data-filter="upcoming" role="tab">Upcoming</button>
-                <button class="gp-tab" data-filter="ongoing" role="tab">Ongoing</button>
-                <button class="gp-tab" data-filter="completed" role="tab">Completed</button>
-                <button class="gp-tab" data-filter="cancelled" role="tab">Cancelled</button>
+            <div class="gp-filter-select">
+                <div class="gp-custom-select" id="gpFilterSelect">
+                    <div class="gp-select-trigger" onclick="toggleFilterSelect()">
+                        <span>All Tournaments</span>
+                    </div>
+                    <div class="gp-select-options">
+                        <div class="gp-select-option active" data-value="all" onclick="selectFilterOption(this)">All Tournaments</div>
+                        <div class="gp-select-option" data-value="live" onclick="selectFilterOption(this)">Live</div>
+                        <div class="gp-select-option" data-value="upcoming" onclick="selectFilterOption(this)">Upcoming</div>
+                        <div class="gp-select-option" data-value="ongoing" onclick="selectFilterOption(this)">Ongoing</div>
+                        <div class="gp-select-option" data-value="completed" onclick="selectFilterOption(this)">Completed</div>
+                        <div class="gp-select-option" data-value="cancelled" onclick="selectFilterOption(this)">Cancelled</div>
+                    </div>
+                </div>
             </div>
             <div class="gp-search">
                 <i class="fas fa-search gp-search-icon"></i>
@@ -393,6 +799,34 @@ $palette = ['#7c3aed','#2563eb','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4
                         <div><i class="fas fa-users"></i> <?php echo $regd; ?><?php echo $maxTeams > 0 ? "/$maxTeams" : ''; ?> teams</div>
                         <?php if ($entryFee > 0): ?><div><i class="fas fa-coins" style="color:#10b981"></i> ৳<?php echo number_format($entryFee, 0); ?> entry</div><?php endif; ?>
                         <?php if ($status === 'cancelled'): ?><div style="color:#dc2626"><i class="fas fa-ban"></i> Cancelled</div><?php endif; ?>
+                        <?php
+                        $bracketType = $t['bracket_type'] ?? 'single_elimination';
+                        $bracketIcons = ['single_elimination'=>'fa-diagram-project','double_elimination'=>'fa-arrow-right-arrow-left','round_robin'=>'fa-arrows-rotate','swiss'=>'fa-sitemap'];
+                        $bracketLabels = ['single_elimination'=>'Single Elim','double_elimination'=>'Double Elim','round_robin'=>'Round Robin','swiss'=>'Swiss'];
+                        $restrictedClubId = $t['restricted_club_id'] ?? null;
+                        $restrictedClubName = '';
+                        $restrictedClubColour = '';
+                        if ($restrictedClubId) {
+                            $rcStmt = $db->prepare("SELECT name, colour FROM clubs WHERE id = ?");
+                            $rcStmt->execute([$restrictedClubId]);
+                            $rc = $rcStmt->fetch();
+                            if ($rc) { $restrictedClubName = $rc['name']; $restrictedClubColour = $rc['colour']; }
+                        }
+                        ?>
+                        <div><i class="fas <?php echo $bracketIcons[$bracketType] ?? 'fa-diagram-project'; ?>" style="color:#7c3aed"></i> <?php echo $bracketLabels[$bracketType] ?? 'Single Elim'; ?></div>
+                        <?php if ($maxTeams > 0): ?>
+                        <div style="grid-column:1/-1;margin-top:2px">
+                            <div style="display:flex;align-items:center;gap:8px;font-size:.7rem;color:var(--gp-muted)">
+                                <span style="flex:1;height:4px;border-radius:2px;background:var(--gp-border);overflow:hidden">
+                                    <span style="display:block;height:100%;width:<?php echo min(100, round($regd/$maxTeams*100)); ?>%;border-radius:2px;background:linear-gradient(90deg,#7c3aed,#a78bfa);transition:width .3s"></span>
+                                </span>
+                                <span style="font-weight:700"><?php echo $regd; ?>/<?php echo $maxTeams; ?></span>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        <?php if ($restrictedClubName): ?>
+                        <div style="grid-column:1/-1;margin-top:2px;display:flex;align-items:center;gap:6px"><span style="display:inline-flex;align-items:center;gap:4px;font-size:.65rem;font-weight:700;padding:3px 8px;border-radius:999px;background:rgba(124,58,237,.1);color:<?php echo $restrictedClubColour ?: '#7c3aed'; ?>"><i class="fas fa-lock"></i> <?php echo htmlspecialchars($restrictedClubName); ?> only</span></div>
+                        <?php endif; ?>
                     </div>
                     <div class="gp-card-actions">
                         <?php if ($status === 'cancelled'): ?>
@@ -491,7 +925,95 @@ $palette = ['#7c3aed','#2563eb','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4
         </div>
     </section>
     <?php endif; ?>
+
+    <!-- ═══ LEADERBOARD ═══ -->
+    <section id="leaderboard" class="gp-section" style="margin-top:32px">
+        <div class="gp-section-header">
+            <h2><i class="fas fa-ranking-star"></i> Leaderboard</h2>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <select id="lbFilter" class="gp-input" style="width:auto">
+                    <option value="">Player Rankings</option>
+                    <option value="club">Club Rankings</option>
+                </select>
+                <button class="gp-btn gp-btn-sm gp-btn-ghost" onclick="loadLeaderboard()"><i class="fas fa-rotate"></i> Refresh</button>
+            </div>
+        </div>
+        <div style="background:var(--gp-card);border-radius:20px;border:1px solid var(--gp-border);overflow:hidden">
+            <div style="display:grid;grid-template-columns:36px 1fr 80px 90px 60px;gap:8px;padding:12px 16px;font-size:.7rem;font-weight:700;color:var(--gp-muted);text-transform:uppercase;background:var(--gp-bg);border-bottom:1px solid var(--gp-border)" id="lbHeader">
+                <span>#</span><span>Player</span><span>Points</span><span>Prize</span><span>Rank</span>
+            </div>
+            <div id="lbBody">
+                <div style="text-align:center;padding:40px 20px;color:var(--gp-muted)"><i class="fas fa-spinner fa-spin" style="font-size:1.5rem;opacity:.4"></i><p style="font-size:.9rem;margin:8px 0 0">Loading leaderboard...</p></div>
+            </div>
+        </div>
+    </section>
 </div>
+
+
+
+<script>
+function loadLeaderboard() {
+    var body = document.getElementById('lbBody');
+    body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--gp-muted)"><i class="fas fa-spinner fa-spin" style="font-size:1.5rem;opacity:.4"></i></div>';
+    var type = document.getElementById('lbFilter').value;
+    var data = type === 'club' 
+        ? new URLSearchParams({ action:'get_club_standings' })
+        : new URLSearchParams({ action:'get_leaderboard', limit:50 });
+    fetch('handlers/tournament_handler.php', { method:'POST', body:data })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+        if (type === 'club') {
+            if (!res.success || !res.standings || !res.standings.length) {
+                body.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--gp-muted)"><i class="fas fa-flag" style="font-size:2.5rem;opacity:.4;margin-bottom:12px;display:block"></i><p style="font-size:.9rem;margin:0">No club rankings yet.</p></div>';
+                document.getElementById('lbHeader').innerHTML = '<span>#</span><span>Club</span><span>Points</span><span>Trophies</span><span>Members</span>';
+                return;
+            }
+            document.getElementById('lbHeader').innerHTML = '<span>#</span><span>Club</span><span>Points</span><span>Trophies</span><span>Members</span>';
+            var html = '';
+            res.standings.forEach(function(c, i) {
+                var rankClass = i===0 ? 'gold' : (i===1 ? 'silver' : (i===2 ? 'bronze' : ''));
+                html += '<a href="index.php?page=clubs&club_id=' + c.id + '" class="gp-lb-row">';
+                html += '<div class="gp-lb-rank ' + rankClass + '">' + (i+1) + '</div>';
+                html += '<div style="display:flex;align-items:center;gap:8px;font-weight:700;color:var(--gp-text)"><span style="width:10px;height:10px;border-radius:50%;background:' + (c.colour || '#7c3aed') + ';flex-shrink:0"></span>' + c.name + '</div>';
+                html += '<div class="gp-lb-cell">' + (c.total_club_points || c.total_points || 0) + '</div>';
+                html += '<div class="gp-lb-cell">' + (c.trophies || 0) + '</div>';
+                html += '<div class="gp-lb-cell">' + (c.member_count || 0) + '</div></a>';
+            });
+            body.innerHTML = html;
+        } else {
+            if (!res.success || !res.leaderboard || !res.leaderboard.length) {
+                body.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--gp-muted)"><i class="fas fa-trophy" style="font-size:2.5rem;opacity:.4;margin-bottom:12px;display:block"></i><p style="font-size:.9rem;margin:0">No rankings yet. Complete a tournament to appear.</p></div>';
+                return;
+            }
+            document.getElementById('lbHeader').innerHTML = '<span>#</span><span>Player</span><span>Points</span><span>Prize</span><span>Rank</span>';
+            var html = '';
+            res.leaderboard.forEach(function(p, i) {
+                var rankClass = i===0 ? 'gold' : (i===1 ? 'silver' : (i===2 ? 'bronze' : ''));
+                html += '<div class="gp-lb-row" onclick="window.location.href=\'index.php?page=player-market&user_id=' + p.user_id + '\'">';
+                html += '<div class="gp-lb-rank ' + rankClass + '">' + (i+1) + '</div>';
+                html += '<div style="display:flex;align-items:center;gap:8px;font-weight:600;color:var(--gp-text)">';
+                if (p.avatar) html += '<img src="assets/images/avatars/' + p.avatar + '" style="width:28px;height:28px;border-radius:50%;object-fit:cover" onerror="this.style.display=\'none\'">';
+                html += (p.nickname || p.full_name || p.username) + '</div>';
+                html += '<div class="gp-lb-cell">' + (p.total_points || 0) + '</div>';
+                html += '<div class="gp-lb-prize">৳' + (parseFloat(p.total_prize) || 0).toLocaleString() + '</div>';
+                html += '<div class="gp-lb-cell">' + (p.best_rank || '--') + '</div></div>';
+            });
+            body.innerHTML = html;
+        }
+    }).catch(function() {
+        body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gp-muted)"><i class="fas fa-exclamation-triangle" style="font-size:2rem;opacity:.4;margin-bottom:8px;display:block"></i><p style="font-size:.9rem;margin:0">Failed to load leaderboard.</p></div>';
+    });
+}
+
+// Filter change
+document.addEventListener('DOMContentLoaded', function() {
+    var filter = document.getElementById('lbFilter');
+    if (filter) {
+        filter.addEventListener('change', loadLeaderboard);
+        loadLeaderboard();
+    }
+});
+</script>
 
 <!-- ════════════════════════════════════════════════════════════ -->
 <!-- MODALS -->
@@ -608,39 +1130,121 @@ $palette = ['#7c3aed','#2563eb','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4
     </div>
 </div>
 
-<!-- ═══ Gamer Profile Setup Modal ═══ -->
-<div class="gp-modal hidden" id="gamerProfileModal">
-    <div class="gp-modal-panel">
+<!-- ═══ View Gamer Profile Modal (exists) ═══ -->
+<div class="gp-modal hidden" id="viewGamerProfileModal">
+    <div class="gp-modal-panel gp-modal-full-mobile">
         <div class="gp-modal-head">
-            <h3><i class="fas fa-id-card" style="color:#7c3aed"></i> My Profile</h3>
+            <h3><i class="fas fa-id-card" style="color:#7c3aed"></i> Gamer Profile</h3>
             <button class="gp-modal-close" data-close-modal><i class="fas fa-times"></i></button>
         </div>
         <div class="gp-modal-body">
-            <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px">
-                <div style="width:64px;height:64px;border-radius:50%;overflow:hidden;border:3px solid #e5e7eb;flex-shrink:0;background:#f3f4f6">
-                    <img src="assets/avatars/<?php echo htmlspecialchars($_SESSION['avatar'] ?? 'default.png'); ?>" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.src='assets/avatars/default.png'">
+            <div class="gp-profile-card">
+                <div class="gp-profile-card-cover">
+                    <img src="assets/avatars/<?php echo htmlspecialchars($_SESSION['avatar'] ?? 'default.png'); ?>" alt="" onerror="this.src='assets/avatars/default.png'">
                 </div>
-                <div>
-                    <div style="font-size:18px;font-weight:800;color:#1f2937" class="dark:text-white"><?php echo htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username'] ?? 'User'); ?></div>
-                    <div style="font-size:12px;color:#6b7280;margin-top:2px"><?php echo htmlspecialchars($_SESSION['email'] ?? ''); ?></div>
-                    <div style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:2px 10px;border-radius:999px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;background:<?php echo $userRole === 'agent' ? '#fef3c7' : '#ede9fe'; ?>;color:<?php echo $userRole === 'agent' ? '#92400e' : '#5b21b6'; ?>">
+                <div class="gp-profile-card-body">
+                    <div class="gp-profile-card-avatar">
+                        <img src="assets/avatars/<?php echo htmlspecialchars($_SESSION['avatar'] ?? 'default.png'); ?>" alt="" onerror="this.src='assets/avatars/default.png'">
+                    </div>
+                    <h4><?php echo htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username'] ?? 'User'); ?></h4>
+                    <?php if (!empty($_SESSION['nickname'])): ?>
+                    <span class="gp-profile-card-tag">@<?php echo htmlspecialchars($_SESSION['nickname']); ?></span>
+                    <?php endif; ?>
+                    <span class="gp-role-badge <?php echo $userRole === 'agent' ? 'gp-role-agent' : 'gp-role-gamer'; ?>" style="margin-top:6px">
                         <i class="fas <?php echo $userRole === 'agent' ? 'fa-crown' : 'fa-gamepad'; ?>"></i>
                         <?php echo $userRole === 'agent' ? 'Agent' : 'Gamer'; ?>
-                    </div>
+                    </span>
                 </div>
+            </div>
+
+            <!-- ═══ STATS OVERVIEW ═══ -->
+            <div class="gp-profile-stats-title"><i class="fas fa-chart-simple"></i> Career Stats</div>
+            <div class="gp-profile-stats">
+                <div class="gp-profile-stat">
+                    <span class="gp-profile-stat-icon"><i class="fas fa-gamepad"></i></span>
+                    <span class="gp-profile-stat-label">Matches</span>
+                    <span class="gp-profile-stat-value"><?php echo (int)($playerStats['total_matches'] ?? 0); ?></span>
+                </div>
+                <div class="gp-profile-stat">
+                    <span class="gp-profile-stat-icon"><i class="fas fa-trophy"></i></span>
+                    <span class="gp-profile-stat-label">Wins</span>
+                    <span class="gp-profile-stat-value"><?php echo (int)($playerStats['total_wins'] ?? 0); ?></span>
+                </div>
+                <div class="gp-profile-stat">
+                    <span class="gp-profile-stat-icon"><i class="fas fa-crosshairs"></i></span>
+                    <span class="gp-profile-stat-label">Kills</span>
+                    <span class="gp-profile-stat-value"><?php echo (int)($playerStats['total_kills'] ?? 0); ?></span>
+                </div>
+                <div class="gp-profile-stat">
+                    <span class="gp-profile-stat-icon"><i class="fas fa-star"></i></span>
+                    <span class="gp-profile-stat-label">Score</span>
+                    <span class="gp-profile-stat-value"><?php echo number_format((float)($playerStats['total_score'] ?? 0), 0); ?></span>
+                </div>
+            </div>
+
+            <!-- ═══ GAME SKILLS ═══ -->
+            <div class="gp-profile-stats-title"><i class="fas fa-signal"></i> Game Skills</div>
+            <div class="gp-profile-game-skills" id="viewGameSkills">
+                <?php if (empty($gameSkills)): ?>
+                <div class="gp-profile-no-skills">No skills added yet. <a href="#" onclick="editGamerProfile();return false">Add your game skills</a></div>
+                <?php else: foreach ($gameSkills as $gs): ?>
+                <div class="gp-profile-game-skill">
+                    <span class="gp-game-skill-icon"><i class="fas <?php echo htmlspecialchars($gs['game_icon'] ?? 'fa-gamepad'); ?>"></i></span>
+                    <span class="gp-game-skill-name"><?php echo htmlspecialchars($gs['game']); ?></span>
+                    <span class="gp-game-skill-level"><?php echo htmlspecialchars($gs['skill_level'] ?: '--'); ?></span>
+                    <span class="gp-game-skill-bar"><span style="width:<?php echo $skillPct = max(10, min(100, ['Beginner'=>20,'Intermediate'=>40,'Advanced'=>60,'Pro'=>80,'Elite'=>100][$gs['skill_level']] ?? 30)); ?>%"></span></span>
+                </div>
+                <?php endforeach; endif; ?>
+            </div>
+
+            <?php if (!empty($_SESSION['bio'])): ?>
+            <div class="gp-profile-bio">
+                <label><i class="fas fa-quote-left"></i> Bio</label>
+                <p><?php echo htmlspecialchars($_SESSION['bio']); ?></p>
+            </div>
+            <?php endif; ?>
+
+            <div class="gp-profile-info-links">
+                <?php if (!empty($_SESSION['discord'])): ?>
+                <span><i class="fab fa-discord"></i> <?php echo htmlspecialchars($_SESSION['discord']); ?></span>
+                <?php endif; ?>
+                <span><i class="fas fa-coins"></i> ৳<?php echo number_format($userBalance, 0); ?></span>
+            </div>
+
+            <div class="gp-modal-actions">
+                <button type="button" class="gp-btn gp-btn-ghost" data-close-modal>Close</button>
+                <button type="button" class="gp-btn gp-btn-primary" onclick="editGamerProfile()"><i class="fas fa-pen"></i> Edit profile</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ Create/Edit Gamer Profile Modal ═══ -->
+<div class="gp-modal hidden" id="createGamerProfileModal">
+    <div class="gp-modal-panel gp-modal-full-mobile">
+        <div class="gp-modal-head">
+            <h3><i class="fas fa-id-card" style="color:#7c3aed"></i> <?php echo !empty($_SESSION['nickname']) ? 'Edit' : 'Create'; ?> Gamer Profile</h3>
+            <button class="gp-modal-close" data-close-modal><i class="fas fa-times"></i></button>
+        </div>
+        <div class="gp-modal-body">
+            <div class="gp-modal-step-indicator">
+                <span class="gp-step-dot active"></span>
+                <span class="gp-step-line"></span>
+                <span class="gp-step-dot"></span>
             </div>
 
             <form id="gamerProfileForm">
                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
                 <input type="hidden" name="action" value="update_profile">
+
                 <div class="gp-form-group">
-                    <label>Gaming nickname</label>
-                    <input type="text" name="nickname" class="gp-input" placeholder="e.g. ShadowStrike" maxlength="50" value="<?php echo htmlspecialchars($_SESSION['username'] ?? ''); ?>">
+                    <label><i class="fas fa-tag"></i> Gaming nickname</label>
+                    <input type="text" name="nickname" class="gp-input" placeholder="e.g. ShadowStrike" maxlength="50" value="<?php echo htmlspecialchars($_SESSION['nickname'] ?? ''); ?>" required>
                     <span class="gp-form-hint">This will be displayed to other players</span>
                 </div>
-                <div class="gp-form-grid two" style="grid-template-columns:1fr 2fr">
+                <div class="gp-form-grid two">
                     <div class="gp-form-group">
-                        <label>Skill level</label>
+                        <label><i class="fas fa-signal"></i> Skill level</label>
                         <select name="skill_level" class="gp-input">
                             <?php $levels = ['','Beginner','Intermediate','Advanced','Pro','Elite']; $current = $_SESSION['skill_level'] ?? ''; ?>
                             <?php foreach ($levels as $lv): ?>
@@ -649,29 +1253,59 @@ $palette = ['#7c3aed','#2563eb','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4
                         </select>
                     </div>
                     <div class="gp-form-group">
-                        <label>Favorite game</label>
+                        <label><i class="fas fa-gamepad"></i> Favorite game</label>
                         <select name="favorite_game" class="gp-input">
                             <option value="">Select</option>
                             <?php foreach ($categories as $gc): ?>
-                            <option value="<?php echo $gc; ?>"><?php echo $gc; ?></option>
+                            <option value="<?php echo $gc; ?>" <?php echo ($_SESSION['favorite_game'] ?? '') === $gc ? 'selected' : ''; ?>><?php echo $gc; ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
                 </div>
                 <div class="gp-form-group">
-                    <label>Bio</label>
+                    <label><i class="fas fa-comment"></i> Bio</label>
                     <textarea name="bio" class="gp-input" rows="2" placeholder="Tell other players about yourself..." maxlength="200"><?php echo htmlspecialchars($_SESSION['bio'] ?? ''); ?></textarea>
                 </div>
                 <div class="gp-form-group">
-                    <label>Discord (optional)</label>
+                    <label><i class="fab fa-discord"></i> Discord (optional)</label>
                     <div class="gp-input-group">
                         <span class="gp-input-prefix"><i class="fab fa-discord"></i></span>
                         <input type="text" name="discord" class="gp-input" placeholder="your#0000" value="<?php echo htmlspecialchars($_SESSION['discord'] ?? ''); ?>">
                     </div>
                 </div>
+
+                <!-- ═══ PER-GAME SKILLS ═══ -->
+                <div class="gp-profile-stats-title" style="margin-top:6px"><i class="fas fa-signal"></i> Per-Game Skills</div>
+                <div id="gameSkillsContainer" class="gp-game-skills-editor">
+                    <?php if (!empty($gameSkills)): foreach ($gameSkills as $gs): ?>
+                    <div class="gp-game-skill-row">
+                        <span class="gp-game-skill-icon-preview"><i class="fas <?php echo htmlspecialchars($gs['game_icon'] ?? 'fa-gamepad'); ?>"></i></span>
+                        <span class="gp-game-skill-row-name"><?php echo htmlspecialchars($gs['game']); ?></span>
+                        <select class="gp-input gp-game-skill-row-select" onchange="saveGameSkill(this, '<?php echo htmlspecialchars($gs['game']); ?>')">
+                            <option value="">--</option>
+                            <?php foreach (['Beginner','Intermediate','Advanced','Pro','Elite'] as $lv): ?>
+                            <option value="<?php echo $lv; ?>" <?php echo $gs['skill_level'] === $lv ? 'selected' : ''; ?>><?php echo $lv; ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <?php endforeach; endif; ?>
+                    <button type="button" class="gp-btn gp-btn-sm gp-btn-ghost gp-add-game-skill-btn" onclick="addGameSkillRow()"><i class="fas fa-plus"></i> Add game skill</button>
+                </div>
+
+                <?php if ($userRole !== 'agent'): ?>
+                <div class="gp-profile-become-agent">
+                    <span class="gp-profile-agent-icon"><i class="fas fa-crown"></i></span>
+                    <div>
+                        <strong>Want to host tournaments?</strong>
+                        <p>Become an agent and create your own events.</p>
+                    </div>
+                    <button type="button" class="gp-btn gp-btn-sm gp-btn-gradient" data-open-modal="becomeAgentModal"><i class="fas fa-arrow-right"></i> Upgrade</button>
+                </div>
+                <?php endif; ?>
+
                 <div class="gp-modal-actions">
-                    <button type="button" class="gp-btn gp-btn-ghost" data-close-modal>Close</button>
-                    <button type="submit" class="gp-btn gp-btn-primary"><i class="fas fa-check"></i> Save profile</button>
+                    <button type="button" class="gp-btn gp-btn-ghost" data-close-modal>Cancel</button>
+                    <button type="submit" class="gp-btn gp-btn-accent"><i class="fas fa-check"></i> <?php echo !empty($_SESSION['nickname']) ? 'Save changes' : 'Create profile'; ?></button>
                 </div>
                 <div class="gp-feedback hidden"></div>
             </form>
@@ -917,23 +1551,37 @@ $palette = ['#7c3aed','#2563eb','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4
     function safe(name, fn) { try { fn(); } catch (e) {} }
 
     var csrfToken = (document.getElementById('tournamentsPage') || {}).getAttribute('data-csrf') || '';
+    var availableGames = <?php echo json_encode($categories); ?>;
+    var gameIconsMap = <?php echo json_encode(array_combine($categories, array_slice($gameIcons, 0, count($categories)))); ?>;
 
-    safe('Particles', function() {
-        var c = document.getElementById('gpParticles'); if (!c) return;
-        var ctx = c.getContext('2d'); if (!ctx) return;
-        var W = c.width = innerWidth, H = c.height = innerHeight, P = [], N = Math.min(W*H/8000|0,80), C = ['124,58,237','37,99,235','236,72,153','16,185,129','245,158,11'];
-        for (var i = 0; i < N; i++) P.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.6,vy:(Math.random()-.5)*.6,r:Math.random()*2.5+1,c:C[i%5],a:Math.random()*.5+.2});
-        !function loop() {
-            ctx.clearRect(0,0,W,H); var dk = document.documentElement.classList.contains('dark');
-            for (var i = 0; i < P.length; i++) {
-                var p = P[i]; p.x+=p.vx; p.y+=p.vy; if (p.x<0||p.x>W) p.vx*=-1; if (p.y<0||p.y>H) p.vy*=-1;
-                ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fillStyle='rgba('+p.c+','+(dk?p.a+.2:p.a)+')'; ctx.fill();
-                for (var j = i+1; j < P.length; j++) { var d = Math.hypot(p.x-P[j].x,p.y-P[j].y); if (d<120) { ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(P[j].x,P[j].y); ctx.strokeStyle='rgba('+p.c+','+((1-d/120)*(dk?.2:.12))+')'; ctx.lineWidth=.6; ctx.stroke(); } }
-            }
-            requestAnimationFrame(loop);
-        }();
-        window.addEventListener('resize', function(){ W=c.width=innerWidth; H=c.height=innerHeight; });
-    });
+    window.saveGameSkill = function(sel, game) {
+        var val = sel.value;
+        fetch('handlers/tournament_handler.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
+            body: JSON.stringify({ action: 'save_game_skill', game: game, skill_level: val, csrf_token: csrfToken })
+        }).then(function(r){ return r.json(); }).then(function(res){
+            if (res.success) toast('Skill updated for ' + game, 'success');
+            else toast(res.message || 'Failed', 'error');
+        }).catch(function(){ toast('Network error', 'error'); });
+    };
+
+    window.addGameSkillRow = function() {
+        var container = document.getElementById('gameSkillsContainer');
+        if (!container) return;
+        var usedGames = {};
+        container.querySelectorAll('.gp-game-skill-row-name').forEach(function(el){ usedGames[el.textContent.trim()] = true; });
+        var avail = availableGames.filter(function(g){ return !usedGames[g]; });
+        if (!avail.length) { toast('All games added!', 'info'); return; }
+        var game = avail[0];
+        var icon = gameIconsMap[game] || 'fa-gamepad';
+        var row = document.createElement('div');
+        row.className = 'gp-game-skill-row';
+        row.innerHTML = '<span class="gp-game-skill-icon-preview"><i class="fas ' + icon + '"></i></span><span class="gp-game-skill-row-name">' + game + '</span><select class="gp-input gp-game-skill-row-select" onchange="saveGameSkill(this,\'' + game + '\')"><option value="">--</option><option value="Beginner">Beginner</option><option value="Intermediate">Intermediate</option><option value="Advanced">Advanced</option><option value="Pro">Pro</option><option value="Elite">Elite</option></select>';
+        var addBtn = container.querySelector('.gp-add-game-skill-btn');
+        container.insertBefore(row, addBtn);
+        row.querySelector('select').focus();
+    };
 
     safe('Cards', function() {
         document.querySelectorAll('.gp-card').forEach(function(el, i) {
@@ -954,17 +1602,52 @@ $palette = ['#7c3aed','#2563eb','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4
         window._gpIntv = setInterval(function(){ document.querySelectorAll('.gp-countdown').forEach(tick); },1000);
     });
 
-    safe('Tabs', function() {
-        document.querySelectorAll('.gp-tab').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                var parent = btn.closest('.gp-tabs');
-                parent.querySelectorAll('.gp-tab').forEach(function(t){ t.classList.remove('active'); });
-                btn.classList.add('active');
-                var f = btn.getAttribute('data-filter');
-                document.querySelectorAll('.gp-card').forEach(function(c){ c.classList.toggle('hidden', f!=='all' && c.getAttribute('data-status')!==f); });
-            });
+    window.toggleFilterSelect = function() {
+        var sel = document.getElementById('gpFilterSelect');
+        if (sel) sel.classList.toggle('active');
+    };
+
+    window.selectFilterOption = function(el) {
+        var container = document.getElementById('gpFilterSelect');
+        if (!container) return;
+        container.querySelectorAll('.gp-select-option').forEach(function(o){ o.classList.remove('active'); });
+        el.classList.add('active');
+        var trigger = container.querySelector('.gp-select-trigger span');
+        if (trigger) trigger.textContent = el.textContent;
+        container.classList.remove('active');
+        var f = el.getAttribute('data-value');
+        document.querySelectorAll('.gp-card').forEach(function(c) {
+            c.classList.toggle('hidden', f !== 'all' && c.getAttribute('data-status') !== f);
+        });
+    };
+
+    // Close custom select on outside click
+    document.addEventListener('click', function(e) {
+        document.querySelectorAll('.gp-custom-select').forEach(function(sel) {
+            if (!sel.contains(e.target)) sel.classList.remove('active');
         });
     });
+
+    window.openGamerProfile = function() {
+        var hasProfile = <?php echo !empty($_SESSION['nickname']) ? 'true' : 'false'; ?>;
+        var modalId = hasProfile ? 'viewGamerProfileModal' : 'createGamerProfileModal';
+        var modal = document.getElementById(modalId);
+        if (modal) {
+            var ov = document.getElementById('gpOverlay');
+            if (ov) ov.classList.remove('hidden');
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+    };
+
+    window.editGamerProfile = function() {
+        var viewModal = document.getElementById('viewGamerProfileModal');
+        var editModal = document.getElementById('createGamerProfileModal');
+        if (viewModal) viewModal.classList.add('hidden');
+        if (editModal) {
+            editModal.classList.remove('hidden');
+        }
+    };
 
     safe('Search', function() {
         var inp = document.getElementById('gpSearch'); if (!inp) return;

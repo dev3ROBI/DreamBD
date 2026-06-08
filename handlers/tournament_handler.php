@@ -613,6 +613,165 @@ try {
             $response = ['success' => true, 'message' => 'Profile updated!'];
             break;
 
+        // ─── GAME SKILLS ───
+        case 'save_game_skill':
+            if (!$userId) { $response['message'] = 'Please log in.'; break; }
+            $game = trim($req['game'] ?? '');
+            $skillLevel = trim($req['skill_level'] ?? '');
+            if (!$game) { $response['message'] = 'Game required.'; break; }
+            try {
+                $stmt = $db->prepare("INSERT INTO game_skills (user_id, game, skill_level) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE skill_level = VALUES(skill_level)");
+                $stmt->execute([$userId, $game, $skillLevel]);
+                $response = ['success' => true, 'message' => 'Skill saved!'];
+            } catch (Throwable $e) {
+                error_log("save_game_skill error: " . $e->getMessage());
+                $response = ['success' => false, 'message' => 'Failed to save skill.'];
+            }
+            break;
+
+        // ─── CLUB ACTIONS ───
+        case 'create_club':
+            if (!$userId) { $response['message'] = 'Please log in.'; break; }
+            $name = trim($req['name'] ?? '');
+            $tag = trim($req['tag'] ?? '');
+            $colour = trim($req['colour'] ?? '#7c3aed');
+            $description = trim($req['description'] ?? '');
+            $region = trim($req['region'] ?? '');
+            if (!$name || !$tag) { $response['message'] = 'Name and tag required.'; break; }
+            $response = createClub($db, $userId, $name, $tag, $colour, $description, $region);
+            break;
+
+        case 'get_club':
+            $clubId = (int)($req['club_id'] ?? 0);
+            if (!$clubId) { $response['message'] = 'Club ID required.'; break; }
+            $club = getClub($db, $clubId);
+            if ($club) { $response = ['success' => true, 'club' => $club]; }
+            else { $response['message'] = 'Club not found.'; }
+            break;
+
+        case 'get_my_clubs':
+            if (!$userId) { $response['message'] = 'Please log in.'; break; }
+            $response = ['success' => true, 'clubs' => getUserClubs($db, $userId)];
+            break;
+
+        case 'get_club_members':
+            $clubId = (int)($req['club_id'] ?? 0);
+            if (!$clubId) { $response['message'] = 'Club ID required.'; break; }
+            $response = ['success' => true, 'members' => getClubMembers($db, $clubId)];
+            break;
+
+        case 'join_club':
+            if (!$userId) { $response['message'] = 'Please log in.'; break; }
+            $clubId = (int)($req['club_id'] ?? 0);
+            if (!$clubId) { $response['message'] = 'Club ID required.'; break; }
+            $response = joinClub($db, $clubId, $userId);
+            break;
+
+        case 'leave_club':
+            if (!$userId) { $response['message'] = 'Please log in.'; break; }
+            $clubId = (int)($req['club_id'] ?? 0);
+            if (!$clubId) { $response['message'] = 'Club ID required.'; break; }
+            $response = leaveClub($db, $clubId, $userId);
+            break;
+
+        case 'update_club':
+            if (!$userId) { $response['message'] = 'Please log in.'; break; }
+            $clubId = (int)($req['club_id'] ?? 0);
+            if (!$clubId) { $response['message'] = 'Club ID required.'; break; }
+            $data = [];
+            foreach (['name','tag','colour','description','region','logo'] as $k) {
+                if (isset($req[$k])) $data[$k] = $req[$k];
+            }
+            $response = updateClub($db, $clubId, $userId, $data);
+            break;
+
+        // ─── PLAYER MARKET / AUCTION ───
+        case 'list_player_auction':
+            if (!$userId) { $response['message'] = 'Please log in.'; break; }
+            $playerId = (int)($req['player_id'] ?? 0);
+            $basePrice = (float)($req['base_price'] ?? 0);
+            $duration = (int)($req['duration_hours'] ?? 24);
+            if (!$playerId || $basePrice <= 0) { $response['message'] = 'Invalid parameters.'; break; }
+            $response = listPlayerForAuction($db, $userId, $playerId, $basePrice, $duration);
+            break;
+
+        case 'place_bid':
+            if (!$userId) { $response['message'] = 'Please log in.'; break; }
+            $auctionId = (int)($req['auction_id'] ?? 0);
+            $amount = (float)($req['amount'] ?? 0);
+            if (!$auctionId || $amount <= 0) { $response['message'] = 'Invalid parameters.'; break; }
+            $response = placeBid($db, $auctionId, $userId, $amount);
+            break;
+
+        case 'buy_player':
+            if (!$userId) { $response['message'] = 'Please log in.'; break; }
+            $playerId = (int)($req['player_id'] ?? 0);
+            $price = (float)($req['price'] ?? 0);
+            if (!$playerId || $price <= 0) { $response['message'] = 'Invalid parameters.'; break; }
+            $response = buyPlayerDirect($db, $playerId, $userId, $price);
+            break;
+
+        case 'release_player':
+            if (!$userId) { $response['message'] = 'Please log in.'; break; }
+            $playerId = (int)($req['player_id'] ?? 0);
+            if (!$playerId) { $response['message'] = 'Player ID required.'; break; }
+            $response = releasePlayer($db, $playerId, $userId);
+            break;
+
+        case 'hire_player':
+            if (!$userId) { $response['message'] = 'Please log in.'; break; }
+            $playerId = (int)($req['player_id'] ?? 0);
+            $clubId = (int)($req['club_id'] ?? 0);
+            if (!$playerId || !$clubId) { $response['message'] = 'Player and Club required.'; break; }
+            $response = hirePlayerToClub($db, $playerId, $clubId, $userId);
+            break;
+
+        case 'fire_player':
+            if (!$userId) { $response['message'] = 'Please log in.'; break; }
+            $playerUserId = (int)($req['player_user_id'] ?? 0);
+            $clubId = (int)($req['club_id'] ?? 0);
+            if (!$playerUserId || !$clubId) { $response['message'] = 'Player and Club required.'; break; }
+            $response = firePlayerFromClub($db, $playerUserId, $clubId, $userId);
+            break;
+
+        // ─── DATA FETCH ───
+        case 'get_leaderboard':
+            $tournamentId = isset($req['tournament_id']) ? (int)$req['tournament_id'] : null;
+            $clubId = isset($req['club_id']) ? (int)$req['club_id'] : null;
+            $limit = (int)($req['limit'] ?? 50);
+            $response = ['success' => true, 'leaderboard' => getLeaderboard($db, $tournamentId, $clubId, $limit)];
+            break;
+
+        case 'get_market_players':
+            $status = $req['status'] ?? 'free_agent';
+            $clubId = isset($req['club_id']) ? (int)$req['club_id'] : null;
+            $limit = (int)($req['limit'] ?? 50);
+            $response = ['success' => true, 'players' => getMarketPlayers($db, $status, $clubId, $limit)];
+            break;
+
+        case 'get_player_detail':
+            $playerUserId = (int)($req['user_id'] ?? 0);
+            if (!$playerUserId) { $response['message'] = 'User ID required.'; break; }
+            $detail = getPlayerDetail($db, $playerUserId);
+            if ($detail) { $response = ['success' => true, 'player' => $detail]; }
+            else { $response['message'] = 'Player not found.'; }
+            break;
+
+        case 'get_active_auctions':
+            $limit = (int)($req['limit'] ?? 30);
+            $response = ['success' => true, 'auctions' => getActiveAuctions($db, $limit)];
+            break;
+
+        case 'get_club_standings':
+            $response = ['success' => true, 'standings' => getClubStandings($db)];
+            break;
+
+        case 'settle_auctions':
+            if (!$userId) { $response['message'] = 'Please log in.'; break; }
+            $count = settleExpiredAuctions($db);
+            $response = ['success' => true, 'settled' => $count, 'message' => "$count auctions settled."];
+            break;
+
         default:
             $response['message'] = 'Unknown action.';
     }

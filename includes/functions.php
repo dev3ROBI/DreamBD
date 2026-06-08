@@ -2689,3 +2689,403 @@ function createTournamentByAgent(PDO $pdo, int $agentId, array $data): array {
     }
 }
 
+/* ================================================
+   CLUB SYSTEM FUNCTIONS
+   ================================================ */
+
+function createClub(PDO $pdo, int $ownerId, string $name, string $tag, string $colour = '#7c3aed', ?string $description = null, ?string $region = null): array {
+    if (strlen($tag) < 2 || strlen($tag) > 10) return ['success' => false, 'message' => 'Tag must be 2-10 characters.'];
+    $pdo->beginTransaction();
+    try {
+        $stmt = $pdo->prepare("SELECT id FROM clubs WHERE tag = ?");
+        $stmt->execute([$tag]);
+        if ($stmt->fetch()) { $pdo->rollBack(); return ['success' => false, 'message' => 'Tag already taken.']; }
+
+        $stmt = $pdo->prepare("INSERT INTO clubs (name, tag, colour, description, owner_id, region) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$name, $tag, $colour, $description, $ownerId, $region]);
+        $clubId = (int)$pdo->lastInsertId();
+
+        $stmt = $pdo->prepare("INSERT INTO club_members (club_id, user_id, role) VALUES (?, ?, 'owner')");
+        $stmt->execute([$clubId, $ownerId]);
+
+        $pdo->commit();
+        return ['success' => true, 'club_id' => $clubId, 'message' => 'Club created!'];
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        return ['success' => false, 'message' => 'Could not create club.'];
+    }
+}
+
+function getClub(PDO $pdo, int $clubId): ?array {
+    $stmt = $pdo->prepare("SELECT c.*, u.username AS owner_name, u.full_name AS owner_full, u.avatar AS owner_avatar,
+        (SELECT COUNT(*) FROM club_members WHERE club_id = c.id) AS member_count
+        FROM clubs c JOIN users u ON u.id = c.owner_id WHERE c.id = ?");
+    $stmt->execute([$clubId]);
+    return $stmt->fetch() ?: null;
+}
+
+function getUserClubs(PDO $pdo, int $userId): array {
+    $stmt = $pdo->prepare("SELECT c.*, cm.role AS my_role,
+        (SELECT COUNT(*) FROM club_members WHERE club_id = c.id) AS member_count
+        FROM clubs c JOIN club_members cm ON cm.club_id = c.id AND cm.user_id = ? ORDER BY c.created_at DESC");
+    $stmt->execute([$userId]);
+    return $stmt->fetchAll();
+}
+
+function getClubMembers(PDO $pdo, int $clubId): array {
+    $stmt = $pdo->prepare("SELECT u.id, u.username, u.full_name, u.avatar, u.nickname, cm.role, cm.joined_at
+        FROM club_members cm JOIN users u ON u.id = cm.user_id WHERE cm.club_id = ? ORDER BY FIELD(cm.role,'owner','manager','player','sub'), cm.joined_at");
+    $stmt->execute([$clubId]);
+    return $stmt->fetchAll();
+}
+
+function joinClub(PDO $pdo, int $clubId, int $userId): array {
+    $stmt = $pdo->prepare("SELECT id FROM club_members WHERE club_id = ? AND user_id = ?");
+    $stmt->execute([$clubId, $userId]);
+    if ($stmt->fetch()) return ['success' => false, 'message' => 'Already a member.'];
+
+    try {
+        $stmt = $pdo->prepare("INSERT INTO club_members (club_id, user_id, role) VALUES (?, ?, 'player')");
+        $stmt->execute([$clubId, $userId]);
+        return ['success' => true, 'message' => 'Joined club!'];
+    } catch (Throwable $e) {
+        return ['success' => false, 'message' => 'Could not join club.'];
+    }
+}
+
+function leaveClub(PDO $pdo, int $clubId, int $userId): array {
+    $stmt = $pdo->prepare("SELECT role FROM club_members WHERE club_id = ? AND user_id = ?");
+    $stmt->execute([$clubId, $userId]);
+    $member = $stmt->fetch();
+    if (!$member) return ['success' => false, 'message' => 'Not a member.'];
+    if ($member['role'] === 'owner') return ['success' => false, 'message' => 'Owner cannot leave. Transfer ownership first.'];
+
+    try {
+        $stmt = $pdo->prepare("DELETE FROM club_members WHERE club_id = ? AND user_id = ?");
+        $stmt->execute([$clubId, $userId]);
+        return ['success' => true, 'message' => 'Left club.'];
+    } catch (Throwable $e) {
+        return ['success' => false, 'message' => 'Could not leave club.'];
+    }
+}
+
+function updateClub(PDO $pdo, int $clubId, int $userId, array $data): array {
+    $stmt = $pdo->prepare("SELECT owner_id FROM clubs WHERE id = ?");
+    $stmt->execute([$clubId]);
+    $club = $stmt->fetch();
+    if (!$club || (int)$club['owner_id'] !== $userId) return ['success' => false, 'message' => 'Only owner can update.'];
+
+    $allowed = ['name','tag','colour','description','region','logo'];
+    $sets = []; $params = [];
+    foreach ($allowed as $k) {
+        if (isset($data[$k])) { $sets[] = "$k = ?"; $params[] = $data[$k]; }
+    }
+    if (empty($sets)) return ['success' => false, 'message' => 'No data to update.'];
+    $params[] = $clubId;
+
+    try {
+        $stmt = $pdo->prepare("UPDATE clubs SET " . implode(', ', $sets) . " WHERE id = ?");
+        $stmt->execute($params);
+        return ['success' => true, 'message' => 'Club updated.'];
+    } catch (Throwable $e) {
+        return ['success' => false, 'message' => 'Could not update club.'];
+    }
+}
+
+/* ================================================
+   PLAYER AUCTION FUNCTIONS
+   ================================================ */
+
+function listPlayerForAuction(PDO $pdo, int $userId, int $playerId, float $basePrice, int $durationHours = 24): array {
+    // Check ownership
+    $stmt = $pdo->prepare("SELECT id, owner_id, status FROM players WHERE id = ?");
+    $stmt->execute([$playerId]);
+    $player = $stmt->fetch();
+    if (!$player) return ['success' => false, 'message' => 'Player not found.'];
+    if ((int)$player['owner_id'] !== $userId) return ['success' => false, 'message' => 'Not your player.'];
+
+    $endTime = date('Y-m-d H:i:s', time() + $durationHours * 3600);
+    try {
+        $stmt = $pdo->prepare("INSERT INTO player_auctions (player_id, seller_id, base_price, current_price, end_time) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([$playerId, $userId, $basePrice, $basePrice, $endTime]);
+        $stmt = $pdo->prepare("UPDATE players SET status = 'active', base_price = ? WHERE id = ?");
+        $stmt->execute([$basePrice, $playerId]);
+        return ['success' => true, 'message' => 'Player listed for auction!'];
+    } catch (Throwable $e) {
+        return ['success' => false, 'message' => 'Could not list player.'];
+    }
+}
+
+function placeBid(PDO $pdo, int $auctionId, int $bidderId, float $amount): array {
+    $pdo->beginTransaction();
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM player_auctions WHERE id = ? FOR UPDATE");
+        $stmt->execute([$auctionId]);
+        $auction = $stmt->fetch();
+        if (!$auction || $auction['status'] !== 'active')
+            { $pdo->rollBack(); return ['success' => false, 'message' => 'Auction not active.']; }
+        if (time() > strtotime($auction['end_time']))
+            { $pdo->rollBack(); return ['success' => false, 'message' => 'Auction ended.']; }
+        if ($amount < $auction['current_price'] + $auction['min_increment'])
+            { $pdo->rollBack(); return ['success' => false, 'message' => 'Bid too low. Min: ৳' . number_format($auction['current_price'] + $auction['min_increment'], 0) . '']; }
+
+        $balStmt = $pdo->prepare("SELECT balance FROM users WHERE id = ? FOR UPDATE");
+        $balStmt->execute([$bidderId]);
+        $balance = (float)$balStmt->fetchColumn();
+        if ($balance < $amount)
+            { $pdo->rollBack(); return ['success' => false, 'message' => 'Insufficient balance.']; }
+
+        $stmt = $pdo->prepare("INSERT INTO auction_bids (auction_id, bidder_id, amount) VALUES (?, ?, ?)");
+        $stmt->execute([$auctionId, $bidderId, $amount]);
+        $stmt = $pdo->prepare("UPDATE player_auctions SET current_price = ? WHERE id = ?");
+        $stmt->execute([$amount, $auctionId]);
+        $pdo->commit();
+        return ['success' => true, 'current_price' => $amount, 'message' => 'Bid placed!'];
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        return ['success' => false, 'message' => 'Could not place bid.'];
+    }
+}
+
+function buyPlayerDirect(PDO $pdo, int $playerId, int $buyerId, float $price): array {
+    $pdo->beginTransaction();
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM players WHERE id = ? FOR UPDATE");
+        $stmt->execute([$playerId]);
+        $player = $stmt->fetch();
+        if (!$player || $player['status'] !== 'free_agent')
+            { $pdo->rollBack(); return ['success' => false, 'message' => 'Player not available.']; }
+
+        $balStmt = $pdo->prepare("SELECT balance FROM users WHERE id = ? FOR UPDATE");
+        $balStmt->execute([$buyerId]);
+        $balance = (float)$balStmt->fetchColumn();
+        if ($balance < $price)
+            { $pdo->rollBack(); return ['success' => false, 'message' => 'Insufficient balance.']; }
+
+        // Deduct from buyer, credit to seller (if any) or system
+        $prevOwnerId = $player['owner_id'];
+        $stmt = $pdo->prepare("UPDATE users SET balance = balance - ? WHERE id = ?");
+        $stmt->execute([$price, $buyerId]);
+        if ($prevOwnerId) {
+            $stmt = $pdo->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
+            $stmt->execute([$price, $prevOwnerId]);
+        }
+
+        $stmt = $pdo->prepare("UPDATE players SET owner_id = ?, current_club_id = NULL, status = 'active' WHERE id = ?");
+        $stmt->execute([$buyerId, $playerId]);
+
+        $stmt = $pdo->prepare("INSERT INTO player_transfers (player_id, from_owner_id, to_owner_id, amount, type) VALUES (?, ?, ?, ?, 'direct_sale')");
+        $stmt->execute([$playerId, $prevOwnerId, $buyerId, $price]);
+
+        $pdo->commit();
+        return ['success' => true, 'message' => 'Player purchased!'];
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        return ['success' => false, 'message' => 'Could not complete purchase.'];
+    }
+}
+
+function releasePlayer(PDO $pdo, int $playerId, int $ownerId): array {
+    $stmt = $pdo->prepare("SELECT id, owner_id, current_club_id FROM players WHERE id = ?");
+    $stmt->execute([$playerId]);
+    $player = $stmt->fetch();
+    if (!$player || (int)$player['owner_id'] !== $ownerId) return ['success' => false, 'message' => 'Not your player.'];
+
+    try {
+        $fromClubId = $player['current_club_id'];
+        $stmt = $pdo->prepare("UPDATE players SET owner_id = NULL, current_club_id = NULL, status = 'free_agent' WHERE id = ?");
+        $stmt->execute([$playerId]);
+        $stmt = $pdo->prepare("INSERT INTO player_transfers (player_id, from_club_id, from_owner_id, type) VALUES (?, ?, ?, 'release')");
+        $stmt->execute([$playerId, $fromClubId, $ownerId]);
+        return ['success' => true, 'message' => 'Player released.'];
+    } catch (Throwable $e) {
+        return ['success' => false, 'message' => 'Could not release player.'];
+    }
+}
+
+function hirePlayerToClub(PDO $pdo, int $playerId, int $clubId, int $managerId): array {
+    $pdo->beginTransaction();
+    try {
+        // Verify manager is owner/manager of club
+        $stmt = $pdo->prepare("SELECT role FROM club_members WHERE club_id = ? AND user_id = ?");
+        $stmt->execute([$clubId, $managerId]);
+        $member = $stmt->fetch();
+        if (!$member || !in_array($member['role'], ['owner','manager']))
+            { $pdo->rollBack(); return ['success' => false, 'message' => 'Not authorized.']; }
+
+        $stmt = $pdo->prepare("SELECT p.* FROM players p JOIN users u ON u.id = p.user_id WHERE p.id = ? FOR UPDATE");
+        $stmt->execute([$playerId]);
+        $player = $stmt->fetch();
+        if (!$player) { $pdo->rollBack(); return ['success' => false, 'message' => 'Player not found.']; }
+
+        // Check if player already in club as member
+        $stmt = $pdo->prepare("SELECT id FROM club_members WHERE club_id = ? AND user_id = ?");
+        $stmt->execute([$clubId, $player['user_id']]);
+        if ($stmt->fetch()) { $pdo->rollBack(); return ['success' => false, 'message' => 'Already in club.']; }
+
+        $stmt = $pdo->prepare("INSERT INTO club_members (club_id, user_id, role) VALUES (?, ?, 'player')");
+        $stmt->execute([$clubId, $player['user_id']]);
+        $stmt = $pdo->prepare("UPDATE players SET current_club_id = ? WHERE id = ?");
+        $stmt->execute([$clubId, $playerId]);
+        $stmt = $pdo->prepare("INSERT INTO player_transfers (player_id, to_club_id, to_owner_id, type) VALUES (?, ?, ?, 'hire')");
+        $stmt->execute([$playerId, $clubId, $managerId]);
+
+        $pdo->commit();
+        return ['success' => true, 'message' => 'Player hired to club!'];
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        return ['success' => false, 'message' => 'Could not hire player.'];
+    }
+}
+
+function firePlayerFromClub(PDO $pdo, int $playerUserId, int $clubId, int $managerId): array {
+    $stmt = $pdo->prepare("SELECT role FROM club_members WHERE club_id = ? AND user_id = ?");
+    $stmt->execute([$clubId, $managerId]);
+    $member = $stmt->fetch();
+    if (!$member || !in_array($member['role'], ['owner','manager']))
+        return ['success' => false, 'message' => 'Not authorized.'];
+
+    try {
+        $stmt = $pdo->prepare("DELETE FROM club_members WHERE club_id = ? AND user_id = ?");
+        $stmt->execute([$clubId, $playerUserId]);
+        $stmt = $pdo->prepare("UPDATE players SET current_club_id = NULL WHERE user_id = ? AND current_club_id = ?");
+        $stmt->execute([$playerUserId, $clubId]);
+        return ['success' => true, 'message' => 'Player removed from club.'];
+    } catch (Throwable $e) {
+        return ['success' => false, 'message' => 'Could not remove player.'];
+    }
+}
+
+/* ================================================
+   LEADERBOARD & PLAYER STATS
+   ================================================ */
+
+function getLeaderboard(PDO $pdo, ?int $tournamentId = null, ?int $clubId = null, int $limit = 50): array {
+    $where = []; $params = [];
+    if ($tournamentId) { $where[] = "tl.tournament_id = ?"; $params[] = $tournamentId; }
+    if ($clubId) { $where[] = "cm.club_id = ?"; $params[] = $clubId; }
+
+    $sql = "SELECT tl.*, u.username, u.full_name, u.avatar, u.nickname,
+            COALESCE((SELECT cm.club_id FROM club_members cm WHERE cm.user_id = tl.user_id LIMIT 1), 0) AS club_id,
+            COALESCE((SELECT c.name FROM club_members cm JOIN clubs c ON c.id = cm.club_id WHERE cm.user_id = tl.user_id LIMIT 1), '') AS club_name,
+            COALESCE((SELECT c.colour FROM club_members cm JOIN clubs c ON c.id = cm.club_id WHERE cm.user_id = tl.user_id LIMIT 1), '#7c3aed') AS club_colour
+            FROM tournament_leaderboard tl
+            JOIN users u ON u.id = tl.user_id";
+    if ($clubId) { $sql .= " JOIN club_members cm ON cm.user_id = tl.user_id"; }
+    if (!empty($where)) $sql .= " WHERE " . implode(' AND ', $where);
+    $sql .= " ORDER BY tl.total_points DESC, tl.total_prize DESC LIMIT ?";
+    $params[] = $limit;
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll();
+}
+
+function getPlayerDetail(PDO $pdo, int $userId): ?array {
+    $stmt = $pdo->prepare("SELECT p.*, u.username, u.full_name, u.avatar, u.nickname, u.registered_at,
+        COALESCE((SELECT c.id FROM club_members cm JOIN clubs c ON c.id = cm.club_id WHERE cm.user_id = p.user_id LIMIT 1), NULL) AS club_id,
+        COALESCE((SELECT c.name FROM club_members cm JOIN clubs c ON c.id = cm.club_id WHERE cm.user_id = p.user_id LIMIT 1), NULL) AS club_name,
+        COALESCE((SELECT c.colour FROM club_members cm JOIN clubs c ON c.id = cm.club_id WHERE cm.user_id = p.user_id LIMIT 1), NULL) AS club_colour,
+        COALESCE((SELECT c.logo FROM club_members cm JOIN clubs c ON c.id = cm.club_id WHERE cm.user_id = p.user_id LIMIT 1), NULL) AS club_logo
+        FROM players p JOIN users u ON u.id = p.user_id WHERE p.user_id = ?");
+    $stmt->execute([$userId]);
+    $player = $stmt->fetch();
+    if (!$player) return null;
+
+    // Stats
+    $stmt = $pdo->prepare("SELECT COALESCE(SUM(goals),0) AS total_goals, COALESCE(SUM(assists),0) AS total_assists, COALESCE(SUM(matches_played),0) AS total_matches, COALESCE(SUM(wins),0) AS total_wins, COALESCE(SUM(kills),0) AS total_kills FROM player_stats WHERE user_id = ?");
+    $stmt->execute([$userId]);
+    $player['stats'] = $stmt->fetch();
+
+    // Transfer history
+    $stmt = $pdo->prepare("SELECT pt.*, fc.name AS from_club_name, tc.name AS to_club_name, fu.username AS from_owner_name, tu.username AS to_owner_name FROM player_transfers pt LEFT JOIN clubs fc ON fc.id = pt.from_club_id LEFT JOIN clubs tc ON tc.id = pt.to_club_id LEFT JOIN users fu ON fu.id = pt.from_owner_id LEFT JOIN users tu ON tu.id = pt.to_owner_id WHERE pt.player_id = ? ORDER BY pt.created_at DESC LIMIT 20");
+    $stmt->execute([$playerId = $player['id']]);
+    $player['transfers'] = $stmt->fetchAll();
+
+    return $player;
+}
+
+function getMarketPlayers(PDO $pdo, string $status = 'free_agent', ?int $clubId = null, int $limit = 50): array {
+    $where = ["p.status = ?"]; $params = [$status];
+    if ($clubId) { $where[] = "p.current_club_id = ?"; $params[] = $clubId; }
+
+    $sql = "SELECT p.*, u.username, u.full_name, u.avatar, u.nickname,
+            COALESCE((SELECT COUNT(*) FROM player_auctions WHERE player_id = p.id AND status = 'active'), 0) AS has_active_auction,
+            COALESCE((SELECT current_price FROM player_auctions WHERE player_id = p.id AND status = 'active' ORDER BY start_time DESC LIMIT 1), p.market_value) AS display_price,
+            COALESCE((SELECT COUNT(*) FROM auction_bids ab JOIN player_auctions pa ON pa.id = ab.auction_id WHERE pa.player_id = p.id AND pa.status = 'active'), 0) AS bid_count
+            FROM players p JOIN users u ON u.id = p.user_id
+            WHERE " . implode(' AND ', $where) . " ORDER BY p.market_value DESC LIMIT ?";
+    $params[] = $limit;
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll();
+}
+
+function getClubStandings(PDO $pdo): array {
+    $stmt = $pdo->prepare("SELECT c.*,
+        (SELECT COUNT(*) FROM club_members WHERE club_id = c.id) AS member_count,
+        (SELECT COALESCE(SUM(tl.total_points),0) FROM tournament_leaderboard tl JOIN club_members cm ON cm.user_id = tl.user_id WHERE cm.club_id = c.id) AS total_club_points
+        FROM clubs c ORDER BY total_club_points DESC, c.trophies DESC");
+    $stmt->execute();
+    return $stmt->fetchAll();
+}
+
+function getActiveAuctions(PDO $pdo, int $limit = 30): array {
+    $stmt = $pdo->prepare("SELECT pa.*, u.username AS seller_name, p2.username AS player_name, p2.full_name AS player_full, p2.avatar AS player_avatar,
+        (SELECT COUNT(*) FROM auction_bids WHERE auction_id = pa.id) AS total_bids,
+        COALESCE((SELECT MAX(amount) FROM auction_bids WHERE auction_id = pa.id), pa.base_price) AS highest_bid
+        FROM player_auctions pa
+        JOIN players p ON p.id = pa.player_id
+        JOIN users u ON u.id = pa.seller_id
+        JOIN users p2 ON p2.id = p.user_id
+        WHERE pa.status = 'active' AND pa.end_time > NOW()
+        ORDER BY pa.end_time ASC LIMIT ?");
+    $stmt->execute([$limit]);
+    return $stmt->fetchAll();
+}
+
+function settleExpiredAuctions(PDO $pdo): int {
+    $count = 0;
+    try {
+        $stmt = $pdo->query("SELECT * FROM player_auctions WHERE status = 'active' AND end_time <= NOW()");
+        $expired = $stmt->fetchAll();
+        foreach ($expired as $auction) {
+            $pdo->beginTransaction();
+            try {
+                // Get highest bidder
+                $bidStmt = $pdo->prepare("SELECT * FROM auction_bids WHERE auction_id = ? ORDER BY amount DESC LIMIT 1");
+                $bidStmt->execute([$auction['id']]);
+                $topBid = $bidStmt->fetch();
+
+                if ($topBid) {
+                    $stmt = $pdo->prepare("UPDATE player_auctions SET status = 'completed', winner_id = ?, final_price = ? WHERE id = ?");
+                    $stmt->execute([$topBid['bidder_id'], $topBid['amount'], $auction['id']]);
+
+                    // Deduct from winner
+                    $stmt = $pdo->prepare("UPDATE users SET balance = balance - ? WHERE id = ? AND balance >= ?");
+                    $stmt->execute([$topBid['amount'], $topBid['bidder_id'], $topBid['amount']]);
+
+                    // Credit seller
+                    $stmt = $pdo->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
+                    $stmt->execute([$topBid['amount'] * 0.95, $auction['seller_id']]); // 5% platform fee
+
+                    // Update player ownership
+                    $stmt = $pdo->prepare("UPDATE players SET owner_id = ?, status = 'active' WHERE id = ?");
+                    $stmt->execute([$topBid['bidder_id'], $auction['player_id']]);
+
+                    $stmt = $pdo->prepare("INSERT INTO player_transfers (player_id, from_owner_id, to_owner_id, amount, type) VALUES (?, ?, ?, ?, 'auction')");
+                    $stmt->execute([$auction['player_id'], $auction['seller_id'], $topBid['bidder_id'], $topBid['amount']]);
+                } else {
+                    $stmt = $pdo->prepare("UPDATE player_auctions SET status = 'cancelled' WHERE id = ?");
+                    $stmt->execute([$auction['id']]);
+                }
+                $pdo->commit();
+                $count++;
+            } catch (Throwable $e) {
+                $pdo->rollBack();
+            }
+        }
+    } catch (Throwable $e) {}
+    return $count;
+}
+
