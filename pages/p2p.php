@@ -166,7 +166,7 @@ $statusBadge = ['pending'=>'yellow','paid'=>'blue','completed'=>'green','cancell
   cursor: not-allowed;
   transform: none;
 }
-.p2p-tabbar-v3 { display:flex; gap:4px; margin-bottom:16px; background:rgba(255,255,255,.7); backdrop-filter:blur(12px); border-radius:16px; padding:4px; position:sticky; top:80px; z-index:50; border:1px solid var(--p2p-border); box-shadow:0 4px 16px rgba(0,0,0,.04) }
+.p2p-tabbar-v3 { display:flex; gap:4px; margin-bottom:16px; background:rgba(255,255,255,.7); backdrop-filter:blur(12px); border-radius:16px; padding:4px; position:sticky; top:0; z-index:50; border:1px solid var(--p2p-border); box-shadow:0 4px 16px rgba(0,0,0,.04) }
 .dark .p2p-tabbar-v3 { background:rgba(30,41,59,.8); border-color:#374151 }
 .p2p-tabbar-btn { flex:1; padding:10px 8px; border-radius:10px; border:0; font-size:.8rem; font-weight:700; cursor:pointer; transition:all .2s; background:transparent; color:var(--p2p-muted); display:flex; align-items:center; justify-content:center; gap:6px; white-space:nowrap; font-family:'Plus Jakarta Sans',sans-serif }
 .p2p-tabbar-btn:hover { color:var(--p2p-text) }

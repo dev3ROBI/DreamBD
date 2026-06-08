@@ -409,23 +409,20 @@ class DreamBDApp {
         });
     }
 
-    // Enhanced Back to Top with progress indicator
+    // Enhanced Back to Top with progress indicator (uses main scroll container)
     initBackToTop() {
         const backToTop = document.getElementById('backToTop');
-        
-        if (!backToTop) return;
+        const scrollContainer = document.getElementById('mainContent');
+        if (!backToTop || !scrollContainer) return;
         
         const updateVisibility = () => {
-            const scrollY = window.scrollY;
-            const windowHeight = window.innerHeight;
-            const documentHeight = document.documentElement.scrollHeight;
+            const scrollY = scrollContainer.scrollTop;
+            const containerHeight = scrollContainer.clientHeight;
+            const scrollHeight = scrollContainer.scrollHeight;
             
-            // Show after 300px scroll
             if (scrollY > 300) {
                 backToTop.classList.add('visible');
-                
-                // Add progress indicator
-                const progress = Math.min((scrollY / (documentHeight - windowHeight)) * 100, 100);
+                const progress = Math.min((scrollY / (scrollHeight - containerHeight)) * 100, 100);
                 backToTop.style.setProperty('--progress', `${progress}%`);
             } else {
                 backToTop.classList.remove('visible');
@@ -433,20 +430,13 @@ class DreamBDApp {
         };
         
         backToTop.addEventListener('click', () => {
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
-            
-            // Add click animation
+            scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
             backToTop.classList.add('clicked');
-            setTimeout(() => {
-                backToTop.classList.remove('clicked');
-            }, 300);
+            setTimeout(() => backToTop.classList.remove('clicked'), 300);
         });
         
-        window.addEventListener('scroll', updateVisibility);
-        updateVisibility(); // Initial check
+        scrollContainer.addEventListener('scroll', updateVisibility);
+        updateVisibility();
         
         this.components.backToTop = { update: updateVisibility };
     }

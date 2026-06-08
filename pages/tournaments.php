@@ -319,6 +319,7 @@ $palette = ['#7c3aed','#2563eb','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4
                 <button class="gp-tab" data-filter="upcoming" role="tab">Upcoming</button>
                 <button class="gp-tab" data-filter="ongoing" role="tab">Ongoing</button>
                 <button class="gp-tab" data-filter="completed" role="tab">Completed</button>
+                <button class="gp-tab" data-filter="cancelled" role="tab">Cancelled</button>
             </div>
             <div class="gp-search">
                 <i class="fas fa-search gp-search-icon"></i>
@@ -391,9 +392,12 @@ $palette = ['#7c3aed','#2563eb','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4
                         <?php if ($prize): ?><div><i class="fas fa-trophy" style="color:#f59e0b"></i> ৳<?php echo $prize; ?></div><?php endif; ?>
                         <div><i class="fas fa-users"></i> <?php echo $regd; ?><?php echo $maxTeams > 0 ? "/$maxTeams" : ''; ?> teams</div>
                         <?php if ($entryFee > 0): ?><div><i class="fas fa-coins" style="color:#10b981"></i> ৳<?php echo number_format($entryFee, 0); ?> entry</div><?php endif; ?>
+                        <?php if ($status === 'cancelled'): ?><div style="color:#dc2626"><i class="fas fa-ban"></i> Cancelled</div><?php endif; ?>
                     </div>
                     <div class="gp-card-actions">
-                        <?php if ($isRegistered): ?>
+                        <?php if ($status === 'cancelled'): ?>
+                            <span class="gp-btn gp-btn-sm gp-btn-disabled"><i class="fas fa-ban"></i> Cancelled</span>
+                        <?php elseif ($isRegistered): ?>
                             <button class="gp-btn gp-btn-sm gp-btn-success" disabled><i class="fas fa-check-circle"></i> Registered</button>
                             <button class="gp-btn gp-btn-sm gp-btn-ghost gp-unregister" data-id="<?php echo $tid; ?>"><i class="fas fa-xmark"></i></button>
                         <?php elseif ($canRegister && !$isFull): ?>

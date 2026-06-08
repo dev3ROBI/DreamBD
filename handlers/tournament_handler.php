@@ -241,6 +241,30 @@ try {
             $response = ['success' => true, 'message' => 'Tournament status updated.', 'status' => $status];
             break;
 
+        case 'generate_bracket':
+            if (!$userId || ($_SESSION['role'] ?? '') !== 'agent') { $response['message'] = 'Only agents can generate brackets.'; break; }
+            $tournamentId = (int)($req['tournament_id'] ?? 0);
+            if (!$tournamentId) { $response['message'] = 'Invalid tournament.'; break; }
+            $result = generateTournamentBracket($db, $tournamentId, (int)$userId);
+            $response = array_merge($response, $result);
+            break;
+
+        case 'advance_winner':
+            if (!$userId || ($_SESSION['role'] ?? '') !== 'agent') { $response['message'] = 'Only agents can advance winners.'; break; }
+            $matchId = (int)($req['match_id'] ?? 0);
+            $winnerTeamId = (int)($req['winner_team_id'] ?? 0);
+            if (!$matchId || !$winnerTeamId) { $response['message'] = 'Invalid match or winner.'; break; }
+            $result = advanceTournamentWinner($db, $matchId, $winnerTeamId, (int)$userId);
+            $response = array_merge($response, $result);
+            break;
+
+        case 'get_bracket':
+            $tournamentId = (int)($req['tournament_id'] ?? 0);
+            if (!$tournamentId) { $response['message'] = 'Invalid tournament.'; break; }
+            $bracket = getTournamentBracket($db, $tournamentId);
+            $response = ['success' => true, 'bracket' => $bracket];
+            break;
+
         case 'get_tournament_room':
             $tournamentId = (int)($req['tournament_id'] ?? 0);
             if (!$userId) { $response['message'] = 'Please log in.'; break; }
@@ -253,6 +277,7 @@ try {
                 'player_pool' => getTournamentPlayerPool($db, $tournamentId),
                 'messages' => getTournamentRoomMessages($db, $tournamentId),
                 'results' => getTournamentResultsBundle($db, $tournamentId),
+                'bracket' => getTournamentBracket($db, $tournamentId),
             ];
             break;
 
@@ -276,6 +301,14 @@ try {
             if ($response['success']) {
                 $response['messages'] = getTournamentRoomMessages($db, $tournamentId);
             }
+            break;
+
+        case 'cancel_tournament':
+            if (!$userId || ($_SESSION['role'] ?? '') !== 'agent') { $response['message'] = 'Only agents can cancel tournaments.'; break; }
+            $tournamentId = (int)($req['tournament_id'] ?? 0);
+            if (!$tournamentId) { $response['message'] = 'Invalid tournament.'; break; }
+            $result = cancelTournament($db, $tournamentId, (int)$userId);
+            $response = array_merge($response, $result);
             break;
 
         case 'submit_tournament_results':

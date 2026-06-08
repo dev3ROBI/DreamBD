@@ -24,6 +24,8 @@ $teams = getTournamentTeams($db, $tournamentId);
 $playerPool = getTournamentPlayerPool($db, $tournamentId);
 $messages = getTournamentRoomMessages($db, $tournamentId);
 $results = getTournamentResultsBundle($db, $tournamentId);
+$bracket = getTournamentBracket($db, $tournamentId);
+$hasBracket = !empty($bracket);
 $isAgentOwner = (int) ($tournament['agent_id'] ?? 0) === $viewerId && (($_SESSION['role'] ?? '') === 'agent');
 $status = (string) ($tournament['status'] ?? 'upcoming');
 $accent = htmlspecialchars($tournament['accent_color'] ?? '#7c3aed');
@@ -67,7 +69,9 @@ $title = htmlspecialchars($tournament['title'] ?? 'Tournament');
 .tr-badge.live::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #b91c1c; animation: tr-pulse 1.5s ease-in-out infinite; }
 .tr-badge.upcoming { background: rgba(37,99,235,0.12); color: #1d4ed8; }
 .tr-badge.completed { background: rgba(16,185,129,0.14); color: #047857; }
+.tr-badge.cancelled { background: rgba(220,38,38,0.1); color: #b91c1c; }
 @keyframes tr-pulse { 0%,100% { opacity:1; } 50% { opacity:.3; } }
+@keyframes tr-reconnect-pulse { 0%,100% { opacity:1; transform: scale(1); } 50% { opacity:.5; transform: scale(0.95); } }
 
 /* -- Status buttons row */
 .tr-actions { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -172,6 +176,33 @@ $title = htmlspecialchars($tournament['title'] ?? 'Tournament');
 .tr-feedback.success { color: #15803d; }
 .tr-feedback.error { color: #dc2626; }
 
+/* -- Bracket */
+.tr-bracket-container { position: relative; }
+.tr-bracket-wrapper { display: flex; gap: 0; overflow-x: auto; padding: 16px 4px 20px; min-height: 220px; align-items: stretch; }
+.tr-bracket-round { display: flex; flex-direction: column; gap: 8px; min-width: 175px; flex-shrink: 0; position: relative; padding: 0 12px; }
+.tr-bracket-round:not(:last-child)::after { content: ''; position: absolute; right: -4px; top: 40%; bottom: 40%; width: 2px; background: linear-gradient(to bottom, transparent, var(--tr-accent), transparent); opacity: .3; }
+.tr-bracket-round-header { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: #64748b; padding: 6px 14px; border-radius: 8px; background: var(--tr-bg-soft); text-align: center; margin-bottom: 6px; border: 1px solid var(--tr-glass-border); }
+.dark .tr-bracket-round-header { color: #94a3b8; }
+.tr-bracket-matches { display: flex; flex-direction: column; gap: 10px; flex: 1; justify-content: space-around; }
+.tr-bracket-match { padding: 12px 14px; border-radius: 12px; background: var(--tr-bg-soft); border: 1px solid var(--tr-glass-border); font-size: 12px; transition: all .2s; position: relative; }
+.tr-bracket-match:hover { border-color: color-mix(in srgb, var(--tr-accent) 30%, transparent); box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
+.tr-bracket-team { padding: 5px 8px; font-weight: 600; cursor: pointer; transition: all .15s; border-radius: 8px; font-size: 12px; display: flex; align-items: center; gap: 4px; }
+.tr-bracket-team:hover { background: color-mix(in srgb, var(--tr-accent) 10%, transparent); }
+.tr-bracket-team.is-winner { color: var(--tr-accent); font-weight: 700; }
+.tr-bracket-team.is-winner::after { content: " ✓"; margin-left: auto; }
+.tr-bracket-team.tbd { color: #94a3b8; font-style: italic; cursor: default; }
+.tr-bracket-team.tbd:hover { background: none; }
+.tr-bracket-vs { font-size: 9px; font-weight: 700; color: #94a3b8; text-align: center; padding: 1px 0; letter-spacing: .15em; }
+.tr-bracket-winner { margin-top: 6px; padding: 4px 8px; border-radius: 8px; background: color-mix(in srgb, var(--tr-accent) 12%, transparent); color: var(--tr-accent); font-weight: 700; font-size: 10px; text-align: center; }
+.tr-bracket-live { margin-top: 6px; padding: 4px 8px; border-radius: 8px; background: rgba(239,68,68,0.12); color: #b91c1c; font-weight: 700; font-size: 10px; text-align: center; animation: tr-pulse 1.5s ease-in-out infinite; }
+.tr-bracket-connector { display: none; }
+
+/* -- Participants mini-list */
+.tr-participant-mini { display: flex; flex-wrap: wrap; gap: 6px; }
+.tr-participant-mini .tr-p-mini-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 2px solid var(--tr-glass-border); transition: transform .15s; cursor: pointer; }
+.tr-participant-mini .tr-p-mini-avatar:hover { transform: scale(1.15); z-index: 2; position: relative; }
+.tr-participant-mini .tr-p-mini-more { width: 28px; height: 28px; border-radius: 50%; background: var(--tr-bg-soft); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #64748b; border: 2px solid var(--tr-glass-border); }
+
 /* -- Empty state */
 .tr-empty { text-align: center; padding: 24px 16px; color: #94a3b8; }
 .tr-empty i { font-size: 28px; margin-bottom: 8px; opacity: .4; display: block; }
@@ -212,6 +243,12 @@ $title = htmlspecialchars($tournament['title'] ?? 'Tournament');
                     <span><i class="fas fa-users"></i> <?php echo (int) ($tournament['registered_teams'] ?? 0); ?> joined</span>
                     <span><i class="fas fa-tag"></i> <?php echo htmlspecialchars($tournament['category'] ?? 'General'); ?></span>
                     <span><i class="fas fa-trophy"></i> Prize ৳<?php echo htmlspecialchars((string) ($tournament['prize_money'] ?? '0')); ?></span>
+                    <?php if ((float)($tournament['entry_fee'] ?? 0) > 0): ?>
+                    <span><i class="fas fa-coins"></i> Entry ৳<?php echo number_format((float)$tournament['entry_fee'], 0); ?></span>
+                    <?php endif; ?>
+                    <?php if (!empty($tournament['prize_breakdown'])): ?>
+                    <span><i class="fas fa-list-ol"></i> Prize breakdown available</span>
+                    <?php endif; ?>
                 </div>
                 <?php if (!empty($tournament['description'])): ?>
                     <p style="margin-top:12px;font-size:14px;line-height:1.6;color:#64748b"><?php echo htmlspecialchars($tournament['description']); ?></p>
@@ -224,6 +261,8 @@ $title = htmlspecialchars($tournament['title'] ?? 'Tournament');
                 <button class="tr-btn tr-btn-sm ghost" data-status-action="upcoming"><i class="fas fa-pause"></i> Upcoming</button>
                 <button class="tr-btn tr-btn-sm warn" data-status-action="live"><i class="fas fa-broadcast-tower"></i> Live</button>
                 <button class="tr-btn tr-btn-sm success" data-status-action="completed"><i class="fas fa-check-circle"></i> Complete</button>
+                <button class="tr-btn tr-btn-sm danger" data-cancel-tournament><i class="fas fa-ban"></i> Cancel</button>
+                <div class="tr-feedback" id="trCancelFeedback"></div>
             </div>
         <?php endif; ?>
     </section>
@@ -236,7 +275,7 @@ $title = htmlspecialchars($tournament['title'] ?? 'Tournament');
             <!-- Chat panel -->
             <section class="tr-panel">
                 <div class="tr-panel-header">
-                    <h2><i class="fas fa-comments"></i> Room chat</h2>
+                    <h2><i class="fas fa-comments"></i> Room chat <span class="tr-badge" style="font-size:10px;padding:2px 8px;background:rgba(16,185,129,0.14);color:#047857;margin-left:6px" id="trLiveBadge">LIVE</span></h2>
                     <button class="tr-btn tr-btn-sm ghost" type="button" data-refresh-chat><i class="fas fa-rotate"></i> Refresh</button>
                 </div>
                 <div class="tr-panel-body" style="padding-bottom:0">
@@ -278,6 +317,27 @@ $title = htmlspecialchars($tournament['title'] ?? 'Tournament');
                         <button class="tr-chat-send-btn" type="submit" title="Send"><i class="fas fa-paper-plane"></i></button>
                     </form>
                     <div class="tr-feedback" id="trChatFeedback" style="margin-top:6px;min-height:0"></div>
+                </div>
+            </section>
+
+            <!-- Bracket panel -->
+            <section class="tr-panel" id="trBracketPanel">
+                <div class="tr-panel-header">
+                    <h2><i class="fas fa-diagram-project"></i> Match bracket</h2>
+                    <?php if ($isAgentOwner): ?>
+                    <div class="tr-actions">
+                        <button class="tr-btn tr-btn-sm ghost" type="button" data-generate-bracket<?php echo $hasBracket ? ' style="display:none"' : ''; ?>><i class="fas fa-shuffle"></i> Generate bracket</button>
+                    </div>
+                    <?php endif; ?>
+                </div>
+                <div class="tr-panel-body">
+                    <div id="trBracketContainer" class="tr-bracket-container">
+                        <?php if (!$hasBracket): ?>
+                        <div class="tr-empty" id="trBracketEmpty"><i class="fas fa-diagram-project"></i><p>Bracket not yet generated. The tournament agent can generate a bracket once participants are registered.</p></div>
+                        <?php else: ?>
+                        <?php renderBracketHTML($bracket); ?>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </section>
 
@@ -404,6 +464,27 @@ $title = htmlspecialchars($tournament['title'] ?? 'Tournament');
 
             <section class="tr-panel">
                 <div class="tr-panel-header">
+                    <h2><i class="fas fa-user-group"></i> Participants</h2>
+                    <span class="tr-badge" style="font-size:11px;padding:3px 10px;background:var(--tr-bg-soft)"><?php echo count($playerPool); ?></span>
+                </div>
+                <div class="tr-panel-body">
+                    <?php if (!$playerPool): ?>
+                    <div class="tr-empty"><i class="fas fa-user-plus"></i><p>No participants yet.</p></div>
+                    <?php else: ?>
+                    <div class="tr-participant-mini">
+                        <?php foreach (array_slice($playerPool, 0, 20) as $p): ?>
+                        <img src="assets/avatars/<?php echo htmlspecialchars($p['avatar'] ?? 'default.png'); ?>" alt="<?php echo htmlspecialchars($p['full_name'] ?: $p['username']); ?>" class="tr-p-mini-avatar" title="<?php echo htmlspecialchars($p['full_name'] ?: $p['username']); ?>" onerror="this.src='assets/avatars/default.png'">
+                        <?php endforeach; ?>
+                        <?php if (count($playerPool) > 20): ?>
+                        <span class="tr-p-mini-more">+<?php echo count($playerPool) - 20; ?></span>
+                        <?php endif; ?>
+                    </div>
+                    <?php endif; ?>
+                </div>
+            </section>
+
+            <section class="tr-panel">
+                <div class="tr-panel-header">
                     <h2><i class="fas fa-ranking-star"></i> Results</h2>
                 </div>
                 <div class="tr-panel-body">
@@ -510,18 +591,26 @@ $title = htmlspecialchars($tournament['title'] ?? 'Tournament');
         var board = document.getElementById('trResultsBoard');
         if (!board) { return; }
         var cards = [];
+        var totalPrize = 0;
         (results.teams || []).forEach(function (result) {
             var detail = (result.points_earned ? escapeHtml(String(result.points_earned)) + ' pts' : '') +
                 (result.prize_amount && parseFloat(result.prize_amount) > 0 ? ', ৳' + escapeHtml(String(result.prize_amount)) : '');
+            if (result.prize_amount && parseFloat(result.prize_amount) > 0) totalPrize += parseFloat(result.prize_amount);
             cards.push('<div class="tr-result-card"><span class="tr-placement">#' + escapeHtml(String(result.placement || '0')) + '</span><span class="tr-player-name">' + escapeHtml(result.linked_team_name || 'Team') + '</span>' + (detail ? '<span class="tr-detail">' + detail + '</span>' : '') + '</div>');
         });
         (results.players || []).forEach(function (result) {
             var detail = (result.points_earned ? escapeHtml(String(result.points_earned)) + ' pts' : '') +
                 (result.prize_amount && parseFloat(result.prize_amount) > 0 ? ', ৳' + escapeHtml(String(result.prize_amount)) : '');
+            if (result.prize_amount && parseFloat(result.prize_amount) > 0) totalPrize += parseFloat(result.prize_amount);
             cards.push('<div class="tr-result-card"><span class="tr-placement">#' + escapeHtml(String(result.placement || '0')) + '</span><span class="tr-player-name">' + escapeHtml(result.full_name || result.username || 'Player') + '</span>' + (detail ? '<span class="tr-detail">' + detail + '</span>' : '') + '</div>');
         });
-        board.innerHTML = cards.length ? cards.join('') : '<div class="tr-empty"><i class="fas fa-hourglass-half"></i><p>Results appear here once published.</p></div>';
+        var html = cards.length ? cards.join('') : '<div class="tr-empty"><i class="fas fa-hourglass-half"></i><p>Results appear here once published.</p></div>';
+        if (totalPrize > 0) {
+            html = '<div class="tr-result-summary" style="padding:8px 12px;margin-bottom:10px;border-radius:10px;background:color-mix(in srgb, var(--tr-accent) 8%, transparent);border:1px solid color-mix(in srgb, var(--tr-accent) 15%, transparent);font-size:12px;display:flex;align-items:center;gap:8px"><i class="fas fa-coins" style="color:var(--tr-accent)"></i> <strong style="color:var(--tr-accent)">৳' + numberFormat(totalPrize) + '</strong> prize distributed</div>' + html;
+        }
+        board.innerHTML = html;
     }
+    function numberFormat(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
 
     function collectRows(selector, includeUser) {
         return Array.prototype.map.call(document.querySelectorAll(selector), function (row) {
@@ -570,6 +659,139 @@ $title = htmlspecialchars($tournament['title'] ?? 'Tournament');
         var diffHr = Math.floor(diffMin / 60);
         if (diffHr < 24) { return diffHr + 'h ago'; }
         return date.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    }
+
+    // ─── SSE: Real-time chat & status ───
+    var lastMessageId = 0;
+    var existingMessages = document.querySelectorAll('#trChatFeed .tr-chat-card');
+    if (existingMessages.length) {
+        var lastMsg = existingMessages[existingMessages.length - 1];
+        var timeEl = lastMsg.querySelector('.tr-time');
+        if (timeEl && timeEl.textContent) { lastMessageId = Date.now(); }
+    }
+    var sseUrl = 'handlers/tournament_stream.php?tournament_id=' + tournamentId + '&last_id=' + lastMessageId;
+    var evtSource = new EventSource(sseUrl);
+
+    function appendMessages(messages) {
+        var feed = document.getElementById('trChatFeed');
+        if (!feed) return;
+        if (!Array.isArray(messages) || !messages.length) return;
+        var wasEmpty = feed.querySelector('.tr-empty');
+        if (wasEmpty) feed.innerHTML = '';
+        var html = messages.map(function (message) {
+            var isSelf = parseInt(message.sender_id || '0', 10) === viewerId;
+            var avatar = message.avatar || 'default.png';
+            var meta = {};
+            if (message.metadata_json) { try { meta = JSON.parse(message.metadata_json); } catch (e) { meta = {}; } }
+            var roomMeta = '';
+            if (message.message_type === 'room_card') {
+                roomMeta += '<div class="tr-room-card-embed">';
+                if (meta.room_title) { roomMeta += '<div class="rc-title">' + escapeHtml(meta.room_title) + '</div>'; }
+                if (meta.room_code) { roomMeta += '<div class="rc-row"><i class="fas fa-key"></i> Room: <strong>' + escapeHtml(meta.room_code) + '</strong></div>'; }
+                if (meta.room_link) { roomMeta += '<div class="rc-row"><i class="fas fa-link"></i> <a href="' + escapeAttr(meta.room_link) + '" target="_blank" rel="noopener" class="rc-link">Open invite</a></div>'; }
+                if (meta.starts_at) { roomMeta += '<div class="rc-row"><i class="fas fa-clock"></i> ' + escapeHtml(meta.starts_at) + '</div>'; }
+                if (meta.note) { roomMeta += '<div class="rc-row"><i class="fas fa-sticky-note"></i> ' + escapeHtml(meta.note) + '</div>'; }
+                roomMeta += '</div>';
+            }
+            return '<article class="tr-chat-card' + (isSelf ? ' is-self' : '') + '">' +
+                (isSelf ? '' : '<img src="assets/avatars/' + escapeAttr(avatar) + '" alt="" class="tr-chat-avatar" onerror="this.src=\'assets/avatars/default.png\'">') +
+                '<div class="tr-chat-bubble">' +
+                '<strong>' + escapeHtml(message.full_name || message.username || 'User') + '</strong>' +
+                '<div class="tr-text">' + nl2br(escapeHtml(message.message || '')) + '</div>' +
+                roomMeta +
+                '<span class="tr-time">' + escapeHtml(formatDate(message.created_at)) + '</span>' +
+                '</div></article>';
+        }).join('');
+        feed.insertAdjacentHTML('beforeend', html);
+        feed.scrollTop = feed.scrollHeight;
+    }
+
+    evtSource.addEventListener('messages', function (event) {
+        try {
+            var msgs = JSON.parse(event.data);
+            if (Array.isArray(msgs) && msgs.length) {
+                appendMessages(msgs);
+                msgs.forEach(function (m) {
+                    var mid = parseInt(m.id || '0', 10);
+                    if (mid > lastMessageId) lastMessageId = mid;
+                });
+            }
+        } catch (e) {}
+    });
+
+    evtSource.addEventListener('status', function (event) {
+        try {
+            var data = JSON.parse(event.data);
+            if (data.status) {
+                var badge = document.querySelector('.tr-badge.' + data.status) || document.querySelector('.tr-badge');
+                if (!badge) { window.location.reload(); return; }
+                var allBadges = document.querySelectorAll('.tr-badge');
+                allBadges.forEach(function (b) {
+                    var cls = b.className.split(' ').filter(function (c) { return c === 'tr-badge'; }).join(' ');
+                    b.className = cls;
+                    b.classList.add(data.status);
+                    b.innerHTML = '<i class="fas fa-signal"></i> ' + data.status.toUpperCase();
+                });
+            }
+        } catch (e) {}
+    });
+
+    evtSource.onerror = function () {
+        var liveBadge = document.getElementById('trLiveBadge');
+        if (liveBadge) { liveBadge.textContent = 'RECONNECT'; liveBadge.style.background = 'rgba(245,158,11,0.14)'; liveBadge.style.color = '#b45309'; liveBadge.style.animation = 'tr-reconnect-pulse 2s ease-in-out infinite'; }
+    };
+
+    evtSource.onopen = function () {
+        var liveBadge = document.getElementById('trLiveBadge');
+        if (liveBadge) { liveBadge.textContent = 'LIVE'; liveBadge.style.background = 'rgba(16,185,129,0.14)'; liveBadge.style.color = '#047857'; liveBadge.style.animation = 'none'; }
+    };
+
+    // Also update SSE URL after sending a message to ensure we get new messages
+    var origSend = api;
+    api = function (payload) {
+        return origSend(payload).then(function (result) {
+            if (payload.action === 'send_tournament_chat' && result.success && result.messages) {
+                result.messages.forEach(function (m) {
+                    var mid = parseInt(m.id || '0', 10);
+                    if (mid > lastMessageId) lastMessageId = mid;
+                });
+            }
+            return result;
+        });
+    };
+
+    // Cancel tournament with inline confirmation
+    var cancelBtn = document.querySelector('[data-cancel-tournament]');
+    if (cancelBtn) {
+        var cancelConfirm = document.createElement('div');
+        cancelConfirm.className = 'tr-cancel-confirm';
+        cancelConfirm.style.cssText = 'display:none;margin-top:8px;padding:10px 14px;border-radius:10px;background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.2)';
+        cancelConfirm.innerHTML = '<div style="font-size:13px;font-weight:600;color:#dc2626;margin-bottom:8px"><i class="fas fa-exclamation-triangle"></i> All fees refunded, prize returned to your balance. Proceed?</div><div style="display:flex;gap:6px"><button class="tr-btn tr-btn-sm danger" id="trCancelConfirmYes"><i class="fas fa-check"></i> Yes, cancel</button><button class="tr-btn tr-btn-sm ghost" id="trCancelConfirmNo">No</button></div>';
+        cancelBtn.parentNode.insertBefore(cancelConfirm, cancelBtn.nextSibling);
+
+        cancelBtn.addEventListener('click', function () {
+            cancelConfirm.style.display = 'block';
+            cancelBtn.style.display = 'none';
+        });
+
+        document.getElementById('trCancelConfirmNo').addEventListener('click', function () {
+            cancelConfirm.style.display = 'none';
+            cancelBtn.style.display = 'inline-flex';
+        });
+
+        document.getElementById('trCancelConfirmYes').addEventListener('click', function () {
+            document.getElementById('trCancelConfirmYes').disabled = true;
+            api({ action: 'cancel_tournament', tournament_id: tournamentId })
+                .then(function (result) {
+                    setFeedback('trCancelFeedback', result.message || '', !!result.success);
+                    if (result.success) { setTimeout(function () { window.location.reload(); }, 1500); }
+                    document.getElementById('trCancelConfirmYes').disabled = false;
+                })
+                .catch(function () {
+                    setFeedback('trCancelFeedback', 'Request failed.', false);
+                    document.getElementById('trCancelConfirmYes').disabled = false;
+                });
+        });
     }
 
     // Status buttons
@@ -672,6 +894,126 @@ $title = htmlspecialchars($tournament['title'] ?? 'Tournament');
                 if (result.success) { renderMessages(result.messages || []); }
             });
         });
+    }
+
+    // ─── Bracket ───
+    function renderBracket(bracket) {
+        var container = document.getElementById('trBracketContainer');
+        if (!container) return;
+        if (!Array.isArray(bracket) || !bracket.length) {
+            container.innerHTML = '<div class="tr-empty"><i class="fas fa-diagram-project"></i><p>Bracket not yet generated.</p></div>';
+            return;
+        }
+        var rounds = {};
+        bracket.forEach(function (match) {
+            var r = parseInt(match.round || '1', 10);
+            if (!rounds[r]) rounds[r] = [];
+            rounds[r].push(match);
+        });
+        var roundKeys = Object.keys(rounds).sort(function (a, b) { return a - b; });
+        var html = '<div class="tr-bracket-wrapper">';
+        roundKeys.forEach(function (roundNum) {
+            html += '<div class="tr-bracket-round">';
+            html += '<div class="tr-bracket-round-header">Round ' + roundNum + '</div>';
+            html += '<div class="tr-bracket-matches">';
+            (rounds[roundNum] || []).forEach(function (match) {
+                var team1 = escapeHtml(match.team1_name || 'TBD');
+                var team2 = escapeHtml(match.team2_name || 'TBD');
+                var winner = match.winner_name || '';
+                var status = match.status || 'scheduled';
+                var matchId = parseInt(match.id || '0', 10);
+                var team1Id = parseInt(match.team1_id || '0', 10);
+                var team2Id = parseInt(match.team2_id || '0', 10);
+                html += '<div class="tr-bracket-match" data-match-id="' + matchId + '" data-team1-id="' + team1Id + '" data-team2-id="' + team2Id + '">';
+                html += '<div class="tr-bracket-team' + (winner && winner === team1 ? ' is-winner' : '') + '" data-match-id="' + matchId + '" data-team-id="' + team1Id + '">' + team1 + '</div>';
+                html += '<div class="tr-bracket-vs">VS</div>';
+                html += '<div class="tr-bracket-team' + (winner && winner === team2 ? ' is-winner' : '') + '" data-match-id="' + matchId + '" data-team-id="' + team2Id + '">' + team2 + '</div>';
+                if (status === 'completed' && winner) {
+                    html += '<div class="tr-bracket-winner"><i class="fas fa-trophy"></i> ' + escapeHtml(winner) + '</div>';
+                } else if (status === 'live') {
+                    html += '<div class="tr-bracket-live">Live</div>';
+                }
+                html += '</div>';
+            });
+            html += '</div></div>';
+        });
+        html += '</div>';
+        container.innerHTML = html;
+        attachBracketTeamClick();
+    }
+
+    function attachBracketTeamClick() {
+        var isAgent = <?php echo $isAgentOwner ? 'true' : 'false'; ?>;
+        Array.prototype.forEach.call(document.querySelectorAll('.tr-bracket-team[data-match-id][data-team-id]'), function (el) {
+            var matchId = parseInt(el.getAttribute('data-match-id') || '0', 10);
+            var teamId = parseInt(el.getAttribute('data-team-id') || '0', 10);
+            if (!matchId || !teamId) return;
+            if (isAgent) {
+                el.title = 'Click to advance to next round';
+                el.style.cursor = 'pointer';
+                el.addEventListener('click', function () {
+                    var confirmEl = document.createElement('div');
+                    confirmEl.className = 'tr-bracket-advance-confirm';
+                    confirmEl.style.cssText = 'position:absolute;top:100%;left:0;right:0;z-index:10;padding:8px;border-radius:10px;background:var(--tr-glass);border:1px solid var(--tr-glass-border);box-shadow:0 8px 24px rgba(0,0,0,0.12);margin-top:4px;font-size:12px';
+                    confirmEl.innerHTML = 'Advance <strong>' + escapeHtml(el.textContent.trim()) + '</strong>?<div style="display:flex;gap:4px;margin-top:6px"><button class="tr-btn tr-btn-sm success" style="padding:3px 10px;font-size:11px">Yes</button><button class="tr-btn tr-btn-sm ghost" style="padding:3px 10px;font-size:11px">No</button></div>';
+                    var existing = el.parentNode.querySelector('.tr-bracket-advance-confirm');
+                    if (existing) existing.remove();
+                    el.parentNode.style.position = 'relative';
+                    el.parentNode.appendChild(confirmEl);
+                    confirmEl.querySelector('button:last-child').addEventListener('click', function (e) { e.stopPropagation(); confirmEl.remove(); });
+                    confirmEl.querySelector('button:first-child').addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        confirmEl.querySelector('button:first-child').disabled = true;
+                        api({ action: 'advance_winner', match_id: matchId, winner_team_id: teamId, tournament_id: tournamentId })
+                            .then(function (result) {
+                                if (result.success && result.bracket) renderBracket(result.bracket);
+                                setFeedback('trBracketFeedback', result.message || '', !!result.success);
+                            });
+                    });
+                });
+            } else {
+                el.title = el.textContent.trim();
+            }
+        });
+    }
+
+    initBracket: {
+        var modalRoot = document.getElementById('trBracketContainer');
+        if (modalRoot && !modalRoot.querySelector('.tr-empty')) {
+            attachBracketTeamClick();
+        }
+    }
+
+    // Generate bracket button
+    var genBtn = document.querySelector('[data-generate-bracket]');
+    if (genBtn) {
+        genBtn.addEventListener('click', function () {
+            genBtn.disabled = true;
+            setFeedback('trBracketFeedback', 'Generating bracket...', true);
+            api({ action: 'generate_bracket', tournament_id: tournamentId })
+                .then(function (result) {
+                    setFeedback('trBracketFeedback', result.message || '', !!result.success);
+                    if (result.success && result.bracket) {
+                        renderBracket(result.bracket);
+                        genBtn.style.display = 'none';
+                    }
+                    genBtn.disabled = false;
+                })
+                .catch(function () {
+                    setFeedback('trBracketFeedback', 'Could not generate bracket.', false);
+                    genBtn.disabled = false;
+                });
+        });
+    }
+
+    // Bracket feedback element
+    var bracketPanel = document.getElementById('trBracketPanel');
+    if (bracketPanel) {
+        var fb = document.createElement('div');
+        fb.id = 'trBracketFeedback';
+        fb.className = 'tr-feedback';
+        fb.style.marginTop = '8px';
+        bracketPanel.querySelector('.tr-panel-body').appendChild(fb);
     }
 })();
 </script>

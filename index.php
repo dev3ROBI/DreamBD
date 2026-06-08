@@ -125,6 +125,12 @@ $themeAttr = htmlspecialchars($theme, ENT_QUOTES, 'UTF-8');
     <style>
         body { opacity: 0; }
         body.css-ready { opacity: 1; transition: opacity 0.15s ease; }
+        html, body { height: 100vh; overflow: hidden; }
+        .main-content { height: 100vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        .main-content::-webkit-scrollbar { width: 6px; }
+        .main-content::-webkit-scrollbar-track { background: transparent; }
+        .main-content::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.3); border-radius: 3px; }
+        .main-content::-webkit-scrollbar-thumb:hover { background: rgba(148,163,184,0.5); }
     </style>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -137,11 +143,10 @@ $themeAttr = htmlspecialchars($theme, ENT_QUOTES, 'UTF-8');
     <!-- Navigation -->
     <?php include 'includes/navbar.php'; ?>
     
-    <!-- Main Content -->
+    <!-- Main Content (scrollable area below fixed navbar) -->
     <main id="mainContent" class="main-content min-h-screen">
         <div id="pageSkeleton" class="page-skeleton" aria-hidden="true" hidden>
             <div class="skeleton-container">
-                <!-- Hero/Banner block -->
                 <div class="sk-hero">
                     <div class="sk-banner"></div>
                     <div class="sk-hero-content">
@@ -152,16 +157,12 @@ $themeAttr = htmlspecialchars($theme, ENT_QUOTES, 'UTF-8');
                         </div>
                     </div>
                 </div>
-
-                <!-- Tabs block -->
                 <div class="sk-tabs">
                     <div class="sk-tab"></div>
                     <div class="sk-tab"></div>
                     <div class="sk-tab"></div>
                     <div class="sk-tab"></div>
                 </div>
-
-                <!-- Sidebar + Main layout (messages) -->
                 <div class="sk-layout-split">
                     <div class="sk-sidebar">
                         <div class="sk-sidebar-item"></div>
@@ -170,38 +171,18 @@ $themeAttr = htmlspecialchars($theme, ENT_QUOTES, 'UTF-8');
                         <div class="sk-sidebar-item"></div>
                     </div>
                     <div class="sk-main-area">
-                        <div class="sk-chat-header">
-                            <div class="sk-line sk-line-md"></div>
-                        </div>
+                        <div class="sk-chat-header"><div class="sk-line sk-line-md"></div></div>
                         <div class="sk-chat-bubble sk-chat-bubble-left"></div>
                         <div class="sk-chat-bubble sk-chat-bubble-right"></div>
                         <div class="sk-chat-bubble sk-chat-bubble-left"></div>
-                        <div class="sk-chat-input">
-                            <div class="sk-line sk-line-xl"></div>
-                        </div>
+                        <div class="sk-chat-input"><div class="sk-line sk-line-xl"></div></div>
                     </div>
                 </div>
-
-                <!-- Stats cards grid (balance, p2p, agent-dashboard) -->
                 <div class="sk-stat-grid">
-                    <div class="sk-stat-card">
-                        <div class="sk-line sk-line-sm"></div>
-                        <div class="sk-line sk-line-lg sk-mt-2"></div>
-                        <div class="sk-line sk-line-xs sk-mt-1"></div>
-                    </div>
-                    <div class="sk-stat-card">
-                        <div class="sk-line sk-line-sm"></div>
-                        <div class="sk-line sk-line-lg sk-mt-2"></div>
-                        <div class="sk-line sk-line-xs sk-mt-1"></div>
-                    </div>
-                    <div class="sk-stat-card">
-                        <div class="sk-line sk-line-sm"></div>
-                        <div class="sk-line sk-line-lg sk-mt-2"></div>
-                        <div class="sk-line sk-line-xs sk-mt-1"></div>
-                    </div>
+                    <div class="sk-stat-card"><div class="sk-line sk-line-sm"></div><div class="sk-line sk-line-lg sk-mt-2"></div><div class="sk-line sk-line-xs sk-mt-1"></div></div>
+                    <div class="sk-stat-card"><div class="sk-line sk-line-sm"></div><div class="sk-line sk-line-lg sk-mt-2"></div><div class="sk-line sk-line-xs sk-mt-1"></div></div>
+                    <div class="sk-stat-card"><div class="sk-line sk-line-sm"></div><div class="sk-line sk-line-lg sk-mt-2"></div><div class="sk-line sk-line-xs sk-mt-1"></div></div>
                 </div>
-
-                <!-- Form skeleton (login, register) -->
                 <div class="sk-form-card">
                     <div class="sk-form-header">
                         <div class="sk-avatar sk-avatar-md sk-mx-auto"></div>
@@ -209,113 +190,78 @@ $themeAttr = htmlspecialchars($theme, ENT_QUOTES, 'UTF-8');
                         <div class="sk-line sk-line-sm sk-mx-auto sk-mt-2"></div>
                     </div>
                     <div class="sk-form-body">
-                        <div class="sk-form-field"></div>
-                        <div class="sk-form-field"></div>
+                        <div class="sk-form-field"></div><div class="sk-form-field"></div>
                         <div class="sk-form-field sk-form-field--recaptcha"></div>
-                        <div class="sk-form-field sk-form-field--half">
-                            <div class="sk-line sk-line-sm" style="width:45%"></div>
-                            <div class="sk-line sk-line-sm" style="width:40%"></div>
-                        </div>
+                        <div class="sk-form-field sk-form-field--half"><div class="sk-line sk-line-sm" style="width:45%"></div><div class="sk-line sk-line-sm" style="width:40%"></div></div>
                         <div class="sk-form-field sk-form-field--btn"></div>
                     </div>
-                    <div class="sk-form-footer">
-                        <div class="sk-divider"></div>
-                        <div class="sk-line sk-line-md sk-mx-auto"></div>
-                    </div>
+                    <div class="sk-form-footer"><div class="sk-divider"></div><div class="sk-line sk-line-md sk-mx-auto"></div></div>
                 </div>
-
-                <!-- Notification items -->
                 <div class="sk-notif-list">
-                    <div class="sk-notif-item">
-                        <div class="sk-avatar sk-avatar-sm"></div>
-                        <div class="sk-notif-text">
-                            <div class="sk-line sk-line-md"></div>
-                            <div class="sk-line sk-line-xs"></div>
-                        </div>
-                    </div>
-                    <div class="sk-notif-item">
-                        <div class="sk-avatar sk-avatar-sm"></div>
-                        <div class="sk-notif-text">
-                            <div class="sk-line sk-line-md"></div>
-                            <div class="sk-line sk-line-xs"></div>
-                        </div>
-                    </div>
-                    <div class="sk-notif-item">
-                        <div class="sk-avatar sk-avatar-sm"></div>
-                        <div class="sk-notif-text">
-                            <div class="sk-line sk-line-md"></div>
-                            <div class="sk-line sk-line-xs"></div>
-                        </div>
-                    </div>
+                    <div class="sk-notif-item"><div class="sk-avatar sk-avatar-sm"></div><div class="sk-notif-text"><div class="sk-line sk-line-md"></div><div class="sk-line sk-line-xs"></div></div></div>
+                    <div class="sk-notif-item"><div class="sk-avatar sk-avatar-sm"></div><div class="sk-notif-text"><div class="sk-line sk-line-md"></div><div class="sk-line sk-line-xs"></div></div></div>
+                    <div class="sk-notif-item"><div class="sk-avatar sk-avatar-sm"></div><div class="sk-notif-text"><div class="sk-line sk-line-md"></div><div class="sk-line sk-line-xs"></div></div></div>
                 </div>
-
-                <!-- Feed posts -->
                 <div class="sk-feed">
-                    <div class="sk-post">
-                        <div class="sk-post-head">
-                            <div class="sk-avatar"></div>
-                            <div class="sk-post-head-text">
-                                <div class="sk-line sk-line-md"></div>
-                                <div class="sk-line sk-line-xs"></div>
-                            </div>
-                        </div>
-                        <div class="sk-post-body">
-                            <div class="sk-line sk-line-xl"></div>
-                            <div class="sk-line sk-line-lg"></div>
-                            <div class="sk-line sk-line-md"></div>
-                        </div>
-                        <div class="sk-post-thumb"></div>
-                        <div class="sk-post-actions">
-                            <div class="sk-action"></div>
-                            <div class="sk-action"></div>
-                            <div class="sk-action"></div>
-                        </div>
-                    </div>
-                    <div class="sk-post">
-                        <div class="sk-post-head">
-                            <div class="sk-avatar"></div>
-                            <div class="sk-post-head-text">
-                                <div class="sk-line sk-line-md"></div>
-                                <div class="sk-line sk-line-xs"></div>
-                            </div>
-                        </div>
-                        <div class="sk-post-body">
-                            <div class="sk-line sk-line-xl"></div>
-                            <div class="sk-line sk-line-lg"></div>
-                            <div class="sk-line sk-line-sm"></div>
-                        </div>
-                        <div class="sk-post-actions">
-                            <div class="sk-action"></div>
-                            <div class="sk-action"></div>
-                            <div class="sk-action"></div>
-                        </div>
-                    </div>
-                    <div class="sk-post">
-                        <div class="sk-post-head">
-                            <div class="sk-avatar"></div>
-                            <div class="sk-post-head-text">
-                                <div class="sk-line sk-line-md"></div>
-                                <div class="sk-line sk-line-xs"></div>
-                            </div>
-                        </div>
-                        <div class="sk-post-body">
-                            <div class="sk-line sk-line-xl"></div>
-                            <div class="sk-line sk-line-md"></div>
-                            <div class="sk-line sk-line-sm"></div>
-                        </div>
-                        <div class="sk-post-thumb"></div>
-                        <div class="sk-post-actions">
-                            <div class="sk-action"></div>
-                            <div class="sk-action"></div>
-                            <div class="sk-action"></div>
-                        </div>
-                    </div>
+                    <div class="sk-post"><div class="sk-post-head"><div class="sk-avatar"></div><div class="sk-post-head-text"><div class="sk-line sk-line-md"></div><div class="sk-line sk-line-xs"></div></div></div><div class="sk-post-body"><div class="sk-line sk-line-xl"></div><div class="sk-line sk-line-lg"></div><div class="sk-line sk-line-md"></div></div><div class="sk-post-thumb"></div><div class="sk-post-actions"><div class="sk-action"></div><div class="sk-action"></div><div class="sk-action"></div></div></div>
+                    <div class="sk-post"><div class="sk-post-head"><div class="sk-avatar"></div><div class="sk-post-head-text"><div class="sk-line sk-line-md"></div><div class="sk-line sk-line-xs"></div></div></div><div class="sk-post-body"><div class="sk-line sk-line-xl"></div><div class="sk-line sk-line-lg"></div><div class="sk-line sk-line-sm"></div></div><div class="sk-post-actions"><div class="sk-action"></div><div class="sk-action"></div><div class="sk-action"></div></div></div>
+                    <div class="sk-post"><div class="sk-post-head"><div class="sk-avatar"></div><div class="sk-post-head-text"><div class="sk-line sk-line-md"></div><div class="sk-line sk-line-sm"></div></div></div><div class="sk-post-body"><div class="sk-line sk-line-xl"></div><div class="sk-line sk-line-md"></div><div class="sk-line sk-line-sm"></div></div><div class="sk-post-thumb"></div><div class="sk-post-actions"><div class="sk-action"></div><div class="sk-action"></div><div class="sk-action"></div></div></div>
                 </div>
             </div>
         </div>
         <div id="pageContent">
             <?php include "pages/{$page}.php"; ?>
         </div>
+
+        <!-- Footer inside main for scroll containment -->
+        <footer class="footer dream-footer" id="mainFooter">
+            <div class="footer-wave" aria-hidden="true"><svg viewBox="0 0 1440 80" preserveAspectRatio="none"><path d="M0,40 C360,120 1080,-40 1440,40 L1440,0 L0,0 Z" fill="currentColor"/></svg></div>
+            <div class="footer-deco footer-deco-1" aria-hidden="true"></div>
+            <div class="footer-deco footer-deco-2" aria-hidden="true"></div>
+            <div class="container">
+                <div class="footer-content">
+                    <section class="footer-section footer-brand-section">
+                        <a href="index.php?page=home" class="footer-logo" data-page="home"><img src="assets/logo/logo.png" alt="DreamBD" onerror="this.style.display='none'"><span>DreamBD</span></a>
+                        <p class="footer-description">A colorful social home for community posts, products, tournaments, friends, and real-time conversations.</p>
+                        <div class="social-links">
+                            <a href="#" class="social-link social-facebook" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                            <a href="#" class="social-link social-discord" aria-label="Discord"><i class="fab fa-discord"></i></a>
+                            <a href="#" class="social-link social-youtube" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
+                            <a href="#" class="social-link social-instagram" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                            <a href="#" class="social-link social-github" aria-label="GitHub"><i class="fab fa-github"></i></a>
+                        </div>
+                    </section>
+                    <section class="footer-section">
+                        <h3 class="footer-title">Explore</h3>
+                        <ul class="footer-links">
+                            <li><a href="index.php?page=home" data-page="home"><i class="fas fa-house"></i> Home</a></li>
+                            <li><a href="index.php?page=community" data-page="community"><i class="fas fa-users"></i> Community</a></li>
+                            <li><a href="index.php?page=products" data-page="products"><i class="fas fa-store"></i> Products</a></li>
+                            <li><a href="index.php?page=tournaments" data-page="tournaments"><i class="fas fa-trophy"></i> Tournaments</a></li>
+                            <li><a href="index.php?page=how-it-works" data-page="how-it-works"><i class="fas fa-circle-info"></i> How it works</a></li>
+                        </ul>
+                    </section>
+                    <section class="footer-section">
+                        <h3 class="footer-title">Support</h3>
+                        <ul class="footer-links">
+                            <li><a href="index.php?page=rules" data-page="rules"><i class="fas fa-book"></i> Rules</a></li>
+                            <li><a href="index.php?page=faq" data-page="faq"><i class="fas fa-question-circle"></i> FAQ</a></li>
+                            <li><a href="index.php?page=cart" data-page="cart"><i class="fas fa-cart-shopping"></i> Cart</a></li>
+                            <li><a href="index.php?page=contact" data-page="contact"><i class="fas fa-envelope"></i> Contact</a></li>
+                        </ul>
+                    </section>
+
+                </div>
+                <div class="footer-bottom">
+                    <p class="footer-copy">Created with <i class="fas fa-heart" style="color:#ef4444;font-size:11px;"></i> by <a href="https://me.robicodes.xyz/" target="_blank" rel="noopener noreferrer" style="color:var(--p2p-accent, #8b5cf6);font-weight:700;text-decoration:none;">Robiul Islam</a></p>
+                    <div class="footer-bottom-links">
+                        <a href="https://me.robicodes.xyz/" target="_blank" rel="noopener noreferrer" aria-label="Website"><i class="fas fa-globe"></i></a>
+                        <a href="https://github.com/dev3ROBI" target="_blank" rel="noopener noreferrer" aria-label="GitHub"><i class="fab fa-github"></i></a>
+                        <a href="https://www.facebook.com/iam.robi69/" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                    </div>
+                </div>
+            </div>
+        </footer>
     </main>
 
     <!-- Modal Root (fixed-position, outside mainContent to avoid stacking issues) -->
@@ -323,88 +269,6 @@ $themeAttr = htmlspecialchars($theme, ENT_QUOTES, 'UTF-8');
 
     <!-- Scroll Progress Bar -->
     <div class="scroll-progress" id="scrollProgress" role="progressbar" aria-label="Page scroll progress"></div>
-
-    <footer class="footer dream-footer" id="mainFooter">
-        <!-- Decorative top wave -->
-        <div class="footer-wave" aria-hidden="true">
-            <svg viewBox="0 0 1440 80" preserveAspectRatio="none">
-                <path d="M0,40 C360,120 1080,-40 1440,40 L1440,0 L0,0 Z" fill="currentColor"/>
-            </svg>
-        </div>
-
-        <!-- Floating decoration circles -->
-        <div class="footer-deco footer-deco-1" aria-hidden="true"></div>
-        <div class="footer-deco footer-deco-2" aria-hidden="true"></div>
-
-        <div class="container">
-            <div class="footer-content">
-                <section class="footer-section footer-brand-section">
-                    <a href="index.php?page=home" class="footer-logo" data-page="home">
-                        <img src="assets/logo/logo.png" alt="DreamBD" onerror="this.style.display='none'">
-                        <span>DreamBD</span>
-                    </a>
-                    <p class="footer-description">A colorful social home for community posts, products, tournaments, friends, and real-time conversations.</p>
-                    <div class="social-links">
-                        <a href="#" class="social-link social-facebook" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
-                        <a href="#" class="social-link social-discord" aria-label="Discord"><i class="fab fa-discord"></i></a>
-                        <a href="#" class="social-link social-youtube" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
-                        <a href="#" class="social-link social-instagram" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
-                        <a href="#" class="social-link social-github" aria-label="GitHub"><i class="fab fa-github"></i></a>
-                    </div>
-                </section>
-
-                <section class="footer-section">
-                    <h3 class="footer-title">Explore</h3>
-                    <ul class="footer-links">
-                        <li><a href="index.php?page=home" data-page="home"><i class="fas fa-house"></i> Home</a></li>
-                        <li><a href="index.php?page=community" data-page="community"><i class="fas fa-users"></i> Community</a></li>
-                        <li><a href="index.php?page=products" data-page="products"><i class="fas fa-store"></i> Products</a></li>
-                        <li><a href="index.php?page=tournaments" data-page="tournaments"><i class="fas fa-trophy"></i> Tournaments</a></li>
-                        <li><a href="index.php?page=how-it-works" data-page="how-it-works"><i class="fas fa-circle-info"></i> How it works</a></li>
-                    </ul>
-                </section>
-
-                <section class="footer-section">
-                    <h3 class="footer-title">Support</h3>
-                    <ul class="footer-links">
-                        <li><a href="index.php?page=rules" data-page="rules"><i class="fas fa-book"></i> Rules</a></li>
-                        <li><a href="index.php?page=faq" data-page="faq"><i class="fas fa-question-circle"></i> FAQ</a></li>
-                        <li><a href="index.php?page=cart" data-page="cart"><i class="fas fa-cart-shopping"></i> Cart</a></li>
-                        <li><a href="index.php?page=contact" data-page="contact"><i class="fas fa-envelope"></i> Contact</a></li>
-                    </ul>
-                </section>
-
-                <section class="footer-section">
-                    <h3 class="footer-title">Stay Updated</h3>
-                    <p class="footer-description">Get ready for marketplace launches, tournament updates, and community features.</p>
-                    <form class="newsletter-form" id="footerNewsletterForm" action="#" method="post" novalidate>
-                        <div class="newsletter-input-wrap">
-                            <input type="email" placeholder="Enter your email" aria-label="Email address" required>
-                            <button type="submit" aria-label="Subscribe">
-                                <i class="fas fa-paper-plane"></i>
-                            </button>
-                        </div>
-                        <div class="newsletter-feedback" id="newsletterFeedback" aria-live="polite"></div>
-                    </form>
-                    <p class="newsletter-note">No spam. Unsubscribe anytime.</p>
-                </section>
-            </div>
-
-            <div class="footer-bottom">
-                <p class="footer-copy">&copy; <span id="footerYear"><?php echo date('Y'); ?></span> DreamBD. All rights reserved.</p>
-                <div class="footer-trust">
-                    <span class="trust-badge"><i class="fas fa-shield-alt"></i> Secure</span>
-                    <span class="trust-badge"><i class="fas fa-lock"></i> Privacy</span>
-                    <span class="trust-badge"><i class="fas fa-clock"></i> 24/7 Support</span>
-                </div>
-                <div class="footer-bottom-links">
-                    <a href="index.php?page=rules" data-page="rules">Terms</a>
-                    <a href="index.php?page=faq" data-page="faq">Privacy</a>
-                    <a href="index.php?page=faq" data-page="faq">Cookies</a>
-                </div>
-            </div>
-        </div>
-    </footer>
 
     <!-- Back to Top Button -->
     <button class="back-to-top" id="backToTop" aria-label="Back to top" data-scroll-progress>
@@ -731,17 +595,18 @@ $themeAttr = htmlspecialchars($theme, ENT_QUOTES, 'UTF-8');
                 setNavbarActiveState(event.detail?.page || 'home');
             });
 
-            // ============ Footer: Back to Top with Scroll Progress ============
+            // ============ Footer: Back to Top with Scroll Progress (on main element) ============
+            var scrollContainer = document.getElementById('mainContent');
             const backToTopBtn = document.getElementById('backToTop');
-            if (backToTopBtn) {
+            if (backToTopBtn && scrollContainer) {
                 const ringFill = backToTopBtn.querySelector('.progress-ring-fill');
                 const circumference = 2 * Math.PI * 20;
                 if (ringFill) ringFill.style.strokeDasharray = circumference;
 
                 const handleScroll = () => {
-                    const scrollTop = window.scrollY;
-                    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-                    const progress = docHeight > 0 ? scrollTop / docHeight : 0;
+                    const scrollTop = scrollContainer.scrollTop;
+                    const scrollHeight = scrollContainer.scrollHeight - scrollContainer.clientHeight;
+                    const progress = scrollHeight > 0 ? scrollTop / scrollHeight : 0;
 
                     if (scrollTop > 400) {
                         backToTopBtn.classList.add('visible');
@@ -755,37 +620,12 @@ $themeAttr = htmlspecialchars($theme, ENT_QUOTES, 'UTF-8');
                     }
                 };
 
-                window.addEventListener('scroll', handleScroll, { passive: true });
+                scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
 
                 backToTopBtn.addEventListener('click', () => {
                     backToTopBtn.classList.add('clicked');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
                     setTimeout(() => backToTopBtn.classList.remove('clicked'), 500);
-                });
-            }
-
-            // ============ Footer: Newsletter Form ============
-            const newsletterForm = document.getElementById('footerNewsletterForm');
-            const newsletterFeedback = document.getElementById('newsletterFeedback');
-            if (newsletterForm) {
-                newsletterForm.addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    const input = newsletterForm.querySelector('input[type="email"]');
-                    const email = input ? input.value.trim() : '';
-
-                    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-                        if (newsletterFeedback) {
-                            newsletterFeedback.textContent = 'Please enter a valid email address.';
-                            newsletterFeedback.className = 'newsletter-feedback error';
-                        }
-                        return;
-                    }
-
-                    if (newsletterFeedback) {
-                        newsletterFeedback.textContent = 'Thanks for subscribing! Check your inbox.';
-                        newsletterFeedback.className = 'newsletter-feedback success';
-                    }
-                    if (input) input.value = '';
                 });
             }
 

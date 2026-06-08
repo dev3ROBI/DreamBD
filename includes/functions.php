@@ -1648,6 +1648,225 @@ function getTournamentPlayerPool(PDO $pdo, int $tournamentId): array {
     return $stmt->fetchAll();
 }
 
+// ─── BRACKET HELPERS ──────────────────────────────────────
+
+function getTournamentBracket(PDO $pdo, int $tournamentId): array {
+    $stmt = $pdo->prepare("
+        SELECT tm.*,
+               COALESCE(t1.name, u1_full.full_name, u1_full.username, 'TBD') AS team1_name,
+               COALESCE(t2.name, u2_full.full_name, u2_full.username, 'TBD') AS team2_name,
+               COALESCE(w.name, uw_full.full_name, uw_full.username, '') AS winner_name,
+               tp1.user_id AS team1_captain_id,
+               tp2.user_id AS team2_captain_id,
+               u1.full_name AS team1_captain_name,
+               u2.full_name AS team2_captain_name
+        FROM tournament_matches tm
+        LEFT JOIN teams t1 ON t1.id = tm.team1_id
+        LEFT JOIN teams t2 ON t2.id = tm.team2_id
+        LEFT JOIN teams w ON w.id = tm.winner_id
+        LEFT JOIN users u1_full ON u1_full.id = tm.team1_id
+        LEFT JOIN users u2_full ON u2_full.id = tm.team2_id
+        LEFT JOIN users uw_full ON uw_full.id = tm.winner_id
+        LEFT JOIN tournament_participants tp1 ON tp1.tournament_id = tm.tournament_id AND tp1.team_id = tm.team1_id
+        LEFT JOIN tournament_participants tp2 ON tp2.tournament_id = tm.tournament_id AND tp2.team_id = tm.team2_id
+        LEFT JOIN users u1 ON u1.id = tp1.user_id
+        LEFT JOIN users u2 ON u2.id = tp2.user_id
+        WHERE tm.tournament_id = ?
+        ORDER BY tm.round ASC, tm.id ASC
+    ");
+    $stmt->execute([$tournamentId]);
+    return $stmt->fetchAll();
+}
+
+function generateTournamentBracket(PDO $pdo, int $tournamentId, int $agentId): array {
+    $tournament = getTournamentByIdWithCounts($pdo, $tournamentId);
+    if (!$tournament) return ['success' => false, 'message' => 'Tournament not found.'];
+    if ((int)($tournament['agent_id'] ?? 0) !== $agentId) return ['success' => false, 'message' => 'Only the agent can generate brackets.'];
+
+    // Check if bracket already exists
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM tournament_matches WHERE tournament_id = ?");
+    $stmt->execute([$tournamentId]);
+    if ((int)$stmt->fetchColumn() > 0) return ['success' => false, 'message' => 'Bracket already generated.'];
+
+    // Get all registered teams/participants
+    $stmt = $pdo->prepare("
+        SELECT DISTINCT COALESCE(tp.team_id, tp.user_id) AS entrant_id,
+               CASE WHEN tp.team_id IS NOT NULL THEN 'team' ELSE 'player' END AS entrant_type,
+               COALESCE(t.name, tp.team_name, u.full_name, u.username) AS entrant_name,
+               tp.team_id, tp.user_id
+        FROM tournament_participants tp
+        LEFT JOIN teams t ON t.id = tp.team_id
+        LEFT JOIN users u ON u.id = tp.user_id
+        WHERE tp.tournament_id = ? AND tp.status = 'confirmed'
+        ORDER BY RAND()
+    ");
+    $stmt->execute([$tournamentId]);
+    $entrants = $stmt->fetchAll();
+
+    $count = count($entrants);
+    if ($count < 2) return ['success' => false, 'message' => 'Need at least 2 participants to generate a bracket.'];
+
+    // Find next power of 2 for a balanced bracket
+    $roundSize = 1;
+    while ($roundSize < $count) $roundSize *= 2;
+
+    // Pad with nulls for byes (entrants that get a free pass to next round)
+    while (count($entrants) < $roundSize) {
+        $entrants[] = null;
+    }
+
+    shuffle($entrants);
+
+    try {
+        $pdo->beginTransaction();
+
+        $stmt = $pdo->prepare("
+            INSERT INTO tournament_matches (tournament_id, round, team1_id, team2_id, status)
+            VALUES (?, 1, ?, ?, 'scheduled')
+        ");
+
+        $matchesCreated = 0;
+        for ($i = 0; $i < $roundSize; $i += 2) {
+            $team1 = $entrants[$i];
+            $team2 = $entrants[$i + 1] ?? null;
+
+            // Skip if both are null (shouldn't happen for power of 2)
+            if (!$team1 && !$team2) continue;
+
+            $team1Id = $team1 ? ($team1['entrant_type'] === 'team' ? $team1['team_id'] : $team1['user_id']) : null;
+            $team2Id = $team2 ? ($team2['entrant_type'] === 'team' ? $team2['team_id'] : $team2['user_id']) : null;
+
+            $stmt->execute([$tournamentId, $team1Id, $team2Id]);
+            $matchesCreated++;
+        }
+
+        $pdo->commit();
+
+        $totalRounds = (int)log($roundSize, 2);
+        $bracket = getTournamentBracket($pdo, $tournamentId);
+
+        return [
+            'success' => true,
+            'message' => "Bracket generated! $matchesCreated matches in round 1, $totalRounds total rounds.",
+            'bracket' => $bracket,
+            'total_rounds' => $totalRounds
+        ];
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        return ['success' => false, 'message' => 'Could not generate bracket.'];
+    }
+}
+
+function advanceTournamentWinner(PDO $pdo, int $matchId, int $winnerTeamId, int $agentId): array {
+    try {
+        $pdo->beginTransaction();
+
+        $stmt = $pdo->prepare("SELECT * FROM tournament_matches WHERE id = ? FOR UPDATE");
+        $stmt->execute([$matchId]);
+        $match = $stmt->fetch();
+        if (!$match) { $pdo->rollBack(); return ['success' => false, 'message' => 'Match not found.']; }
+
+        $tournament = getTournamentByIdWithCounts($pdo, (int)$match['tournament_id']);
+        if (!$tournament || (int)($tournament['agent_id'] ?? 0) !== $agentId) { $pdo->rollBack(); return ['success' => false, 'message' => 'Only the agent can advance winners.']; }
+
+        $winnerCol = $winnerTeamId == (int)$match['team1_id'] ? 'team1' : 'team2';
+        $scoreCol = $winnerCol === 'team1' ? 'score1' : 'score2';
+
+        $stmt = $pdo->prepare("UPDATE tournament_matches SET winner_id = ?, status = 'completed' WHERE id = ?");
+        $stmt->execute([$winnerTeamId, $matchId]);
+
+        // Find or create next round match
+        $nextRound = (int)$match['round'] + 1;
+        $tournamentId = (int)$match['tournament_id'];
+
+        // Find all matches in current round, check if all completed
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM tournament_matches WHERE tournament_id = ? AND round = ? AND status != 'completed'");
+        $stmt->execute([$tournamentId, (int)$match['round']]);
+        $remaining = (int)$stmt->fetchColumn();
+
+        // Find or create slot in next round
+        $stmt = $pdo->prepare("SELECT id, team1_id FROM tournament_matches WHERE tournament_id = ? AND round = ? AND (team1_id IS NULL OR team2_id IS NULL) ORDER BY id ASC LIMIT 1");
+        $stmt->execute([$tournamentId, $nextRound]);
+        $nextMatch = $stmt->fetch();
+
+        if ($nextMatch) {
+            if ((int)$nextMatch['team1_id'] === 0 || !$nextMatch['team1_id']) {
+                $stmt = $pdo->prepare("UPDATE tournament_matches SET team1_id = ? WHERE id = ?");
+                $stmt->execute([$winnerTeamId, (int)$nextMatch['id']]);
+            } else {
+                $stmt = $pdo->prepare("UPDATE tournament_matches SET team2_id = ? WHERE id = ?");
+                $stmt->execute([$winnerTeamId, (int)$nextMatch['id']]);
+            }
+        } else {
+            // Check if a next round match slot is needed
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM tournament_matches WHERE tournament_id = ? AND round = ?");
+            $stmt->execute([$tournamentId, (int)$match['round']]);
+            $currentCount = (int)$stmt->fetchColumn();
+
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM tournament_matches WHERE tournament_id = ? AND round = ?");
+            $stmt->execute([$tournamentId, $nextRound]);
+            $nextCount = (int)$stmt->fetchColumn();
+
+            if ($nextCount < ceil($currentCount / 2)) {
+                $stmt = $pdo->prepare("INSERT INTO tournament_matches (tournament_id, round, team1_id, status) VALUES (?, ?, ?, 'scheduled')");
+                $stmt->execute([$tournamentId, $nextRound, $winnerTeamId]);
+            } else {
+                $stmt = $pdo->prepare("UPDATE tournament_matches SET team2_id = ? WHERE tournament_id = ? AND round = ? AND team2_id IS NULL LIMIT 1");
+                $stmt->execute([$winnerTeamId, $tournamentId, $nextRound]);
+            }
+        }
+
+        $pdo->commit();
+
+        $bracket = getTournamentBracket($pdo, $tournamentId);
+        return ['success' => true, 'message' => 'Winner advanced to round ' . $nextRound . '.', 'bracket' => $bracket];
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        return ['success' => false, 'message' => 'Server error.'];
+    }
+}
+
+function renderBracketHTML(array $bracket): void {
+    if (empty($bracket)) {
+        echo '<div class="tr-empty"><i class="fas fa-diagram-project"></i><p>No bracket matches yet.</p></div>';
+        return;
+    }
+
+    $rounds = [];
+    foreach ($bracket as $match) {
+        $rounds[(int)$match['round']][] = $match;
+    }
+    ksort($rounds);
+
+    $totalRounds = count($rounds);
+    echo '<div class="tr-bracket-wrapper">';
+    foreach ($rounds as $roundNum => $matches) {
+        $isLast = ($roundNum === $totalRounds);
+        echo '<div class="tr-bracket-round">';
+        echo '<div class="tr-bracket-round-header">Round ' . $roundNum . '</div>';
+        echo '<div class="tr-bracket-matches">';
+        foreach ($matches as $match) {
+            $team1 = htmlspecialchars($match['team1_name'] ?? 'TBD');
+            $team2 = htmlspecialchars($match['team2_name'] ?? 'TBD');
+            $winner = htmlspecialchars($match['winner_name'] ?? '');
+            $status = $match['status'] ?? 'scheduled';
+            $matchId = (int)$match['id'];
+            echo '<div class="tr-bracket-match" data-match-id="' . $matchId . '" data-team1-id="' . ((int)($match['team1_id'] ?? 0)) . '" data-team2-id="' . ((int)($match['team2_id'] ?? 0)) . '">';
+            echo '<div class="tr-bracket-team' . ($winner && $winner === $team1 ? ' is-winner' : '') . '">' . $team1 . '</div>';
+            echo '<div class="tr-bracket-vs">VS</div>';
+            echo '<div class="tr-bracket-team' . ($winner && $winner === $team2 ? ' is-winner' : '') . '">' . $team2 . '</div>';
+            if ($status === 'completed' && $winner) {
+                echo '<div class="tr-bracket-winner"><i class="fas fa-trophy"></i> ' . $winner . '</div>';
+            } elseif ($status === 'live') {
+                echo '<div class="tr-bracket-live">Live</div>';
+            }
+            echo '</div>';
+        }
+        echo '</div></div>';
+    }
+    echo '</div>';
+}
+
 function getTournamentRoomMessages(PDO $pdo, int $tournamentId, int $limit = 80): array {
     $limit = max(1, min(200, $limit));
     $stmt = $pdo->prepare("
@@ -1824,6 +2043,37 @@ function saveTournamentResults(PDO $pdo, int $tournamentId, int $agentId, array 
 
         $pdo->prepare("UPDATE tournaments SET status = 'completed' WHERE id = ?")->execute([$tournamentId]);
 
+        // ── Auto-distribute prize money to winners ──
+        $allResults = array_merge($cleanTeamResults, $cleanPlayerResults);
+        $totalPrizeDistributed = 0;
+        foreach ($allResults as $result) {
+            $prize = (float)($result['prize_amount'] ?? 0);
+            if ($prize <= 0) continue;
+
+            $winnerUserId = $result['user_id'] ?? null;
+            if (!$winnerUserId && !empty($result['team_id'])) {
+                // For team results, credit the team captain
+                $stmt = $pdo->prepare("SELECT user_id FROM team_members WHERE team_id = ? AND role = 'captain' LIMIT 1");
+                $stmt->execute([(int)$result['team_id']]);
+                $captain = $stmt->fetch();
+                $winnerUserId = $captain ? (int)$captain['user_id'] : null;
+            }
+            if (!$winnerUserId) continue;
+
+            $totalPrizeDistributed += $prize;
+            $stmt = $pdo->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
+            $stmt->execute([$prize, $winnerUserId]);
+
+            createNotification(
+                $pdo,
+                $winnerUserId,
+                $agentId,
+                'prize_credited',
+                'You won ৳' . number_format($prize, 0) . ' in "' . ($tournament['title'] ?? 'Tournament') . '"! Prize credited to your balance.',
+                $tournamentId
+            );
+        }
+
         foreach ($cleanPlayerResults as $playerResult) {
             createNotification(
                 $pdo,
@@ -1838,7 +2088,7 @@ function saveTournamentResults(PDO $pdo, int $tournamentId, int $agentId, array 
         updateTournamentLeaderboard($pdo, $tournamentId);
 
         $pdo->commit();
-        return ['success' => true, 'message' => 'Tournament results submitted successfully.'];
+        return ['success' => true, 'message' => 'Tournament results submitted successfully!' . ($totalPrizeDistributed > 0 ? ' ৳' . number_format($totalPrizeDistributed, 0) . ' prize distributed.' : '')];
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
@@ -1858,6 +2108,9 @@ function canSubmitTournamentResults(PDO $pdo, int $tournamentId, int $agentId): 
 
 function updateTournamentLeaderboard(PDO $pdo, int $tournamentId): void {
     try {
+        // Delete old leaderboard entries for this tournament to avoid double-counting on re-submission
+        $pdo->prepare("DELETE FROM tournament_leaderboard WHERE tournament_id = ?")->execute([$tournamentId]);
+
         $stmt = $pdo->prepare("
             SELECT user_id, SUM(points_earned) AS total_points, SUM(prize_amount) AS total_prize,
                    COUNT(*) AS tournaments_played, MIN(placement) AS best_rank
@@ -1874,7 +2127,7 @@ function updateTournamentLeaderboard(PDO $pdo, int $tournamentId): void {
             ON DUPLICATE KEY UPDATE
                 total_points = VALUES(total_points),
                 total_prize = VALUES(total_prize),
-                tournaments_played = tournaments_played + 1,
+                tournaments_played = VALUES(tournaments_played),
                 best_rank = LEAST(IFNULL(best_rank, 999), VALUES(best_rank))
         ");
         foreach ($players as $player) {
@@ -1883,7 +2136,7 @@ function updateTournamentLeaderboard(PDO $pdo, int $tournamentId): void {
                 (int) $player['user_id'],
                 (int) ($player['total_points'] ?? 0),
                 (float) ($player['total_prize'] ?? 0),
-                1,
+                (int) ($player['tournaments_played'] ?? 1),
                 (int) ($player['best_rank'] ?? 999),
             ]);
         }
@@ -1994,12 +2247,95 @@ function registerForTournament(PDO $pdo, int $userId, int $tournamentId, string 
 }
 
 function unregisterFromTournament(PDO $pdo, int $userId, int $tournamentId): array {
-    $stmt = $pdo->prepare("UPDATE tournament_participants SET status = 'cancelled' WHERE tournament_id = ? AND user_id = ? AND status = 'confirmed'");
-    $stmt->execute([$tournamentId, $userId]);
-    if ($stmt->rowCount() > 0) {
-        return ['success' => true, 'message' => 'Registration cancelled.'];
+    try {
+        $pdo->beginTransaction();
+
+        // Get tournament info
+        $stmt = $pdo->prepare("SELECT * FROM tournaments WHERE id = ? FOR UPDATE");
+        $stmt->execute([$tournamentId]);
+        $tournament = $stmt->fetch();
+        if (!$tournament) { $pdo->rollBack(); return ['success' => false, 'message' => 'Tournament not found.']; }
+
+        // Get participant record
+        $stmt = $pdo->prepare("SELECT id, fee_paid FROM tournament_participants WHERE tournament_id = ? AND user_id = ? AND status = 'confirmed' FOR UPDATE");
+        $stmt->execute([$tournamentId, $userId]);
+        $participant = $stmt->fetch();
+        if (!$participant) { $pdo->rollBack(); return ['success' => false, 'message' => 'No active registration found.']; }
+
+        // Refund entry fee if paid
+        $entryFee = (float)$tournament['entry_fee'];
+        if ($entryFee > 0 && ($participant['fee_paid'] ?? 0)) {
+            // Refund to user
+            $stmt = $pdo->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
+            $stmt->execute([$entryFee, $userId]);
+
+            // Deduct from agent
+            $agentId = (int)$tournament['agent_id'];
+            if ($agentId > 0) {
+                $stmt = $pdo->prepare("UPDATE users SET balance = balance - ? WHERE id = ? AND balance >= ?");
+                $stmt->execute([$entryFee, $agentId, $entryFee]);
+            }
+        }
+
+        // Cancel registration
+        $stmt = $pdo->prepare("UPDATE tournament_participants SET status = 'cancelled' WHERE id = ?");
+        $stmt->execute([$participant['id']]);
+
+        $pdo->commit();
+        return ['success' => true, 'message' => 'Registration cancelled.' . ($entryFee > 0 ? ' Entry fee refunded.' : '')];
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        return ['success' => false, 'message' => 'Server error.'];
     }
-    return ['success' => false, 'message' => 'No active registration found.'];
+}
+
+function cancelTournament(PDO $pdo, int $tournamentId, int $agentId): array {
+    try {
+        $pdo->beginTransaction();
+
+        $stmt = $pdo->prepare("SELECT * FROM tournaments WHERE id = ? AND agent_id = ? FOR UPDATE");
+        $stmt->execute([$tournamentId, $agentId]);
+        $tournament = $stmt->fetch();
+        if (!$tournament) { $pdo->rollBack(); return ['success' => false, 'message' => 'Tournament not found or not owned by you.']; }
+        if ($tournament['status'] === 'completed') { $pdo->rollBack(); return ['success' => false, 'message' => 'Cannot cancel a completed tournament.']; }
+        if ($tournament['status'] === 'cancelled') { $pdo->rollBack(); return ['success' => false, 'message' => 'Tournament already cancelled.']; }
+
+        // Refund entry fees to all confirmed participants
+        $entryFee = (float)$tournament['entry_fee'];
+        if ($entryFee > 0) {
+            $stmt = $pdo->prepare("SELECT tp.user_id, tp.fee_paid FROM tournament_participants tp WHERE tp.tournament_id = ? AND tp.status = 'confirmed'");
+            $stmt->execute([$tournamentId]);
+            $participants = $stmt->fetchAll();
+            foreach ($participants as $p) {
+                if ($p['fee_paid'] ?? 0) {
+                    $stmt = $pdo->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
+                    $stmt->execute([$entryFee, (int)$p['user_id']]);
+                    createNotification($pdo, (int)$p['user_id'], $agentId, 'refund', 'Entry fee ৳' . number_format($entryFee, 0) . ' refunded for cancelled tournament "' . ($tournament['title'] ?? 'Tournament') . '".', $tournamentId);
+                }
+            }
+        }
+
+        // Refund prize money back to agent
+        $prizeMoney = (float)str_replace(',', '', $tournament['prize_money'] ?? '0');
+        if ($prizeMoney > 0) {
+            $stmt = $pdo->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
+            $stmt->execute([$prizeMoney, $agentId]);
+        }
+
+        // Cancel all participant registrations
+        $stmt = $pdo->prepare("UPDATE tournament_participants SET status = 'cancelled' WHERE tournament_id = ? AND status = 'confirmed'");
+        $stmt->execute([$tournamentId]);
+
+        // Update tournament status
+        $stmt = $pdo->prepare("UPDATE tournaments SET status = 'cancelled' WHERE id = ?");
+        $stmt->execute([$tournamentId]);
+
+        $pdo->commit();
+        return ['success' => true, 'message' => 'Tournament cancelled. All fees refunded.'];
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        return ['success' => false, 'message' => 'Server error.'];
+    }
 }
 
 // ─── AGENT HELPERS ────────────────────────────────────────

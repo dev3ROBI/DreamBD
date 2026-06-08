@@ -560,15 +560,6 @@ small {
     border: 0;
 }
 
-/* ===== MAIN CONTENT ===== */
-.main-content {
-    flex: 1;
-    min-height: calc(100vh - var(--header-height) - 400px);
-    padding-top: calc(var(--header-height) + var(--space-xl));
-    padding-bottom: var(--space-3xl);
-    position: relative;
-}
-
 /* ===== FORMS ===== */
 .form-group {
     margin-bottom: var(--space-lg);
@@ -866,11 +857,6 @@ textarea.form-control {
     h2 { font-size: var(--font-size-3xl); }
     h3 { font-size: var(--font-size-2xl); }
     h4 { font-size: var(--font-size-xl); }
-    
-    .main-content {
-        padding-top: calc(var(--header-height-mobile) + var(--space-lg));
-        padding-bottom: var(--space-2xl);
-    }
     
     .container {
         padding: 0 var(--space-lg);
