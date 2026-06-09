@@ -646,6 +646,10 @@ try {
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS silver_coins INT UNSIGNED DEFAULT 0 AFTER gold_coins",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS bronze_coins INT UNSIGNED DEFAULT 0 AFTER silver_coins",
         "ALTER TABLE slider_content ADD COLUMN IF NOT EXISTS slider_type ENUM('features','tournament','leaderboard','ads') DEFAULT 'features' AFTER badge",
+        "CREATE TABLE IF NOT EXISTS payment_requests (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, user_id INT UNSIGNED NOT NULL, method ENUM('bkash','nagad','rocket','other') NOT NULL DEFAULT 'bkash', sender_phone VARCHAR(20) NOT NULL, transaction_id VARCHAR(100) NOT NULL, amount DECIMAL(12,2) NOT NULL, status ENUM('pending','completed','cancelled') DEFAULT 'pending', purpose VARCHAR(30) DEFAULT 'add_money', admin_id INT UNSIGNED DEFAULT NULL, admin_note TEXT DEFAULT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, UNIQUE KEY uniq_txid (transaction_id), KEY idx_user (user_id), KEY idx_status (status)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+        "ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS purpose VARCHAR(30) DEFAULT 'add_money' AFTER status",
+        "ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS admin_id INT UNSIGNED DEFAULT NULL AFTER purpose",
+        "ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS admin_note TEXT DEFAULT NULL AFTER admin_id",
     ];
     foreach ($alwaysRun as $sql) {
         try { $db->exec($sql); } catch (Throwable $e) {}

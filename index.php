@@ -14,6 +14,19 @@ $security = new Security();
 $isLoggedIn = $auth->isLoggedIn();
 $user_name = $isLoggedIn ? ($_SESSION['full_name'] ?? $_SESSION['username'] ?? null) : null;
 
+// Refresh session role from DB on every request (catches admin approvals)
+if ($isLoggedIn && !empty($_SESSION['user_id'])) {
+    try {
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare("SELECT role FROM users WHERE id = ?");
+        $stmt->execute([$_SESSION['user_id']]);
+        $row = $stmt->fetch();
+        if ($row && $row['role'] !== ($_SESSION['role'] ?? '')) {
+            $_SESSION['role'] = $row['role'];
+        }
+    } catch (Throwable $e) {}
+}
+
 $page = $_GET['page'] ?? 'home';
 $allowed_pages = ['home', 'community', 'products', 'tournaments', 'tournament-room', 'how-it-works', 'cart', 'login', 'register', 'rules', 'faq', 'profile', 'messages', 'notifications', 'search', 'agent-dashboard', 'balance', 'p2p', 'admin', 'agent_submit_results', 'verify', 'reset_password', 'clubs', 'player-market'];
 $page = in_array($page, $allowed_pages) ? $page : 'home';

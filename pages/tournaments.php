@@ -317,7 +317,7 @@ if ($viewerId) {
 .gp-agent-hero-sub { font-size:.85rem; color:rgba(255,255,255,.7); line-height:1.4 }
 
 .gp-agent-badge-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:24px }
-.gp-agent-badge { background:var(--gp-card); border:1px solid var(--gp-border); padding:16px; border-radius:20px; text-align:center; transition:all .3s ease }
+.gp-agent-badge { background:var(--gp-card); border:1px solid var(--gp-border); padding:12px; border-radius:8px; text-align:center; transition:all .3s ease }
 .gp-agent-badge:hover { transform:translateY(-5px); border-color:var(--gp-accent); box-shadow:0 12px 24px rgba(139,92,246,.1) }
 .gp-agent-badge-icon { font-size:1.8rem; display:block; margin-bottom:8px }
 .gp-agent-badge-label { font-size:.82rem; font-weight:800; color:var(--gp-text); margin-bottom:2px }
@@ -327,35 +327,37 @@ if ($viewerId) {
 .gp-agent-fee-label { font-size:.75rem; font-weight:700; color:#b45309; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px }
 .gp-agent-fee-amount { font-size:2rem; font-weight:900; color:#d97706; display:block }
 
-/* ═══ PAYMENT (BECOME AGENT) ═══ */
-.ba-pay-wrap { padding:24px; background:var(--gp-card); border-radius:24px }
-.gp-pay-note { padding:16px 20px; border-radius:18px; background:rgba(245,158,11,.08); border:1px solid rgba(245,158,11,.15); font-size:.85rem; color:#92400e; margin-bottom:20px; display:flex; align-items:center; gap:12px; line-height:1.5 }
-.dark .gp-pay-note { color:#fbbf24; background:rgba(245,158,11,.06) }
-.gp-pay-note i { font-size:1.4rem; color:#d97706; flex-shrink:0 }
+/* ═══ PAYMENT (BECOME AGENT) — REDESIGNED ═══ */
+.gp-pay-note { padding:14px 18px; border-radius:14px; background:linear-gradient(135deg,rgba(245,158,11,.1),rgba(217,119,6,.04)); border:1px solid rgba(245,158,11,.18); font-size:.82rem; color:#92400e; margin-bottom:18px; display:flex; align-items:center; gap:10px; line-height:1.5 }
+.dark .gp-pay-note { color:#fbbf24; background:rgba(245,158,11,.07) }
+.gp-pay-note i { font-size:1.2rem; color:#d97706; flex-shrink:0 }
 
-.ba-method-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:24px }
-.ba-method-card { display:flex; align-items:center; justify-content:center; padding:16px; border-radius:20px; border:2px solid var(--gp-border); background:var(--gp-card); cursor:pointer; transition:all .25s ease; min-height:70px }
-.ba-method-card:hover { transform:translateY(-3px); border-color:var(--gp-accent); box-shadow:0 8px 16px rgba(0,0,0,.05) }
-.ba-method-card.active { border-color:#E2136E; background:rgba(226,19,110,.05); box-shadow:0 8px 20px rgba(226,19,110,.1) }
-.ba-method-card img { max-height:36px; max-width:100%; object-fit:contain }
+.ba-method-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:18px }
+.ba-method-card { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; padding:14px 10px; border-radius:14px; border:2px solid var(--gp-border); background:var(--gp-card); cursor:pointer; transition:all .25s ease; min-height:64px }
+.ba-method-card:hover { border-color:var(--gp-accent); background:rgba(139,92,246,.04) }
+.ba-method-card.active { border-color:#E2136E; background:rgba(226,19,110,.06); box-shadow:0 4px 16px rgba(226,19,110,.12) }
+.ba-method-card img { max-height:28px; max-width:100%; object-fit:contain }
+.ba-method-label { font-size:.65rem; font-weight:700; color:var(--gp-muted); letter-spacing:.3px }
 
-#baMerchantBox { padding:24px; border-radius:24px; background:var(--gp-bg); border:1px solid var(--gp-border); margin-bottom:24px; box-shadow:inset 0 2px 8px rgba(0,0,0,.02) }
-.ba-merchant-header { display:flex; align-items:center; gap:10px; font-size:1rem; font-weight:900; margin-bottom:16px; color:var(--gp-text) }
-.ba-merchant-header img { height:26px }
-.ba-instr-step { font-size:.8rem; color:var(--gp-muted); padding:6px 0; line-height:1.6 }
+#baMerchantBox { padding:18px; border-radius:16px; background:var(--gp-bg); border:1px solid var(--gp-border); margin-bottom:18px }
+.ba-merchant-header { display:flex; align-items:center; gap:8px; font-size:.9rem; font-weight:800; margin-bottom:12px; color:var(--gp-text) }
+.ba-merchant-header img { height:22px }
+.ba-instr-step { font-size:.75rem; color:var(--gp-muted); padding:5px 0; line-height:1.5; display:flex; align-items:flex-start; gap:8px }
+.ba-instr-step::before { content:'→'; color:var(--gp-accent); font-weight:700; font-size:.7rem; opacity:.7; flex-shrink:0; margin-top:1px }
 .ba-instr-step strong { color:var(--gp-text); font-weight:800 }
-.ba-merchant-num { font-size:1rem; font-weight:900; letter-spacing:.8px; font-family:monospace }
-.ba-copy-btn { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:10px; border:0; background:var(--gp-accent); color:#fff; font-size:.7rem; font-weight:700; cursor:pointer; transition:all .2s; margin-left:8px }
+.ba-merchant-num { font-size:.9rem; font-weight:900; letter-spacing:.6px; font-family:monospace; background:rgba(139,92,246,.08); padding:2px 10px; border-radius:6px; display:inline-block }
+.ba-copy-btn { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:8px; border:0; background:var(--gp-accent); color:#fff; font-size:.65rem; font-weight:700; cursor:pointer; transition:all .2s; margin-left:6px }
 .ba-copy-btn:hover { transform:scale(1.05); filter:brightness(1.1) }
+.ba-instr-footer { margin-top:10px; padding:10px 14px; border-radius:10px; background:rgba(139,92,246,.06); border:1px solid rgba(139,92,246,.12); font-size:.75rem; color:var(--gp-text); font-weight:600; text-align:center }
 
-.ba-inputs-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px }
-.ba-input-label { font-size:.75rem; font-weight:800; color:var(--gp-muted); margin-bottom:8px; display:block; text-transform:uppercase; letter-spacing:.5px }
-.ba-input-wrap { position:relative; display:flex; align-items:center; border-radius:16px; border:2px solid var(--gp-border); background:var(--gp-bg); transition:all .2s }
-.ba-input-wrap:focus-within { border-color:var(--gp-accent); box-shadow:0 0 0 4px rgba(139,92,246,.12); transform:translateY(-1px) }
-.ba-input-icon { width:46px; display:flex; align-items:center; justify-content:center; color:var(--gp-muted); font-size:1.1rem; border-right:1px solid var(--gp-border) }
-.ba-input { flex:1; padding:12px 16px; border:0; font-size:.9rem; font-weight:700; outline:none; background:transparent; color:var(--gp-text) }
-.ba-input::placeholder { font-weight:500; opacity:.5 }
-.ba-actions { margin-top:12px }
+.ba-inputs-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:18px }
+.ba-input-label { font-size:.7rem; font-weight:700; color:var(--gp-muted); margin-bottom:6px; display:block }
+.ba-input-wrap { position:relative; display:flex; align-items:center; border-radius:12px; border:2px solid var(--gp-border); background:var(--gp-bg); transition:all .2s }
+.ba-input-wrap:focus-within { border-color:var(--gp-accent); box-shadow:0 0 0 3px rgba(139,92,246,.1) }
+.ba-input-icon { width:40px; display:flex; align-items:center; justify-content:center; color:var(--gp-muted); font-size:1rem; border-right:1px solid var(--gp-border) }
+.ba-input { flex:1; padding:10px 14px; border:0; font-size:.85rem; font-weight:700; outline:none; background:transparent; color:var(--gp-text) }
+.ba-input::placeholder { font-weight:500; opacity:.45 }
+.ba-actions { margin-top:10px }
 .gp-modal-step { display:none; animation:gpModalIn .3s ease }
 .gp-modal-step.active { display:block }
 .gp-balance-notice { font-size:.72rem; color:var(--gp-muted); padding:8px 0; text-align:right }
@@ -374,14 +376,33 @@ if ($viewerId) {
 @keyframes gpToastIn { from { opacity:0; transform:translateY(20px) scale(.95) } to { opacity:1; transform:translateY(0) scale(1) } }
 .gp-loading { text-align:center; padding:24px; font-size:.78rem; color:var(--gp-muted) }
 
-/* ═══ SUCCESS OVERLAY ═══ */
-.gp-success-overlay { position:fixed; inset:0; z-index:999999; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.45); backdrop-filter:blur(6px) }
-.gp-success-box { text-align:center; padding:40px 48px; border-radius:28px; background:var(--gp-card); box-shadow:0 20px 60px rgba(0,0,0,.15); max-width:380px; animation:gpModalIn .3s ease }
-.gp-success-icon { width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:1.5rem }
-.gp-success-icon { background:rgba(5,150,105,.1); color:var(--gp-green) }
-.gp-fail-icon { width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:1.5rem; background:rgba(220,38,38,.1); color:var(--gp-red) }
-.gp-success-text { font-size:1.2rem; font-weight:800; color:var(--gp-text); margin-bottom:4px }
-.gp-success-sub { font-size:.78rem; color:var(--gp-muted) }
+/* ═══ SUCCESS OVERLAY — REDESIGNED ═══ */
+.gp-success-overlay { position:fixed; inset:0; z-index:999999; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.55); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); animation:gpOverlayIn .25s ease }
+@keyframes gpOverlayIn { from { opacity:0 } to { opacity:1 } }
+.gp-success-box { position:relative; text-align:center; padding:44px 48px 36px; border-radius:28px; background:var(--gp-card); box-shadow:0 25px 80px rgba(0,0,0,.25); max-width:400px; width:calc(100% - 32px); margin:16px; animation:gpSuccessIn .45s cubic-bezier(.34,1.56,.64,1) }
+@keyframes gpSuccessIn { 0% { opacity:0; transform:scale(.85) translateY(40px) } 100% { opacity:1; transform:scale(1) translateY(0) } }
+.gp-success-close { position:absolute; top:12px; right:12px; width:34px; height:34px; border-radius:50%; border:0; background:rgba(0,0,0,.05); cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--gp-muted); font-size:14px; transition:all .2s; z-index:2 }
+.gp-success-close:hover { background:rgba(239,68,68,.12); color:#dc2626; transform:rotate(90deg) }
+.dark .gp-success-close { background:rgba(255,255,255,.08); color:#9ca3af }
+.dark .gp-success-close:hover { background:rgba(239,68,68,.2); color:#fca5a5 }
+.gp-success-icon-wrap { width:72px; height:72px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:1.8rem; animation:gpIconPop .5s cubic-bezier(.34,1.56,.64,1) .15s both }
+@keyframes gpIconPop { 0% { opacity:0; transform:scale(0) rotate(-30deg) } 100% { opacity:1; transform:scale(1) rotate(0deg) } }
+.gp-success-icon-wrap.success { background:rgba(5,150,105,.12); color:var(--gp-green); box-shadow:0 0 0 4px rgba(5,150,105,.1) }
+.gp-success-icon-wrap.fail { background:rgba(220,38,38,.12); color:var(--gp-red); box-shadow:0 0 0 4px rgba(220,38,38,.1) }
+.gp-success-text { font-size:1.25rem; font-weight:800; color:var(--gp-text); margin-bottom:6px; letter-spacing:-.02em }
+.gp-success-sub { font-size:.82rem; color:var(--gp-muted); line-height:1.5; margin-bottom:24px }
+.gp-success-btn { display:inline-flex; align-items:center; gap:8px; padding:10px 28px; border-radius:12px; border:0; font-size:.82rem; font-weight:700; cursor:pointer; transition:all .2s; font-family:inherit }
+.gp-success-btn:hover { transform:translateY(-2px); filter:brightness(1.08) }
+.gp-success-btn.primary { background:var(--gp-accent); color:#fff; box-shadow:0 4px 16px rgba(139,92,246,.3) }
+.gp-success-btn.secondary { background:rgba(0,0,0,.05); color:var(--gp-text) }
+.dark .gp-success-btn.secondary { background:rgba(255,255,255,.08); color:var(--gp-text) }
+@media(max-width:480px) {
+  .gp-success-box { padding:32px 24px 28px; border-radius:20px }
+  .gp-success-icon-wrap { width:60px; height:60px; font-size:1.5rem }
+  .gp-success-text { font-size:1.05rem }
+  .gp-success-sub { font-size:.78rem }
+  .gp-success-btn { width:100%; justify-content:center; padding:12px 20px }
+}
 
 /* ═══ PARTICIPANT ITEMS ═══ */
 .gp-participants { display:flex; flex-direction:column; gap:8px }
@@ -664,8 +685,10 @@ if ($viewerId) {
   .gp-icon-opt { width:36px; height:36px; font-size:14px; border-radius:10px }
   .gp-color-picker { gap:4px }
   .gp-color-opt { width:28px; height:28px }
-  .ba-method-grid { gap:8px }
-  .ba-method-card { padding:10px; border-radius:14px; min-height:50px }
+  .ba-method-grid { gap:6px }
+  .ba-method-card { padding:10px 6px; border-radius:10px; min-height:50px }
+  .ba-method-label { font-size:.6rem }
+  #baMerchantBox { padding:14px; border-radius:12px }
   .gp-radio-group { flex-direction:column }
   .gp-radio { padding:10px 12px }
   .gp-participant { flex-wrap:wrap; gap:8px; padding:10px; border-radius:12px }
@@ -1298,49 +1321,45 @@ var filter = document.getElementById('lbFilter');
                 </div>
             </div>
 
-            <!-- ═══ Step 2: Payment (Bangla instructions + copy) ═══ -->
+            <!-- ═══ Step 2: Payment (Redesigned) ═══ -->
             <div class="gp-modal-step" id="baPayStep">
                 <div class="ba-pay-wrap">
 
-                    <!-- Premium info note -->
                     <div class="gp-pay-note">
-                        <i class="fas fa-shield-halved"></i> <span>নিচের যেকোনো একটি মেথডে <strong>৫০০ টাকা</strong> পাঠিয়ে এজেন্ট অ্যাক্টিভেট করুন।</span>
+                        <i class="fas fa-shield-halved"></i>
+                        <span>নিচের যেকোনো একটি মেথডে <strong>৫০০ টাকা</strong> পাঠিয়ে এজেন্ট অ্যাক্টিভেট করুন।</span>
                     </div>
 
-                    <!-- Method Cards -->
                     <div class="ba-method-grid">
                         <?php $methods = ['bkash'=>['label'=>'bKash','color'=>'#E2136E'],'nagad'=>['label'=>'Nagad','color'=>'#E8522E'],'rocket'=>['label'=>'Rocket','color'=>'#CC0000']]; ?>
                         <?php foreach ($methods as $mk => $mv): ?>
-                        <div class="ba-method-card active" data-method="<?php echo $mk; ?>" style="<?php echo $mk === 'bkash' ? 'border-color:'.$mv['color'].'; background:rgba(226,19,110,.05)' : ''; ?>">
+                        <div class="ba-method-card<?php echo $mk === 'bkash' ? ' active' : ''; ?>" data-method="<?php echo $mk; ?>" style="<?php echo $mk === 'bkash' ? 'border-color:'.$mv['color'].'; background:rgba(226,19,110,.06)' : ''; ?>">
                             <img src="assets/images/payment-icon/<?php echo $mk; ?>-logo-mobile-banking.png" alt="<?php echo $mv['label']; ?>">
+                            <span class="ba-method-label"><?php echo $mv['label']; ?></span>
                         </div>
                         <?php endforeach; ?>
                     </div>
 
-                    <!-- Merchant Info -->
                     <div id="baMerchantBox"></div>
 
-                    <!-- Inputs -->
                     <div class="ba-inputs-grid">
                         <div>
-                            <label class="ba-input-label">📱 আপনার মোবাইল নাম্বার</label>
+                            <label class="ba-input-label"><i class="fas fa-phone"></i> মোবাইল নাম্বার</label>
                             <div class="ba-input-wrap">
-                                <span class="ba-input-icon"><i class="fas fa-phone"></i></span>
                                 <input type="tel" id="baPhone" class="ba-input" placeholder="01XXXXXXXXX">
                             </div>
                         </div>
                         <div>
-                            <label class="ba-input-label">🔗 ট্রানজেকশন আইডি</label>
+                            <label class="ba-input-label"><i class="fas fa-hashtag"></i> ট্রানজেকশন আইডি</label>
                             <div class="ba-input-wrap">
-                                <span class="ba-input-icon"><i class="fas fa-key"></i></span>
                                 <input type="text" id="baTxid" class="ba-input" placeholder="TXID দিন" style="text-transform:uppercase">
                             </div>
                         </div>
                     </div>
 
-                    <div class="gp-modal-actions" style="border-top:1px solid var(--gp-border); padding-top:20px">
+                    <div class="gp-modal-actions" style="border-top:1px solid var(--gp-border); padding-top:18px">
                         <button type="button" class="gp-btn gp-btn-ghost" id="baBackToInfo"><i class="fas fa-arrow-left"></i> পেছনে</button>
-                        <button type="button" class="gp-btn gp-btn-accent" id="baPayBtn" style="background:var(--gp-accent); color:#fff"><i class="fas fa-check-circle"></i> সাবমিট করুন</button>
+                        <button type="button" class="gp-btn gp-btn-accent" id="baPayBtn" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed); border:0; color:#fff"><i class="fas fa-paper-plane"></i> সাবমিট</button>
                     </div>
                     <div class="gp-feedback hidden" id="baFeedback"></div>
                 </div>
@@ -1866,12 +1885,14 @@ var filter = document.getElementById('lbFilter');
     </div>
 </div>
 
-<!-- ═══ SUCCESS / FAIL OVERLAY ═══ -->
+<!-- ═══ SUCCESS / FAIL OVERLAY — REDESIGNED ═══ -->
 <div class="gp-success-overlay" id="baResultOverlay">
-    <div class="gp-success-box gp-success-box--crown">
-        <div id="baResultIcon" class="gp-success-icon"><i class="fas fa-check"></i></div>
-        <div id="baResultTitle" class="gp-success-text">Success!</div>
-        <div id="baResultSub" class="gp-success-sub">Your request has been submitted</div>
+    <div class="gp-success-box">
+        <button class="gp-success-close" id="baResultClose" title="Close"><i class="fas fa-times"></i></button>
+        <div id="baResultIcon" class="gp-success-icon-wrap success"><i class="fas fa-check"></i></div>
+        <div id="baResultTitle" class="gp-success-text">সফল!</div>
+        <div id="baResultSub" class="gp-success-sub">আপনার অনুরোধ জমা দেওয়া হয়েছে</div>
+        <button class="gp-success-btn primary" id="baResultDoneBtn"><i class="fas fa-check-circle"></i> ঠিক আছে</button>
     </div>
 </div>
 
@@ -2032,12 +2053,13 @@ var filter = document.getElementById('lbFilter');
         }
     });
 
+    function gpModalBody(open) {
+        document.body.classList.toggle('gp-modal-open', open);
+        document.body.style.overflow = open ? 'hidden' : '';
+    }
+
     safe('Modals', function() {
         var ov = document.getElementById('gpOverlay'); if (!ov) return;
-        function gpModalBody(open) {
-            document.body.classList.toggle('gp-modal-open', open);
-            document.body.style.overflow = open ? 'hidden' : '';
-        }
         var close = function() {
             document.querySelectorAll('.gp-modal').forEach(function(m){ m.classList.add('hidden'); });
             ov.classList.add('hidden');
@@ -2185,13 +2207,13 @@ var filter = document.getElementById('lbFilter');
             var mNum = d.number || '01888780877';
             baMerchantBox.innerHTML =
                 '<div class="ba-merchant-header"><img src="assets/images/payment-icon/'+baCurrentMethod+'-logo-mobile-banking.png" alt="" onerror="this.style.display=\'none\'"><span style="color:'+c+'">'+n+'</span></div>' +
-                '<div class="ba-instr-step">১. <strong>'+dials[baCurrentMethod]+'</strong> ডায়াল করুন অথবা '+n+' অ্যাপ খুলুন।</div>' +
-                '<div class="ba-instr-step">২. <strong>"'+label+'"</strong> অপশন সিলেক্ট করুন।</div>' +
-                '<div class="ba-instr-step">৩. প্রাপক নম্বর লিখুনঃ <strong class="ba-merchant-num" style="color:'+c+'">'+mNum+'</strong> <button onclick="baCopyNumber()" class="ba-copy-btn"><i class="fas fa-copy"></i> কপি</button></div>' +
-                '<div class="ba-instr-step">৪. টাকার পরিমাণ লিখুনঃ <strong>৳৫০০</strong></div>' +
-                '<div class="ba-instr-step">৫. আপনার পিন দিন এবং কনফার্ম বাটনে ক্লিক করুন।</div>' +
-                '<div class="ba-instr-step">৬. কনফার্মেশন মেসেজ থেকে <strong>Transaction ID</strong> কপি করে নিচে দিন।</div>' +
-                '<div class="ba-instr-footer">এখন নিচের বক্সে TXID দিন এবং <strong style="color:#8b5cf6">সাবমিট</strong> বাটনে ক্লিক করুন। ✅</div>';
+                '<div class="ba-instr-step"><strong>'+dials[baCurrentMethod]+'</strong> ডায়াল করুন অথবা '+n+' অ্যাপ খুলুন</div>' +
+                '<div class="ba-instr-step"><strong>"'+label+'"</strong> অপশন সিলেক্ট করুন</div>' +
+                '<div class="ba-instr-step">প্রাপক নম্বর <strong class="ba-merchant-num" style="color:'+c+'">'+mNum+'</strong> <button onclick="baCopyNumber()" class="ba-copy-btn"><i class="fas fa-copy"></i> কপি</button></div>' +
+                '<div class="ba-instr-step">টাকার পরিমাণ <strong>৳৫০০</strong></div>' +
+                '<div class="ba-instr-step">পিন দিন এবং কনফার্ম করুন</div>' +
+                '<div class="ba-instr-step">কনফার্মেশন থেকে <strong>TXID</strong> কপি করে নিচে দিন</div>' +
+                '<div class="ba-instr-footer">✅ TXID নিচের বক্সে দিন এবং <strong style="color:#7c3aed">সাবমিট</strong> ক্লিক করুন</div>';
             baMerchantBox.style.display = 'block';
         }
 
@@ -2209,25 +2231,35 @@ var filter = document.getElementById('lbFilter');
         var baResultIcon = document.getElementById('baResultIcon');
         var baResultTitle = document.getElementById('baResultTitle');
         var baResultSub = document.getElementById('baResultSub');
+        var baResultClose = document.getElementById('baResultClose');
+        var baResultDoneBtn = document.getElementById('baResultDoneBtn');
+
+        function baHideResult() {
+            baResultOverlay.style.display = 'none'; gpModalBody(false);
+        }
 
         function baShowResult(success, title, sub) {
             baResultOverlay.style.display = 'flex'; gpModalBody(true);
             if (success) {
-                baResultIcon.className = 'gp-success-icon';
+                baResultIcon.className = 'gp-success-icon-wrap success';
                 baResultIcon.innerHTML = '<i class="fas fa-check"></i>';
             } else {
-                baResultIcon.className = 'gp-fail-icon';
+                baResultIcon.className = 'gp-success-icon-wrap fail';
                 baResultIcon.innerHTML = '<i class="fas fa-times"></i>';
             }
-            baResultTitle.textContent = title;
+            baResultTitle.textContent = title.replace(/[✅❌]/g,'').trim();
             baResultSub.textContent = sub;
             if (success) {
-                setTimeout(function() {
-                    baResultOverlay.style.display = 'none'; gpModalBody(false);
-                    location.reload();
-                }, 2500);
+                baResultDoneBtn.innerHTML = '<i class="fas fa-check-circle"></i> ঠিক আছে';
+                baResultDoneBtn.className = 'gp-success-btn primary';
+                baResultDoneBtn.onclick = function() { baHideResult(); location.reload(); };
             } else {
-                setTimeout(function() { baResultOverlay.style.display = 'none'; gpModalBody(false); }, 3000);
+                baResultDoneBtn.innerHTML = '<i class="fas fa-undo"></i> আবার চেষ্টা করুন';
+                baResultDoneBtn.className = 'gp-success-btn secondary';
+                baResultDoneBtn.onclick = baHideResult;
+            }
+            if (baResultClose) {
+                baResultClose.onclick = function() { baHideResult(); if (success) location.reload(); };
             }
         }
 
