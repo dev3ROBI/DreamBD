@@ -666,7 +666,7 @@ if ($viewerId) {
   .gp-grid { grid-template-columns:1fr; gap:12px; padding:0 4px }
   .gp-card { border-radius:20px }
   .gp-card-body h3 { font-size:.9rem }
-  .gp-card-body p { font-size:.72rem; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden }
+.gp-card-body p { font-size:.72rem; display:-webkit-box; line-clamp:2; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden }
   .gp-card-meta { font-size:.7rem; grid-template-columns:1fr 1fr; gap:4px 8px }
   .gp-card-actions .gp-btn { font-size:.65rem; padding:6px 10px; border-radius:10px }
   .gp-my-grid { grid-template-columns:1fr; gap:14px }
