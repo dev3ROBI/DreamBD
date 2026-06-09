@@ -10,7 +10,7 @@
     --comm-radius: 8px;
     --comm-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     --comm-shadow-lg: 0 12px 28px 0 rgba(0, 0, 0, 0.2), 0 2px 4px 0 rgba(0, 0, 0, 0.1);
-    --comm-font-sans: 'Segoe UI', Segoe UI Historic, Helvetica, Arial, sans-serif;
+    --comm-font-sans: 'Hind Siliguri', 'Plus Jakarta Sans', 'Segoe UI', Segoe UI Historic, Helvetica, Arial, sans-serif;
 }
 
 [data-theme="dark"] {

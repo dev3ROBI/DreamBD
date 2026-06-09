@@ -597,14 +597,22 @@ try {
             $favoriteGame = trim($req['favorite_game'] ?? '');
             $bio = trim($req['bio'] ?? '');
             $discord = trim($req['discord'] ?? '');
+            $facebook = trim($req['facebook'] ?? '');
+            $instagram = trim($req['instagram'] ?? '');
+            $youtube = trim($req['youtube'] ?? '');
+
             $_SESSION['nickname'] = $nickname;
             $_SESSION['skill_level'] = $skillLevel;
             $_SESSION['favorite_game'] = $favoriteGame;
             $_SESSION['bio'] = $bio;
             $_SESSION['discord'] = $discord;
+            $_SESSION['facebook'] = $facebook;
+            $_SESSION['instagram'] = $instagram;
+            $_SESSION['youtube'] = $youtube;
+
             try {
-                $stmt = $db->prepare("UPDATE users SET nickname = ?, skill_level = ?, favorite_game = ?, bio = ?, discord = ? WHERE id = ?");
-                $stmt->execute([$nickname, $skillLevel, $favoriteGame, $bio, $discord, $userId]);
+                $stmt = $db->prepare("UPDATE users SET nickname = ?, skill_level = ?, favorite_game = ?, bio = ?, discord = ?, facebook = ?, instagram = ?, youtube = ? WHERE id = ?");
+                $stmt->execute([$nickname, $skillLevel, $favoriteGame, $bio, $discord, $facebook, $instagram, $youtube, $userId]);
             } catch (Throwable $e) {
                 error_log("Profile update error: " . $e->getMessage());
                 $response = ['success' => true, 'message' => 'Profile updated (session only).'];
@@ -620,12 +628,18 @@ try {
             $skillLevel = trim($req['skill_level'] ?? '');
             if (!$game) { $response['message'] = 'Game required.'; break; }
             try {
-                $stmt = $db->prepare("INSERT INTO game_skills (user_id, game, skill_level) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE skill_level = VALUES(skill_level)");
-                $stmt->execute([$userId, $game, $skillLevel]);
-                $response = ['success' => true, 'message' => 'Skill saved!'];
+                if ($skillLevel === '') {
+                    $stmt = $db->prepare("DELETE FROM game_skills WHERE user_id = ? AND game = ?");
+                    $stmt->execute([$userId, $game]);
+                    $response = ['success' => true, 'message' => 'Skill removed!'];
+                } else {
+                    $stmt = $db->prepare("INSERT INTO game_skills (user_id, game, skill_level) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE skill_level = VALUES(skill_level)");
+                    $stmt->execute([$userId, $game, $skillLevel]);
+                    $response = ['success' => true, 'message' => 'Skill saved!'];
+                }
             } catch (Throwable $e) {
                 error_log("save_game_skill error: " . $e->getMessage());
-                $response = ['success' => false, 'message' => 'Failed to save skill.'];
+                $response = ['success' => false, 'message' => 'Failed to process skill.'];
             }
             break;
 

@@ -244,32 +244,42 @@ if ($viewerId) {
 .gp-modal { position:fixed; inset:0; z-index:99999; display:flex; align-items:center; justify-content:center; animation:gpModalIn .3s ease }
 .gp-modal.hidden { display:none }
 @keyframes gpModalIn { from { opacity:0; transform:translateY(30px) scale(.98) } to { opacity:1; transform:translateY(0) scale(1) } }
-.gp-modal-panel { background:var(--gp-card); width:100%; max-width:520px; max-height:92vh; border-radius:28px; overflow-y:auto; box-shadow:0 10px 40px rgba(0,0,0,.2); margin:16px; scrollbar-width:none; -ms-overflow-style:none }
+.gp-modal-panel { background:var(--gp-card); width:100%; max-width:520px; max-height:92vh; border-radius:28px; overflow-y:auto; box-shadow:0 10px 40px rgba(0,0,0,.2); margin:16px; scrollbar-width:none; -ms-overflow-style:none; display: flex; flex-direction: column; }
 .gp-modal-panel::-webkit-scrollbar { display:none }
 .gp-modal-panel.lg { max-width:640px }
 .gp-modal-panel.sm { max-width:440px }
+
+@media(max-width:576px) {
+  .gp-modal .gp-modal-panel { max-width:none !important; max-height:none !important; border-radius:0 !important; width:100vw !important; height:100dvh !important; margin:0 !important; box-shadow:none !important; display: flex; flex-direction: column; }
+}
+
 .gp-modal-panel--crown { background:linear-gradient(180deg,var(--gp-card),rgba(255,255,255,.95)) }
 .dark .gp-modal-panel--crown { background:linear-gradient(180deg,var(--gp-card),rgba(30,41,59,.98)) }
-.gp-modal-head { display:flex; align-items:center; justify-content:space-between; padding:18px 22px; border-bottom:1px solid var(--gp-border); position:sticky; top:0; background:var(--gp-card); z-index:2 }
+.gp-modal-head { display:flex; align-items:center; justify-content:space-between; padding:18px 22px; border-bottom:1px solid var(--gp-border); position:sticky; top:0; background:var(--gp-card); z-index:2; flex-shrink: 0; }
 .gp-modal-head h3 { margin:0; font-size:1.05rem; font-weight:800; display:flex; align-items:center; gap:8px; color:var(--gp-text) }
 .gp-modal-close { width:34px; height:34px; border-radius:50%; border:0; background:rgba(0,0,0,.05); cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--gp-muted); font-size:14px; transition:all .2s; backdrop-filter:blur(4px) }
 .gp-modal-close:hover { background:rgba(239,68,68,.12); color:#dc2626; transform:rotate(90deg) }
 .dark .gp-modal-close { background:rgba(255,255,255,.08); color:#9ca3af }
 .dark .gp-modal-close:hover { background:rgba(239,68,68,.2); color:#fca5a5 }
-.gp-modal-body { padding:20px 22px 24px }
+.gp-modal-body { padding:20px 22px 24px; flex: 1; overflow-y: auto; }
 .gp-modal-sub { font-size:.82rem; color:var(--gp-muted); margin:0 0 12px }
 
 /* ═══ FORM ELEMENTS ═══ */
-.gp-form-group { display:flex; flex-direction:column; gap:4px }
-.gp-form-group label { font-size:.72rem; font-weight:700; color:var(--gp-text) }
-.gp-form-hint { font-size:.65rem; color:var(--gp-muted); margin-top:2px }
-.gp-input { width:100%; padding:10px 14px; border-radius:12px; border:2px solid var(--gp-border); font-size:.82rem; font-weight:700; outline:none; box-sizing:border-box; font-family:'Plus Jakarta Sans',sans-serif; background:var(--gp-card); color:var(--gp-text); transition:border-color .2s,box-shadow .2s; box-shadow:0 2px 4px rgba(0,0,0,.02) }
-.gp-input:focus { border-color:var(--gp-accent); box-shadow:0 0 0 4px rgba(139,92,246,.1) }
-.gp-input::placeholder { color:var(--gp-muted); font-weight:400 }
-select.gp-input { cursor:pointer; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 14px center; padding:10px 40px 10px 14px }
-select.gp-input:hover { border-color:var(--gp-accent); background-color:rgba(139,92,246,.02) }
-.dark select.gp-input:hover { background-color:rgba(139,92,246,.04) }
-select.gp-input option { padding:10px 12px; font-weight:500; background:var(--gp-card); color:var(--gp-text) }
+/* --- CUSTOM SELECTS --- */
+.gp-custom-select { position:relative; width:100%; text-align: left; }
+.gp-select-trigger { display:flex; align-items:center; gap:10px; padding:12px 16px; background:var(--gp-card); border:2px solid var(--gp-border); border-radius:14px; cursor:pointer; font-size:.85rem; font-weight:700; color:var(--gp-text); transition:all .2s; font-family:'Plus Jakarta Sans',sans-serif; }
+.gp-select-trigger:hover { border-color:var(--gp-accent); background:rgba(139,92,246,.04); }
+.gp-select-trigger span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+.gp-select-trigger::after { content:'\f078'; font-family:'Font Awesome 6 Free'; font-weight:900; font-size:10px; opacity:.4; transition:transform .2s; margin-left:4px; }
+.gp-custom-select.active .gp-select-trigger::after { transform:rotate(180deg); opacity:1; color:var(--gp-accent); }
+.gp-select-options { position:absolute; top:calc(100% + 6px); left:0; right:0; background:var(--gp-card); border:1px solid var(--gp-border); border-radius:14px; box-shadow:0 12px 32px rgba(0,0,0,.15); z-index:200; display:none; padding:6px; animation:gpSelectIn .2s ease; max-height:220px; overflow-y:auto; scrollbar-width:none; }
+.gp-select-options::-webkit-scrollbar { display:none; }
+@keyframes gpSelectIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+.gp-select-option { display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:10px; cursor:pointer; font-size:.82rem; font-weight:600; color:var(--gp-muted); transition:all .15s; margin-bottom:2px; text-align: left; }
+.gp-select-option:hover { background:var(--gp-bg); color:var(--gp-accent); }
+.gp-select-option.active { background:rgba(139,92,246,.1); color:var(--gp-accent); }
+.gp-custom-select.active .gp-select-options { display:block; }
+.gp-custom-select.active .gp-select-trigger { border-color:var(--gp-accent); box-shadow:0 0 0 4px rgba(139,92,246,.1); }
 .gp-input-group { display:flex; align-items:stretch; border-radius:12px; overflow:hidden; border:2px solid var(--gp-border); transition:border-color .2s,box-shadow .2s }
 .gp-input-group:focus-within { border-color:var(--gp-accent); box-shadow:0 0 0 4px rgba(139,92,246,.1) }
 .gp-input-group .gp-input { border:none; border-radius:0 }
@@ -297,52 +307,54 @@ select.gp-input option { padding:10px 12px; font-weight:500; background:var(--gp
 
 /* ═══ AGENT BADGE GRID ═══ */
 .gp-agent-badge-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px }
-.gp-agent-badge--premium { position:relative; padding:16px; border-radius:18px; background:var(--gp-card); border:1px solid var(--gp-border); overflow:hidden; text-align:center; transition:all .2s }
-.gp-agent-badge--premium:hover { border-color:rgba(139,92,246,.2); transform:translateY(-2px) }
-.gp-agent-badge-glow { position:absolute; top:-30px; right:-30px; width:80px; height:80px; border-radius:50%; background:radial-gradient(circle,rgba(139,92,246,.08),transparent); pointer-events:none }
-.gp-agent-badge-icon { display:block; font-size:1.8rem; margin-bottom:6px }
-.gp-agent-badge-label { font-size:.78rem; font-weight:700; color:var(--gp-text); display:block }
-.gp-agent-badge-desc { font-size:.65rem; color:var(--gp-muted); margin-top:2px }
-
-/* ═══ AGENT FEE ═══ */
-.gp-agent-fee { position:relative; text-align:center; padding:18px; border-radius:18px; background:linear-gradient(135deg,rgba(251,191,36,.08),rgba(245,158,11,.04)); border:1px solid rgba(251,191,36,.2); margin-bottom:16px; overflow:hidden }
-.gp-agent-fee-glow { position:absolute; top:-50%; left:-50%; width:200%; height:200%; background:radial-gradient(circle,rgba(251,191,36,.05),transparent 60%); animation:gpGlow 4s ease-in-out infinite; pointer-events:none }
 @keyframes gpGlow { 0%,100%{opacity:.5;transform:translate(0,0)} 50%{opacity:1;transform:translate(10%,-10%)} }
-.gp-agent-fee-label { display:block; font-size:.72rem; color:var(--gp-muted); margin-bottom:4px; font-weight:600 }
-.gp-agent-fee-amount { display:block; font-size:1.4rem; font-weight:900; color:#d97706 }
 
 /* ═══ AGENT HERO ═══ */
-.gp-agent-hero { text-align:center; padding:24px 16px 20px; position:relative; overflow:hidden; border-radius:18px; background:linear-gradient(135deg,rgba(139,92,246,.04),rgba(99,102,241,.02)); border:1px solid var(--gp-border); margin-bottom:16px }
-.gp-agent-hero-glow { position:absolute; top:-30%; right:-20%; width:180px; height:180px; border-radius:50%; background:radial-gradient(circle,rgba(139,92,246,.08),transparent); pointer-events:none }
-.gp-agent-hero-icon { font-size:2.8rem; display:block; margin-bottom:8px }
-.gp-agent-hero-title { font-size:1.15rem; font-weight:800; color:var(--gp-text); margin-bottom:4px }
-.gp-agent-hero-sub { font-size:.78rem; color:var(--gp-muted) }
+.gp-agent-hero { text-align:center; padding:40px 20px; position:relative; overflow:hidden; border-radius:24px; background:linear-gradient(135deg,#1a1a2e,#16213e); border:1px solid rgba(139,92,246,.2); margin-bottom:24px }
+.gp-agent-hero-glow { position:absolute; inset:0; background:radial-gradient(circle at 70% 20%,rgba(139,92,246,.15),transparent 50%),radial-gradient(circle at 20% 80%,rgba(245,158,11,.1),transparent 50%); pointer-events:none }
+.gp-agent-hero-icon { font-size:3.5rem; display:block; margin-bottom:12px; filter:drop-shadow(0 0 15px rgba(245,158,11,.4)) }
+.gp-agent-hero-title { font-size:1.4rem; font-weight:900; color:#fff; margin-bottom:6px; letter-spacing:-.02em }
+.gp-agent-hero-sub { font-size:.85rem; color:rgba(255,255,255,.7); line-height:1.4 }
+
+.gp-agent-badge-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:24px }
+.gp-agent-badge { background:var(--gp-card); border:1px solid var(--gp-border); padding:16px; border-radius:20px; text-align:center; transition:all .3s ease }
+.gp-agent-badge:hover { transform:translateY(-5px); border-color:var(--gp-accent); box-shadow:0 12px 24px rgba(139,92,246,.1) }
+.gp-agent-badge-icon { font-size:1.8rem; display:block; margin-bottom:8px }
+.gp-agent-badge-label { font-size:.82rem; font-weight:800; color:var(--gp-text); margin-bottom:2px }
+.gp-agent-badge-desc { font-size:.68rem; color:var(--gp-muted) }
+
+.gp-agent-fee { background:linear-gradient(135deg,rgba(245,158,11,.1),rgba(217,119,6,.05)); border:1.5px dashed #f59e0b; padding:20px; border-radius:20px; text-align:center; margin-bottom:24px; position:relative }
+.gp-agent-fee-label { font-size:.75rem; font-weight:700; color:#b45309; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px }
+.gp-agent-fee-amount { font-size:2rem; font-weight:900; color:#d97706; display:block }
 
 /* ═══ PAYMENT (BECOME AGENT) ═══ */
-.gp-pay-note { padding:14px 16px; border-radius:14px; background:rgba(251,191,36,.08); border:1px solid rgba(251,191,36,.15); font-size:.78rem; color:#92400e; margin-bottom:16px; display:flex; align-items:center; gap:8px }
-.dark .gp-pay-note { color:#fbbf24; background:rgba(251,191,36,.06) }
-.gp-pay-note i { font-size:1rem; color:#d97706; flex-shrink:0 }
-.ba-method-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px }
-.ba-method-card { display:flex; align-items:center; justify-content:center; padding:12px; border-radius:16px; border:2px solid var(--gp-border); background:var(--gp-card); cursor:pointer; transition:all .2s; min-height:60px }
-.ba-method-card:hover { border-color:var(--gp-accent); background:rgba(139,92,246,.04) }
-.ba-method-card.active { border-color:#E2136E; background:#fdf2f8 }
-.dark .ba-method-card.active { background:rgba(226,19,110,.1) }
+.ba-pay-wrap { padding:24px; background:var(--gp-card); border-radius:24px }
+.gp-pay-note { padding:16px 20px; border-radius:18px; background:rgba(245,158,11,.08); border:1px solid rgba(245,158,11,.15); font-size:.85rem; color:#92400e; margin-bottom:20px; display:flex; align-items:center; gap:12px; line-height:1.5 }
+.dark .gp-pay-note { color:#fbbf24; background:rgba(245,158,11,.06) }
+.gp-pay-note i { font-size:1.4rem; color:#d97706; flex-shrink:0 }
+
+.ba-method-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:24px }
+.ba-method-card { display:flex; align-items:center; justify-content:center; padding:16px; border-radius:20px; border:2px solid var(--gp-border); background:var(--gp-card); cursor:pointer; transition:all .25s ease; min-height:70px }
+.ba-method-card:hover { transform:translateY(-3px); border-color:var(--gp-accent); box-shadow:0 8px 16px rgba(0,0,0,.05) }
+.ba-method-card.active { border-color:#E2136E; background:rgba(226,19,110,.05); box-shadow:0 8px 20px rgba(226,19,110,.1) }
 .ba-method-card img { max-height:36px; max-width:100%; object-fit:contain }
-.ba-merchant-box--premium { padding:16px; border-radius:16px; background:var(--gp-bg); border:1px solid var(--gp-border); margin-bottom:16px; display:none }
-.ba-merchant-header { display:flex; align-items:center; gap:8px; font-size:.85rem; font-weight:800; margin-bottom:12px; color:var(--gp-text) }
-.ba-merchant-header img { height:22px }
-.ba-instr-step { font-size:.75rem; color:var(--gp-muted); padding:5px 0; line-height:1.5 }
-.ba-instr-step strong { color:var(--gp-text) }
-.ba-merchant-num { font-size:.9rem; font-weight:800; letter-spacing:.5px }
-.ba-copy-btn { display:inline-flex; align-items:center; gap:4px; padding:2px 10px; border-radius:8px; border:0; background:rgba(139,92,246,.1); color:var(--gp-accent); font-size:.6rem; font-weight:700; cursor:pointer; transition:all .15s; vertical-align:middle }
-.ba-copy-btn:hover { background:rgba(139,92,246,.2) }
-.ba-instr-footer { margin-top:10px; padding-top:10px; border-top:1px solid var(--gp-border); font-size:.72rem; color:var(--gp-muted) }
-.ba-inputs-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px }
-.ba-input-wrap { position:relative; display:flex; align-items:center; border-radius:12px; border:2px solid var(--gp-border); transition:all .2s }
-.ba-input-wrap:focus-within { border-color:var(--gp-accent); box-shadow:0 0 0 4px rgba(139,92,246,.1) }
-.ba-input-icon { display:flex; align-items:center; justify-content:center; width:42px; flex-shrink:0; color:var(--gp-muted); font-size:1rem }
-.ba-input { flex:1; padding:10px 14px 10px 0; border:0; font-size:.8rem; font-weight:600; outline:none; font-family:'Plus Jakarta Sans',sans-serif; background:transparent; color:var(--gp-text) }
-.ba-input::placeholder { color:var(--gp-muted); font-weight:400 }
+
+#baMerchantBox { padding:24px; border-radius:24px; background:var(--gp-bg); border:1px solid var(--gp-border); margin-bottom:24px; box-shadow:inset 0 2px 8px rgba(0,0,0,.02) }
+.ba-merchant-header { display:flex; align-items:center; gap:10px; font-size:1rem; font-weight:900; margin-bottom:16px; color:var(--gp-text) }
+.ba-merchant-header img { height:26px }
+.ba-instr-step { font-size:.8rem; color:var(--gp-muted); padding:6px 0; line-height:1.6 }
+.ba-instr-step strong { color:var(--gp-text); font-weight:800 }
+.ba-merchant-num { font-size:1rem; font-weight:900; letter-spacing:.8px; font-family:monospace }
+.ba-copy-btn { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:10px; border:0; background:var(--gp-accent); color:#fff; font-size:.7rem; font-weight:700; cursor:pointer; transition:all .2s; margin-left:8px }
+.ba-copy-btn:hover { transform:scale(1.05); filter:brightness(1.1) }
+
+.ba-inputs-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px }
+.ba-input-label { font-size:.75rem; font-weight:800; color:var(--gp-muted); margin-bottom:8px; display:block; text-transform:uppercase; letter-spacing:.5px }
+.ba-input-wrap { position:relative; display:flex; align-items:center; border-radius:16px; border:2px solid var(--gp-border); background:var(--gp-bg); transition:all .2s }
+.ba-input-wrap:focus-within { border-color:var(--gp-accent); box-shadow:0 0 0 4px rgba(139,92,246,.12); transform:translateY(-1px) }
+.ba-input-icon { width:46px; display:flex; align-items:center; justify-content:center; color:var(--gp-muted); font-size:1.1rem; border-right:1px solid var(--gp-border) }
+.ba-input { flex:1; padding:12px 16px; border:0; font-size:.9rem; font-weight:700; outline:none; background:transparent; color:var(--gp-text) }
+.ba-input::placeholder { font-weight:500; opacity:.5 }
 .ba-actions { margin-top:12px }
 .gp-modal-step { display:none; animation:gpModalIn .3s ease }
 .gp-modal-step.active { display:block }
@@ -404,38 +416,77 @@ select.gp-input option { padding:10px 12px; font-weight:500; background:var(--gp
 .gp-join-fee { font-size:.78rem; color:var(--gp-muted); padding:8px 14px; border-radius:12px; background:rgba(16,185,129,.06); border:1px solid rgba(16,185,129,.1); margin-bottom:12px }
 .gp-modal-actions { display:flex; gap:8px; margin-top:14px; justify-content:flex-end }
 .hidden { display:none !important }
-/* ═══ PROFILE CARD ═══ */
-.gp-profile-card { text-align:center; margin-bottom:20px; border-radius:20px; overflow:hidden; border:1px solid var(--gp-border); background:var(--gp-card) }
-.gp-profile-card-cover { height:80px; background:linear-gradient(135deg,rgba(139,92,246,.3),rgba(99,102,241,.15)); position:relative; overflow:hidden }
-.gp-profile-card-cover img { display:none }
-.gp-profile-card-avatar { width:72px; height:72px; border-radius:50%; overflow:hidden; border:4px solid var(--gp-card); margin:-40px auto 8px; box-shadow:0 4px 16px rgba(0,0,0,.1); position:relative }
-.gp-profile-card-avatar img { width:100%; height:100%; object-fit:cover }
-.gp-profile-card-body h4 { font-size:1.05rem; font-weight:800; color:var(--gp-text); margin:0; letter-spacing:-.02em }
-.gp-profile-card-tag { font-size:.75rem; color:var(--gp-accent); font-weight:600 }
+/* ═══ PROFILE HERO (View Mode) ═══ */
+.gp-profile-hero { position:relative; padding:40px 24px 30px; overflow:hidden; border-radius:0 0 32px 32px; background:linear-gradient(135deg,#1e1b4b,#0f172a) }
+.gp-profile-hero-bg { position:absolute; inset:0; background:radial-gradient(circle at top right,rgba(139,92,246,.2),transparent),radial-gradient(circle at bottom left,rgba(236,72,153,.1),transparent); opacity:.8 }
+.gp-profile-hero-content { position:relative; z-index:1; display:flex; align-items:center; gap:24px }
+.gp-profile-avatar-large { position:relative; width:100px; height:100px; flex-shrink:0 }
+.gp-profile-avatar-large img { width:100%; height:100%; border-radius:50%; object-fit:cover; border:4px solid rgba(255,255,255,.1); box-shadow:0 12px 32px rgba(0,0,0,.3) }
+.gp-avatar-status { position:absolute; bottom:6px; right:6px; width:18px; height:18px; background:#10b981; border:3px solid #1e1b4b; border-radius:50% }
+.gp-profile-main-info { flex:1 }
+.gp-profile-full-name { font-size:1.6rem; font-weight:900; color:#fff; margin:0 0 4px; letter-spacing:-.03em }
+.gp-profile-sub-name { font-size:.85rem; font-weight:600; color:rgba(255,255,255,.7); margin-bottom:12px; display:block }
+.gp-profile-nickname-badge { font-size:.9rem; font-weight:700; color:var(--gp-accent); background:rgba(139,92,246,.15); padding:3px 12px; border-radius:99px; display:inline-block; margin-bottom:10px }
+.gp-profile-badges { display:flex; gap:8px; flex-wrap:wrap }
+.gp-badge { padding:4px 12px; border-radius:8px; font-size:.7rem; font-weight:800; display:flex; align-items:center; gap:6px; text-transform:uppercase }
+.gp-badge-skill { background:rgba(255,255,255,.1); color:#fff }
+.gp-badge-agent { background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff }
+.gp-badge-status { background:rgba(34,197,94,.2); color:#4ade80; border:1px solid rgba(34,197,94,.2) }
+.gp-badge-status i { font-size:.5rem; margin-top:-1px }
 
-/* ═══ PROFILE STATS ═══ */
-.gp-profile-stats { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px }
-.gp-profile-stat { padding:14px 12px; border-radius:14px; background:var(--gp-bg); border:1px solid var(--gp-border); text-align:center; transition:all .2s }
-.gp-profile-stat:hover { border-color:rgba(139,92,246,.2) }
-.gp-profile-stat-icon { display:block; font-size:1.2rem; margin-bottom:4px; color:var(--gp-accent) }
-.gp-profile-stat-label { display:block; font-size:.6rem; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--gp-muted); margin-bottom:2px }
-.gp-profile-stat-value { display:block; font-size:.82rem; font-weight:800; color:var(--gp-text) }
+/* ═══ VISUAL STATS GRID ═══ */
+.gp-stats-visual-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:24px }
+.gp-stat-visual-card { background:var(--gp-card); border:1px solid var(--gp-border); padding:16px; border-radius:20px; display:flex; align-items:center; gap:12px; transition:all .2s }
+.gp-stat-visual-card:hover { transform:translateY(-3px); box-shadow:0 8px 24px rgba(0,0,0,.05) }
+.gp-stat-visual-icon { width:42px; height:42px; border-radius:12px; background:rgba(0,0,0,.04); display:flex; align-items:center; justify-content:center; font-size:1.1rem }
+.dark .gp-stat-visual-icon { background:rgba(255,255,255,.04) }
+.gp-stat-visual-data { display:flex; flex-direction:column }
+.gp-stat-visual-value { font-size:1.2rem; font-weight:900; color:var(--gp-text); line-height:1.1 }
+.gp-stat-visual-label { font-size:.65rem; font-weight:700; color:var(--gp-muted); text-transform:uppercase }
 
-/* ═══ PROFILE STATS TITLE ═══ */
-.gp-profile-stats-title { font-size:.78rem; font-weight:700; color:var(--gp-text); display:flex; align-items:center; gap:6px; margin-bottom:8px; padding-top:4px }
-.gp-profile-stats-title i { color:var(--gp-accent); font-size:.7rem }
+/* ═══ PROFILE CONTENT LAYOUT ═══ */
+.gp-profile-content-grid { display:grid; grid-template-columns:1fr 240px; gap:24px }
+.gp-profile-block { margin-bottom:20px }
+.gp-block-title { font-size:.8rem; font-weight:800; color:var(--gp-muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:12px; display:flex; align-items:center; gap:8px }
+.gp-profile-bio-box { background:var(--gp-bg); padding:16px; border-radius:16px; border:1px solid var(--gp-border) }
+.gp-profile-bio-box p { font-size:.85rem; color:var(--gp-text); margin:0; line-height:1.6 }
 
-/* ═══ GAME SKILLS ═══ */
-.gp-profile-game-skills { display:flex; flex-direction:column; gap:6px; margin-bottom:14px }
-.gp-profile-game-skill { display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:12px; background:var(--gp-bg); border:1px solid var(--gp-border); transition:all .15s }
-.gp-profile-game-skill:hover { border-color:rgba(139,92,246,.15) }
-.gp-game-skill-icon { width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; background:rgba(139,92,246,.1); color:var(--gp-accent); font-size:.7rem; flex-shrink:0 }
-.gp-game-skill-name { font-size:.75rem; font-weight:700; color:var(--gp-text); flex:1; min-width:0 }
-.gp-game-skill-level { font-size:.65rem; font-weight:600; color:var(--gp-muted); flex-shrink:0; width:72px; text-align:right }
-.gp-game-skill-bar { flex:0 0 80px; height:4px; border-radius:99px; background:var(--gp-border); overflow:hidden }
-.gp-game-skill-bar span { display:block; height:100%; border-radius:99px; background:linear-gradient(90deg,var(--gp-accent),#a78bfa); transition:width .3s }
-.gp-profile-no-skills { text-align:center; padding:16px; font-size:.72rem; color:var(--gp-muted); border:1px dashed var(--gp-border); border-radius:12px }
-.gp-profile-no-skills a { color:var(--gp-accent); font-weight:600 }
+/* ═══ VISUAL SKILLS ═══ */
+.gp-visual-skills { display:flex; flex-direction:column; gap:10px }
+.gp-skill-visual-item { background:var(--gp-card); border:1px solid var(--gp-border); padding:12px 16px; border-radius:16px }
+.gp-skill-visual-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px }
+.gp-skill-name { font-size:.82rem; font-weight:800; color:var(--gp-text) }
+.gp-skill-rank { font-size:.7rem; font-weight:700; color:var(--gp-accent); background:rgba(139,92,246,.1); padding:2px 8px; border-radius:6px }
+.gp-skill-progress-wrap { height:6px; background:var(--gp-bg); border-radius:99px; overflow:hidden }
+.gp-skill-progress-bar { height:100%; background:linear-gradient(90deg,var(--gp-accent),#ec4899); border-radius:99px }
+
+/* ═══ SOCIAL LINKS ═══ */
+.gp-social-links-list { display:flex; flex-direction:column; gap:8px }
+.gp-social-link-item { display:flex; align-items:center; gap:12px; padding:12px 16px; border-radius:14px; background:var(--gp-bg); border:1px solid var(--gp-border); font-size:.8rem; font-weight:700 }
+.gp-social-link-item.discord { color:#5865f2; background:rgba(88,101,242,.05) }
+.gp-social-link-item.facebook { color:#1877f2; background:rgba(24,119,242,.05) }
+.gp-social-link-item.instagram { color:#e4405f; background:rgba(228,64,95,.05) }
+.gp-social-link-item.youtube { color:#ff0000; background:rgba(255,0,0,.05) }
+.gp-social-link-item.wallet { color:var(--gp-green); background:rgba(16,185,129,.05) }
+
+/* ═══ EDIT TABS ═══ */
+.gp-form-tabs { display:flex; border-bottom:1px solid var(--gp-border); background:var(--gp-bg) }
+.gp-form-tab { flex:1; padding:16px; border:0; background:transparent; font-size:.8rem; font-weight:700; color:var(--gp-muted); cursor:pointer; transition:all .2s; display:flex; align-items:center; justify-content:center; gap:8px }
+.gp-form-tab:hover { color:var(--gp-text) }
+.gp-form-tab.active { color:var(--gp-accent); position:relative }
+.gp-form-tab.active::after { content:''; position:absolute; bottom:0; left:20%; right:20%; height:3px; background:var(--gp-accent); border-radius:3px 3px 0 0 }
+.gp-tab-content { display:none }
+.gp-tab-content.active { display:block }
+
+@media (max-width:768px) {
+    .gp-profile-hero { padding:30px 16px 24px; border-radius:0 }
+    .gp-profile-hero-content { flex-direction:column; text-align:center; gap:16px }
+    .gp-profile-avatar-large { width:80px; height:80px }
+    .gp-profile-full-name { font-size:1.3rem }
+    .gp-stats-visual-grid { grid-template-columns:1fr }
+    .gp-profile-content-grid { grid-template-columns:1fr }
+    .gp-form-tab span { display:none }
+}
 .gp-profile-info-links { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:14px; font-size:.72rem; color:var(--gp-muted) }
 .gp-profile-info-links i { width:14px; text-align:center }
 
@@ -454,24 +505,72 @@ select.gp-input option { padding:10px 12px; font-weight:500; background:var(--gp
 .gp-profile-bio p { font-size:.8rem; color:var(--gp-text); margin:0; line-height:1.5 }
 
 /* ═══ PROFILE BAR (v2) ═══ */
-.gp-profile-bar { display:flex; align-items:center; gap:12px; padding:10px 16px; margin:0 0 16px; border-radius:20px; background:linear-gradient(135deg,var(--gp-card),rgba(139,92,246,.03)); border:1px solid var(--gp-border); box-shadow:0 2px 12px rgba(0,0,0,.02); position:relative; overflow:hidden }
-.gp-profile-bar::before { content:''; position:absolute; inset:0; border-radius:20px; padding:1px; background:linear-gradient(135deg,rgba(139,92,246,.08),transparent 50%,rgba(5,150,105,.04)); -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); -webkit-mask-composite:xor; mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); mask-composite:exclude; pointer-events:none }
-.gp-profile-avatar-wrap { position:relative; width:40px; height:40px; flex-shrink:0; cursor:pointer; transition:transform .2s }
-.gp-profile-avatar-wrap:hover { transform:scale(1.08) }
-.gp-profile-avatar-wrap img { width:100%; height:100%; border-radius:50%; object-fit:cover; position:relative; z-index:1 }
-.gp-profile-avatar-ring { position:absolute; inset:-3px; border-radius:50%; background:linear-gradient(135deg,#8b5cf6,#6366f1,#8b5cf6); z-index:0; animation:gpRingSpin 3s linear infinite; opacity:.7 }
-@keyframes gpRingSpin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
+.gp-profile-bar { display:flex; align-items:center; gap:16px; padding:12px 20px; margin:0 0 20px; border-radius:24px; background:linear-gradient(135deg,var(--gp-card),rgba(139,92,246,.04)); border:1px solid var(--gp-border); box-shadow:0 8px 30px rgba(0,0,0,.04); position:relative; overflow:hidden }
+.gp-profile-avatar-wrap { position:relative; width:48px; height:48px; flex-shrink:0; cursor:pointer; transition:transform .2s }
+.gp-profile-avatar-wrap:hover { transform:scale(1.05) }
+.gp-profile-avatar-wrap img { width:100%; height:100%; border-radius:50%; object-fit:cover; position:relative; z-index:1; border:2px solid var(--gp-card) }
+.gp-profile-header-top { display:flex; align-items:center; gap:10px; margin-bottom:4px }
+.gp-verified-gamer-badge { color:#10b981; font-size:1.1rem; text-shadow:0 0 12px rgba(16,185,129,.4) }
+.gp-profile-hero-bio { margin-bottom:18px; max-width:480px; position:relative }
+.gp-profile-hero-bio p { font-size:.85rem; color:rgba(255,255,255,.75); line-height:1.5; margin:0; font-style:italic }
+.gp-profile-hero-bio i { font-size:.7rem; color:var(--gp-accent); opacity:.6; margin-right:4px }
+
+/* ═══ PLAYER HIGHLIGHTS ═══ */
+.gp-player-highlights { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px; padding:16px; background:rgba(139,92,246,.04); border-radius:20px; border:1px solid rgba(139,92,246,.1) }
+.gp-highlight-item { display:flex; flex-direction:column; gap:4px }
+.gp-highlight-label { font-size:.65rem; font-weight:800; color:var(--gp-muted); text-transform:uppercase; letter-spacing:.5px }
+.gp-highlight-value { font-size:.95rem; font-weight:800; color:var(--gp-text); display:flex; align-items:center; gap:6px }
+.gp-highlight-value.skill-rank { color:var(--gp-accent) }
+.gp-highlight-value.fav-game { color:#ec4899 }
+
+@media (max-width:768px) {
+    .gp-profile-hero { padding:32px 20px 24px; border-radius:0 }
+    .gp-profile-hero-content { flex-direction:column; text-align:center; gap:18px }
+    .gp-profile-avatar-large { width:90px; height:90px; margin:0 auto }
+    .gp-profile-header-top { justify-content:center; flex-wrap:wrap }
+    .gp-profile-full-name { font-size:1.4rem }
+    .gp-profile-hero-bio { margin:0 auto 16px }
+    .gp-profile-hero-bio p { font-size:.8rem }
+    .gp-profile-badges { justify-content:center }
+    .gp-player-highlights { grid-template-columns:1fr; gap:12px; padding:12px 16px }
+    .gp-highlight-item { align-items:center; text-align:center }
+}
+
+.gp-btn-remove-skill { width:32px; height:32px; border-radius:8px; border:0; background:rgba(239,68,68,.1); color:#ef4444; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .2s; flex-shrink:0 }
+.gp-btn-remove-skill:hover { background:#ef4444; color:#fff; transform:scale(1.1) }
+
 .gp-profile-meta { flex:1; min-width:0; cursor:pointer }
-.gp-profile-name { display:flex; align-items:baseline; gap:6px; font-size:.85rem; font-weight:700; color:var(--gp-text); white-space:nowrap; overflow:hidden }
-.gp-profile-nick { font-size:.65rem; font-weight:600; color:var(--gp-accent); overflow:hidden; text-overflow:ellipsis }
-.gp-profile-tags { display:flex; align-items:center; gap:4px; margin-top:1px }
-.gp-profile-balance { display:flex; align-items:center; gap:6px; padding:5px 12px; border-radius:999px; background:linear-gradient(135deg,rgba(16,185,129,.08),rgba(5,150,105,.04)); border:1px solid rgba(16,185,129,.12); flex-shrink:0 }
-.gp-balance-icon { font-size:.7rem; color:var(--gp-green) }
-.gp-balance-amount { font-size:.82rem; font-weight:800; color:var(--gp-green); letter-spacing:-.3px }
-.gp-balance-add { display:flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; background:rgba(16,185,129,.12); color:var(--gp-green); font-size:8px; text-decoration:none; transition:all .15s }
-.gp-balance-add:hover { background:var(--gp-green); color:#fff; transform:scale(1.15) }
-.gp-profile-actions { display:flex; align-items:center; gap:5px; flex-shrink:0 }
-.gp-profile-actions .gp-btn { width:34px; height:34px; padding:0; border-radius:10px; font-size:.75rem }
+.gp-profile-name { font-size:1rem; font-weight:800; color:var(--gp-text); letter-spacing:-.02em; line-height:1.2 }
+.gp-profile-nick { color:var(--gp-accent); font-weight:700 }
+.gp-profile-tags { margin-top:4px; display:flex; align-items:center; gap:8px }
+
+.gp-tag-cta { font-size:.7rem; font-weight:700; color:var(--gp-accent); background:rgba(139,92,246,.1); padding:4px 10px; border-radius:99px; border:1px dashed var(--gp-accent); cursor:pointer; transition:all .2s; display:inline-flex; align-items:center; gap:5px }
+.gp-tag-cta:hover { background:var(--gp-accent); color:#fff; border-style:solid; transform:translateY(-1px) }
+
+.gp-role-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:8px; font-size:.68rem; font-weight:700; background:rgba(0,0,0,.04); color:var(--gp-muted) }
+.dark .gp-role-badge { background:rgba(255,255,255,.05) }
+.gp-role-gamer { background:rgba(139,92,246,.1); color:var(--gp-accent) }
+.gp-role-agent { background:rgba(245,158,11,.1); color:#d97706 }
+
+.gp-profile-balance { display:flex; align-items:center; gap:8px; padding:6px 14px; border-radius:16px; background:rgba(16,185,129,.08); border:1px solid rgba(16,185,129,.12); flex-shrink:0; margin-left:auto }
+.gp-balance-amount { font-size:.95rem; font-weight:900; color:var(--gp-green); letter-spacing:-.5px }
+.gp-balance-add { width:22px; height:22px; border-radius:50%; background:var(--gp-green); color:#fff; display:flex; align-items:center; justify-content:center; font-size:10px; text-decoration:none; transition:all .2s }
+.gp-balance-add:hover { transform:scale(1.1) rotate(90deg) }
+
+.gp-profile-actions { display:flex; align-items:center; gap:8px; flex-shrink:0 }
+.gp-btn-become-agent { padding:8px 16px; border-radius:14px; font-size:.78rem; font-weight:800; gap:8px }
+.gp-profile-more .gp-btn { width:38px; height:38px; border-radius:14px }
+
+@media (max-width:768px) {
+    .gp-profile-bar { padding:12px 14px; gap:10px; border-radius:20px }
+    .gp-profile-avatar-wrap { width:40px; height:40px }
+    .gp-profile-name { font-size:.85rem }
+    .gp-profile-balance { padding:5px 10px; gap:6px }
+    .gp-balance-amount { font-size:.8rem }
+    .gp-btn-become-agent span { display:none }
+    .gp-btn-become-agent { padding:8px; width:36px; height:36px; justify-content:center }
+    .gp-profile-actions { gap:6px }
+}
 
 /* ═══ BECOME AGENT IN PROFILE ═══ */
 .gp-profile-become-agent { display:flex; align-items:center; gap:12px; padding:14px 16px; border-radius:16px; background:linear-gradient(135deg,rgba(251,191,36,.06),rgba(245,158,11,.03)); border:1px solid rgba(251,191,36,.15); margin-bottom:14px }
@@ -666,26 +765,45 @@ select.gp-input option { padding:10px 12px; font-weight:500; background:var(--gp
             <span class="gp-profile-avatar-ring"></span>
         </div>
         <div class="gp-profile-meta" onclick="openGamerProfile()">
-            <span class="gp-profile-name"><?php echo $gpFullName; ?><?php if ($gpNickname): ?><span class="gp-profile-nick">@<?php echo htmlspecialchars($gpNickname); ?></span><?php endif; ?></span>
-            <span class="gp-profile-tags">
-                <span class="gp-role-badge <?php echo $userRole === 'agent' ? 'gp-role-agent' : 'gp-role-gamer'; ?>">
-                    <i class="fas <?php echo $userRole === 'agent' ? 'fa-crown' : 'fa-gamepad'; ?>"></i>
-                    <?php echo $userRole === 'agent' ? 'Agent' : 'Gamer'; ?>
-                </span>
-            </span>
+            <div class="gp-profile-name">
+                <?php if ($gpNickname): ?>
+                    <span class="gp-profile-nick">@<?php echo htmlspecialchars($gpNickname); ?></span>
+                <?php else: ?>
+                    <span><?php echo $gpFullName; ?></span>
+                <?php endif; ?>
+            </div>
+            <div class="gp-profile-tags">
+                <?php if (!$gpNickname): ?>
+                    <span class="gp-tag-cta" onclick="event.stopPropagation(); document.getElementById('createGamerProfileModal').classList.remove('hidden'); document.getElementById('gpOverlay').classList.remove('hidden');">
+                        <i class="fas fa-plus-circle"></i> Create Gamer Profile
+                    </span>
+                <?php else: ?>
+                    <span class="gp-role-badge gp-role-gamer">
+                        <i class="fas fa-gamepad"></i> <?php echo htmlspecialchars($_SESSION['skill_level'] ?? 'Gamer'); ?>
+                    </span>
+                <?php endif; ?>
+            </div>
         </div>
+
         <div class="gp-profile-balance">
-            <span class="gp-balance-icon"><i class="fas fa-coins"></i></span>
             <span class="gp-balance-amount">৳<?php echo number_format($userBalance, 0); ?></span>
             <a href="index.php?page=balance" class="gp-balance-add" title="Add funds"><i class="fas fa-plus"></i></a>
         </div>
+
         <div class="gp-profile-actions">
-            <?php if ($userRole === 'agent'): ?>
-                <button type="button" class="gp-btn gp-btn-sm gp-btn-accent" data-open-modal="createTournamentModal"><i class="fas fa-trophy"></i></button>
-            <?php elseif ($userRole === 'user'): ?>
-                <button type="button" class="gp-btn gp-btn-sm gp-btn-gradient" data-open-modal="becomeAgentModal" title="Become an agent"><i class="fas fa-crown"></i></button>
+            <?php if ($userRole !== 'agent'): ?>
+                <button type="button" class="gp-btn gp-btn-sm gp-btn-gradient gp-btn-become-agent" data-open-modal="becomeAgentModal" title="Become an agent">
+                    <i class="fas fa-crown"></i> <span>Become Agent</span>
+                </button>
+            <?php else: ?>
+                <button type="button" class="gp-btn gp-btn-sm gp-btn-accent" data-open-modal="createTournamentModal" title="Create Tournament">
+                    <i class="fas fa-plus"></i> <span>Tournament</span>
+                </button>
             <?php endif; ?>
-            <button type="button" class="gp-btn gp-btn-sm gp-btn-ghost" data-open-modal="createTeamModal" title="Create team"><i class="fas fa-users"></i></button>
+            
+            <div class="gp-profile-more">
+                <button type="button" class="gp-btn gp-btn-sm gp-btn-ghost" data-open-modal="createTeamModal" title="Create team"><i class="fas fa-users"></i></button>
+            </div>
         </div>
     </section>
     <?php endif; ?>
@@ -714,17 +832,18 @@ select.gp-input option { padding:10px 12px; font-weight:500; background:var(--gp
             <h2><i class="fas fa-trophy"></i> Tournaments</h2>
             <div class="gp-filter-select">
                 <div class="gp-custom-select" id="gpFilterSelect">
-                    <div class="gp-select-trigger" onclick="toggleFilterSelect()">
+                    <div class="gp-select-trigger">
                         <span>All Tournaments</span>
                     </div>
                     <div class="gp-select-options">
-                        <div class="gp-select-option active" data-value="all" onclick="selectFilterOption(this)">All Tournaments</div>
-                        <div class="gp-select-option" data-value="live" onclick="selectFilterOption(this)">Live</div>
-                        <div class="gp-select-option" data-value="upcoming" onclick="selectFilterOption(this)">Upcoming</div>
-                        <div class="gp-select-option" data-value="ongoing" onclick="selectFilterOption(this)">Ongoing</div>
-                        <div class="gp-select-option" data-value="completed" onclick="selectFilterOption(this)">Completed</div>
-                        <div class="gp-select-option" data-value="cancelled" onclick="selectFilterOption(this)">Cancelled</div>
+                        <div class="gp-select-option active" data-value="all">All Tournaments</div>
+                        <div class="gp-select-option" data-value="live">Live</div>
+                        <div class="gp-select-option" data-value="upcoming">Upcoming</div>
+                        <div class="gp-select-option" data-value="ongoing">Ongoing</div>
+                        <div class="gp-select-option" data-value="completed">Completed</div>
+                        <div class="gp-select-option" data-value="cancelled">Cancelled</div>
                     </div>
+                    <input type="hidden" id="tournamentStatusFilter" value="all">
                 </div>
             </div>
             <div class="gp-search">
@@ -931,10 +1050,14 @@ select.gp-input option { padding:10px 12px; font-weight:500; background:var(--gp
         <div class="gp-section-header">
             <h2><i class="fas fa-ranking-star"></i> Leaderboard</h2>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <select id="lbFilter" class="gp-input" style="width:auto">
-                    <option value="">Player Rankings</option>
-                    <option value="club">Club Rankings</option>
-                </select>
+                <div class="gp-custom-select" style="width:160px" id="lbFilterWrap">
+                    <div class="gp-select-trigger"><span>Player Rankings</span></div>
+                    <div class="gp-select-options">
+                        <div class="gp-select-option active" data-value="">Player Rankings</div>
+                        <div class="gp-select-option" data-value="club">Club Rankings</div>
+                    </div>
+                    <input type="hidden" id="lbFilter" value="">
+                </div>
                 <button class="gp-btn gp-btn-sm gp-btn-ghost" onclick="loadLeaderboard()"><i class="fas fa-rotate"></i> Refresh</button>
             </div>
         </div>
@@ -1005,13 +1128,115 @@ function loadLeaderboard() {
     });
 }
 
-// Filter change
+/** --- CUSTOM SELECTS --- **/
+function initAllCustomSelects() {
+    document.querySelectorAll('.gp-custom-select').forEach(sel => {
+        // Prevent double init
+        if (sel.dataset.initialized) return;
+        sel.dataset.initialized = 'true';
+
+        const trigger = sel.querySelector('.gp-select-trigger');
+        const options = sel.querySelectorAll('.gp-select-option');
+        const hiddenInput = sel.querySelector('input[type="hidden"]');
+        const triggerSpan = trigger ? trigger.querySelector('span') : null;
+
+        if (!trigger || !triggerSpan) return;
+
+        trigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // Close others
+            document.querySelectorAll('.gp-custom-select.active').forEach(other => {
+                if (other !== sel) other.classList.remove('active');
+            });
+            sel.classList.toggle('active');
+        });
+
+        options.forEach(opt => {
+            opt.addEventListener('click', () => {
+                const val = opt.dataset.value;
+                const txt = opt.innerText;
+
+                options.forEach(o => o.classList.remove('active'));
+                opt.classList.add('active');
+
+                triggerSpan.innerText = txt;
+                if (hiddenInput) {
+                    hiddenInput.value = val;
+                    // Trigger change event manually
+                    hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                sel.classList.remove('active');
+            });
+        });
+    });
+}
+
+// Global click to close selects
+document.addEventListener('click', () => {
+    document.querySelectorAll('.gp-custom-select.active').forEach(s => s.classList.remove('active'));
+});
+
 document.addEventListener('DOMContentLoaded', function() {
-    var filter = document.getElementById('lbFilter');
+initAllCustomSelects();
+
+// Tournament Filter Logic
+var statusFilterInput = document.getElementById('tournamentStatusFilter');
+if (statusFilterInput) {
+    statusFilterInput.addEventListener('change', function() {
+        var f = this.value;
+        document.querySelectorAll('.gp-card').forEach(function(c) {
+            c.classList.toggle('hidden', f !== 'all' && c.getAttribute('data-status') !== f);
+        });
+    });
+}
+
+var filter = document.getElementById('lbFilter');
+
     if (filter) {
         filter.addEventListener('change', loadLeaderboard);
         loadLeaderboard();
     }
+
+    // Update join type UI toggle
+    document.querySelectorAll('input[name="join_type"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const teamGroup = document.getElementById('teamSelectGroup');
+            const soloGroup = document.getElementById('soloNameGroup');
+            if (this.value === 'team') {
+                if (teamGroup) teamGroup.style.display = 'block';
+                if (soloGroup) soloGroup.style.display = 'none';
+            } else {
+                if (teamGroup) teamGroup.style.display = 'none';
+                if (soloGroup) soloGroup.style.display = 'block';
+            }
+        });
+    });
+
+    // Re-init when modals open (in case they were hidden or newly added)
+    document.querySelectorAll('[data-open-modal]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            setTimeout(initAllCustomSelects, 50);
+        });
+    });
+
+    // Profile Edit Tab Switching
+    document.querySelectorAll('.gp-form-tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            const target = this.dataset.tab;
+            const modal = this.closest('.gp-modal');
+            
+            // Update tabs
+            modal.querySelectorAll('.gp-form-tab').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Update content
+            modal.querySelectorAll('.gp-tab-content').forEach(c => c.classList.remove('active'));
+            modal.querySelector(`#tab-${target}`).classList.add('active');
+            
+            // Re-init selects for new visible content
+            setTimeout(initAllCustomSelects, 20);
+        });
+    });
 });
 </script>
 
@@ -1032,49 +1257,44 @@ document.addEventListener('DOMContentLoaded', function() {
 
             <!-- ═══ Step 1: Benefits Info (Bangla) ═══ -->
             <div class="gp-modal-step active" id="baInfoStep">
-                <div class="gp-agent-hero gp-agent-hero--bn">
+                <div class="gp-agent-hero">
                     <div class="gp-agent-hero-glow"></div>
                     <span class="gp-agent-hero-icon">👑</span>
-                    <div class="gp-agent-hero-title">এজেন্ট পাওয়ার্স আনলক করুন</div>
-                    <div class="gp-agent-hero-sub">টুর্নামেন্ট তৈরি করুন, আয় করুন, নিজের ব্র্যান্ড গড়ুন</div>
+                    <div class="gp-agent-hero-title">এজেন্ট পাওয়ার্স আনলক করুন</div>
+                    <div class="gp-agent-hero-sub">টুর্নামেন্ট তৈরি করুন, আয় করুন এবং নিজের ব্র্যান্ড গড়ুন। প্রো গেমারদের জন্য সেরা সুযোগ!</div>
                 </div>
 
                 <div class="gp-agent-badge-grid">
-                    <div class="gp-agent-badge gp-agent-badge--premium">
-                        <div class="gp-agent-badge-glow"></div>
+                    <div class="gp-agent-badge">
                         <span class="gp-agent-badge-icon">🏆</span>
-                        <div class="gp-agent-badge-label">টুর্নামেন্ট তৈরি</div>
-                        <div class="gp-agent-badge-desc">নিজের ইভেন্ট হোস্ট করুন</div>
+                        <div class="gp-agent-badge-label">টুর্নামেন্ট হোস্ট</div>
+                        <div class="gp-agent-badge-desc">আনলিমিটেড ইভেন্ট তৈরি করুন</div>
                     </div>
-                    <div class="gp-agent-badge gp-agent-badge--premium">
-                        <div class="gp-agent-badge-glow"></div>
+                    <div class="gp-agent-badge">
                         <span class="gp-agent-badge-icon">💰</span>
-                        <div class="gp-agent-badge-label">আয় উপার্জন</div>
-                        <div class="gp-agent-badge-desc">এন্ট্রি ফি রাখুন নিজের</div>
+                        <div class="gp-agent-badge-label">রিয়েল ইনকাম</div>
+                        <div class="gp-agent-badge-desc">এন্ট্রি ফি থেকে কমিশন আয়</div>
                     </div>
-                    <div class="gp-agent-badge gp-agent-badge--premium">
-                        <div class="gp-agent-badge-glow"></div>
+                    <div class="gp-agent-badge">
+                        <span class="gp-agent-badge-icon">⚡</span>
+                        <div class="gp-agent-badge-label">ইনস্ট্যান্ট অ্যাক্সেস</div>
+                        <div class="gp-agent-badge-desc">সব প্রিমিয়াম ফিচার আনলক</div>
+                    </div>
+                    <div class="gp-agent-badge">
                         <span class="gp-agent-badge-icon">👑</span>
-                        <div class="gp-agent-badge-label">এজেন্ট ব্যাজ</div>
-                        <div class="gp-agent-badge-desc">স্পেশাল রিকগনিশন</div>
-                    </div>
-                    <div class="gp-agent-badge gp-agent-badge--premium">
-                        <div class="gp-agent-badge-glow"></div>
-                        <span class="gp-agent-badge-icon">🎯</span>
-                        <div class="gp-agent-badge-label">প্রাইজ কন্ট্রোল</div>
-                        <div class="gp-agent-badge-desc">নিজের প্রাইজ সেট করুন</div>
+                        <div class="gp-agent-badge-label">এজেন্ট ভেরিফাইড</div>
+                        <div class="gp-agent-badge-desc">প্রোফাইলে গোল্ডেন ব্যাজ</div>
                     </div>
                 </div>
 
-                <div class="gp-agent-fee gp-agent-fee--bn">
-                    <div class="gp-agent-fee-glow"></div>
+                <div class="gp-agent-fee">
                     <span class="gp-agent-fee-label">এককালীন অ্যাক্টিভেশন ফি</span>
-                    <span class="gp-agent-fee-amount">মাত্র ৳৫০০</span>
+                    <span class="gp-agent-fee-amount">৳৫০০</span>
                 </div>
 
-                <div class="gp-modal-actions">
+                <div class="gp-modal-actions" style="border-top:1px solid var(--gp-border); padding-top:20px">
                     <button type="button" class="gp-btn gp-btn-ghost" data-close-modal>পরে করব</button>
-                    <button type="button" class="gp-btn gp-btn-gradient gp-btn-gradient--gold" id="baProceedBtn"><i class="fas fa-arrow-right"></i> পেমেন্টে যান</button>
+                    <button type="button" class="gp-btn gp-btn-accent" id="baProceedBtn" style="background:linear-gradient(135deg,#f59e0b,#d97706); border:0; color:#fff"><i class="fas fa-bolt"></i> পেমেন্টে যান</button>
                 </div>
             </div>
 
@@ -1083,44 +1303,44 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="ba-pay-wrap">
 
                     <!-- Premium info note -->
-                    <div class="gp-pay-note gp-pay-note--agent">
-                        <i class="fas fa-crown"></i> নিচের যেকোনো একটি মেথডে <strong>৫০০ টাকা</strong> পাঠিয়ে এজেন্ট অ্যাক্টিভেট করুন
+                    <div class="gp-pay-note">
+                        <i class="fas fa-shield-halved"></i> <span>নিচের যেকোনো একটি মেথডে <strong>৫০০ টাকা</strong> পাঠিয়ে এজেন্ট অ্যাক্টিভেট করুন।</span>
                     </div>
 
-                    <!-- Method Cards (images only) -->
+                    <!-- Method Cards -->
                     <div class="ba-method-grid">
                         <?php $methods = ['bkash'=>['label'=>'bKash','color'=>'#E2136E'],'nagad'=>['label'=>'Nagad','color'=>'#E8522E'],'rocket'=>['label'=>'Rocket','color'=>'#CC0000']]; ?>
                         <?php foreach ($methods as $mk => $mv): ?>
-                        <div class="ba-method-card ba-method-card--premium active" data-method="<?php echo $mk; ?>" style="border-color:<?php echo $mk === 'bkash' ? $mv['color'] : '#d1d5db'; ?>;background:<?php echo $mk === 'bkash' ? '#fdf2f8' : ''; ?>">
-                            <img src="assets/images/payment-icon/<?php echo $mk; ?>-logo-mobile-banking.png" alt="<?php echo $mv['label']; ?>" onerror="this.style.display='none'">
+                        <div class="ba-method-card active" data-method="<?php echo $mk; ?>" style="<?php echo $mk === 'bkash' ? 'border-color:'.$mv['color'].'; background:rgba(226,19,110,.05)' : ''; ?>">
+                            <img src="assets/images/payment-icon/<?php echo $mk; ?>-logo-mobile-banking.png" alt="<?php echo $mv['label']; ?>">
                         </div>
                         <?php endforeach; ?>
                     </div>
 
-                    <!-- Merchant Info + Instructions (JS-rendered, like balance.php) -->
-                    <div id="baMerchantBox" class="ba-merchant-box--premium" style="display:none"></div>
+                    <!-- Merchant Info -->
+                    <div id="baMerchantBox"></div>
 
-                    <!-- Phone + TXID -->
+                    <!-- Inputs -->
                     <div class="ba-inputs-grid">
                         <div>
-                            <label class="ba-input-label">📱 আপনার মোবাইল নাম্বার (Sent From)</label>
+                            <label class="ba-input-label">📱 আপনার মোবাইল নাম্বার</label>
                             <div class="ba-input-wrap">
-                                <span class="ba-input-icon"><i class="fas fa-mobile-screen"></i></span>
-                                <input type="tel" id="baPhone" class="ba-input ba-input--premium" placeholder="01XXXXXXXXX" pattern="01[3-9]\d{8}">
+                                <span class="ba-input-icon"><i class="fas fa-phone"></i></span>
+                                <input type="tel" id="baPhone" class="ba-input" placeholder="01XXXXXXXXX">
                             </div>
                         </div>
                         <div>
-                            <label class="ba-input-label">🔗 ট্রান্সজেকশন আইডি</label>
+                            <label class="ba-input-label">🔗 ট্রানজেকশন আইডি</label>
                             <div class="ba-input-wrap">
-                                <span class="ba-input-icon"><i class="fas fa-hashtag"></i></span>
-                                <input type="text" id="baTxid" class="ba-input ba-input--premium" placeholder="ট্রান্সজেকশন আইডি দিন" style="text-transform:uppercase">
+                                <span class="ba-input-icon"><i class="fas fa-key"></i></span>
+                                <input type="text" id="baTxid" class="ba-input" placeholder="TXID দিন" style="text-transform:uppercase">
                             </div>
                         </div>
                     </div>
 
-                    <div class="gp-modal-actions ba-actions">
+                    <div class="gp-modal-actions" style="border-top:1px solid var(--gp-border); padding-top:20px">
                         <button type="button" class="gp-btn gp-btn-ghost" id="baBackToInfo"><i class="fas fa-arrow-left"></i> পেছনে</button>
-                        <button type="button" class="gp-btn gp-btn-gradient gp-btn-gradient--gold" id="baPayBtn"><i class="fas fa-paper-plane"></i> সাবমিট করুন</button>
+                        <button type="button" class="gp-btn gp-btn-accent" id="baPayBtn" style="background:var(--gp-accent); color:#fff"><i class="fas fa-check-circle"></i> সাবমিট করুন</button>
                     </div>
                     <div class="gp-feedback hidden" id="baFeedback"></div>
                 </div>
@@ -1130,184 +1350,285 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </div>
 
-<!-- ═══ View Gamer Profile Modal (exists) ═══ -->
+<!-- ═══ View Gamer Profile Modal (v2) ═══ -->
 <div class="gp-modal hidden" id="viewGamerProfileModal">
-    <div class="gp-modal-panel gp-modal-full-mobile">
+    <div class="gp-modal-panel lg">
         <div class="gp-modal-head">
             <h3><i class="fas fa-id-card" style="color:#7c3aed"></i> Gamer Profile</h3>
             <button class="gp-modal-close" data-close-modal><i class="fas fa-times"></i></button>
         </div>
-        <div class="gp-modal-body">
-            <div class="gp-profile-card">
-                <div class="gp-profile-card-cover">
-                    <img src="assets/avatars/<?php echo htmlspecialchars($_SESSION['avatar'] ?? 'default.png'); ?>" alt="" onerror="this.src='assets/avatars/default.png'">
-                </div>
-                <div class="gp-profile-card-body">
-                    <div class="gp-profile-card-avatar">
+        <div class="gp-modal-body" style="padding:0">
+            <!-- Profile Hero Section -->
+            <div class="gp-profile-hero">
+                <div class="gp-profile-hero-bg"></div>
+                <div class="gp-profile-hero-content">
+                    <div class="gp-profile-avatar-large">
                         <img src="assets/avatars/<?php echo htmlspecialchars($_SESSION['avatar'] ?? 'default.png'); ?>" alt="" onerror="this.src='assets/avatars/default.png'">
+                        <span class="gp-avatar-status"></span>
                     </div>
-                    <h4><?php echo htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username'] ?? 'User'); ?></h4>
-                    <?php if (!empty($_SESSION['nickname'])): ?>
-                    <span class="gp-profile-card-tag">@<?php echo htmlspecialchars($_SESSION['nickname']); ?></span>
-                    <?php endif; ?>
-                    <span class="gp-role-badge <?php echo $userRole === 'agent' ? 'gp-role-agent' : 'gp-role-gamer'; ?>" style="margin-top:6px">
-                        <i class="fas <?php echo $userRole === 'agent' ? 'fa-crown' : 'fa-gamepad'; ?>"></i>
-                        <?php echo $userRole === 'agent' ? 'Agent' : 'Gamer'; ?>
-                    </span>
+                    <div class="gp-profile-main-info">
+                        <div class="gp-profile-header-top">
+                            <?php if (!empty($_SESSION['nickname'])): ?>
+                                <h2 class="gp-profile-full-name">@<?php echo htmlspecialchars($_SESSION['nickname']); ?> <span class="gp-verified-gamer-badge"><i class="fas fa-certificate"></i></span></h2>
+                                <div class="gp-profile-sub-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username'] ?? 'User'); ?></div>
+                            <?php else: ?>
+                                <h2 class="gp-profile-full-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username'] ?? 'User'); ?> <span class="gp-verified-gamer-badge"><i class="fas fa-certificate"></i></span></h2>
+                            <?php endif; ?>
+                        </div>
+
+                        <div class="gp-profile-hero-bio">
+                            <?php if (!empty($_SESSION['bio'])): ?>
+                                <p><i class="fas fa-quote-left"></i> <?php echo htmlspecialchars($_SESSION['bio']); ?></p>
+                            <?php else: ?>
+                                <p class="text-white opacity-40" style="font-style:italic; font-size:.8rem">"Mastering the game, one level at a time."</p>
+                            <?php endif; ?>
+                        </div>
+
+                        <div class="gp-profile-badges">
+                            <?php if ($userRole === 'agent'): ?>
+                            <span class="gp-badge gp-badge-agent"><i class="fas fa-crown"></i> Official Agent</span>
+                            <?php endif; ?>
+                            <span class="gp-badge gp-badge-status"><i class="fas fa-circle"></i> Online</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- ═══ STATS OVERVIEW ═══ -->
-            <div class="gp-profile-stats-title"><i class="fas fa-chart-simple"></i> Career Stats</div>
-            <div class="gp-profile-stats">
-                <div class="gp-profile-stat">
-                    <span class="gp-profile-stat-icon"><i class="fas fa-gamepad"></i></span>
-                    <span class="gp-profile-stat-label">Matches</span>
-                    <span class="gp-profile-stat-value"><?php echo (int)($playerStats['total_matches'] ?? 0); ?></span>
+            <div style="padding:24px">
+                <!-- Player Highlights (Skill & Favorite Game) -->
+                <div class="gp-player-highlights">
+                    <div class="gp-highlight-item">
+                        <span class="gp-highlight-label">Ranking Level</span>
+                        <span class="gp-highlight-value skill-rank"><i class="fas fa-bolt"></i> <?php echo htmlspecialchars($_SESSION['skill_level'] ?? 'Rookie'); ?></span>
+                    </div>
+                    <div class="gp-highlight-item">
+                        <span class="gp-highlight-label">Favorite Game</span>
+                        <span class="gp-highlight-value fav-game"><i class="fas fa-heart"></i> <?php echo htmlspecialchars($_SESSION['favorite_game'] ?? 'Any'); ?></span>
+                    </div>
                 </div>
-                <div class="gp-profile-stat">
-                    <span class="gp-profile-stat-icon"><i class="fas fa-trophy"></i></span>
-                    <span class="gp-profile-stat-label">Wins</span>
-                    <span class="gp-profile-stat-value"><?php echo (int)($playerStats['total_wins'] ?? 0); ?></span>
-                </div>
-                <div class="gp-profile-stat">
-                    <span class="gp-profile-stat-icon"><i class="fas fa-crosshairs"></i></span>
-                    <span class="gp-profile-stat-label">Kills</span>
-                    <span class="gp-profile-stat-value"><?php echo (int)($playerStats['total_kills'] ?? 0); ?></span>
-                </div>
-                <div class="gp-profile-stat">
-                    <span class="gp-profile-stat-icon"><i class="fas fa-star"></i></span>
-                    <span class="gp-profile-stat-label">Score</span>
-                    <span class="gp-profile-stat-value"><?php echo number_format((float)($playerStats['total_score'] ?? 0), 0); ?></span>
-                </div>
-            </div>
 
-            <!-- ═══ GAME SKILLS ═══ -->
-            <div class="gp-profile-stats-title"><i class="fas fa-signal"></i> Game Skills</div>
-            <div class="gp-profile-game-skills" id="viewGameSkills">
-                <?php if (empty($gameSkills)): ?>
-                <div class="gp-profile-no-skills">No skills added yet. <a href="#" onclick="editGamerProfile();return false">Add your game skills</a></div>
-                <?php else: foreach ($gameSkills as $gs): ?>
-                <div class="gp-profile-game-skill">
-                    <span class="gp-game-skill-icon"><i class="fas <?php echo htmlspecialchars($gs['game_icon'] ?? 'fa-gamepad'); ?>"></i></span>
-                    <span class="gp-game-skill-name"><?php echo htmlspecialchars($gs['game']); ?></span>
-                    <span class="gp-game-skill-level"><?php echo htmlspecialchars($gs['skill_level'] ?: '--'); ?></span>
-                    <span class="gp-game-skill-bar"><span style="width:<?php echo $skillPct = max(10, min(100, ['Beginner'=>20,'Intermediate'=>40,'Advanced'=>60,'Pro'=>80,'Elite'=>100][$gs['skill_level']] ?? 30)); ?>%"></span></span>
+                <!-- Quick Stats Grid -->
+                <div class="gp-stats-visual-grid">
+                    <div class="gp-stat-visual-card">
+                        <div class="gp-stat-visual-icon" style="color:#7c3aed"><i class="fas fa-gamepad"></i></div>
+                        <div class="gp-stat-visual-data">
+                            <span class="gp-stat-visual-value"><?php echo (int)($playerStats['total_matches'] ?? 0); ?></span>
+                            <span class="gp-stat-visual-label">Matches</span>
+                        </div>
+                    </div>
+                    <div class="gp-stat-visual-card">
+                        <div class="gp-stat-visual-icon" style="color:#f59e0b"><i class="fas fa-trophy"></i></div>
+                        <div class="gp-stat-visual-data">
+                            <span class="gp-stat-visual-value"><?php echo (int)($playerStats['total_wins'] ?? 0); ?></span>
+                            <span class="gp-stat-visual-label">Wins</span>
+                        </div>
+                    </div>
+                    <div class="gp-stat-visual-card">
+                        <div class="gp-stat-visual-icon" style="color:#ef4444"><i class="fas fa-crosshairs"></i></div>
+                        <div class="gp-stat-visual-data">
+                            <span class="gp-stat-visual-value"><?php echo (int)($playerStats['total_kills'] ?? 0); ?></span>
+                            <span class="gp-stat-visual-label">Kills</span>
+                        </div>
+                    </div>
                 </div>
-                <?php endforeach; endif; ?>
-            </div>
 
-            <?php if (!empty($_SESSION['bio'])): ?>
-            <div class="gp-profile-bio">
-                <label><i class="fas fa-quote-left"></i> Bio</label>
-                <p><?php echo htmlspecialchars($_SESSION['bio']); ?></p>
-            </div>
-            <?php endif; ?>
+                <div class="gp-profile-content-grid">
+                    <div class="gp-profile-main-column">
+                        <div class="gp-profile-block">
+                            <h4 class="gp-block-title"><i class="fas fa-signal"></i> Expertise Showcase</h4>
+                            <div class="gp-visual-skills">
+                                <?php if (empty($gameSkills)): ?>
+                                <div class="gp-no-skills-visual">
+                                    <i class="fas fa-ghost"></i>
+                                    <p>Expertise pending assessment.</p>
+                                    <button class="gp-btn gp-btn-sm gp-btn-ghost" onclick="editGamerProfile()">Setup Skills</button>
+                                </div>
+                                <?php else: foreach ($gameSkills as $gs): ?>
+                                <div class="gp-skill-visual-item">
+                                    <div class="gp-skill-visual-header">
+                                        <span class="gp-skill-name"><i class="fas <?php echo htmlspecialchars($gs['game_icon'] ?? 'fa-gamepad'); ?>"></i> <?php echo htmlspecialchars($gs['game']); ?></span>
+                                        <span class="gp-skill-rank"><?php echo htmlspecialchars($gs['skill_level'] ?: '--'); ?></span>
+                                    </div>
+                                    <div class="gp-skill-progress-wrap">
+                                        <div class="gp-skill-progress-bar" style="width:<?php echo ['Beginner'=>20,'Intermediate'=>40,'Advanced'=>60,'Pro'=>80,'Elite'=>100][$gs['skill_level']] ?? 30; ?>%"></div>
+                                    </div>
+                                </div>
+                                <?php endforeach; endif; ?>
+                            </div>
+                        </div>
+                    </div>
 
-            <div class="gp-profile-info-links">
-                <?php if (!empty($_SESSION['discord'])): ?>
-                <span><i class="fab fa-discord"></i> <?php echo htmlspecialchars($_SESSION['discord']); ?></span>
-                <?php endif; ?>
-                <span><i class="fas fa-coins"></i> ৳<?php echo number_format($userBalance, 0); ?></span>
-            </div>
+                    <div class="gp-profile-side-column">
+                        <div class="gp-profile-block">
+                            <h4 class="gp-block-title"><i class="fas fa-link"></i> Connectivity</h4>
+                            <div class="gp-social-links-list">
+                                <?php
+                                $hasSocial = false;
+                                $socials = [
+                                    'discord' => ['icon' => 'fab fa-discord', 'class' => 'discord'],
+                                    'facebook' => ['icon' => 'fab fa-facebook', 'class' => 'facebook'],
+                                    'instagram' => ['icon' => 'fab fa-instagram', 'class' => 'instagram'],
+                                    'youtube' => ['icon' => 'fab fa-youtube', 'class' => 'youtube']
+                                ];
+                                foreach ($socials as $key => $meta):
+                                    $val = $_SESSION[$key] ?? '';
+                                    if (!empty($val)):
+                                        $hasSocial = true;
+                                ?>
+                                <div class="gp-social-link-item <?php echo $meta['class']; ?>">
+                                    <i class="<?php echo $meta['icon']; ?>"></i>
+                                    <span><?php echo htmlspecialchars($val); ?></span>
+                                </div>
+                                <?php endif; endforeach; ?>
 
-            <div class="gp-modal-actions">
-                <button type="button" class="gp-btn gp-btn-ghost" data-close-modal>Close</button>
-                <button type="button" class="gp-btn gp-btn-primary" onclick="editGamerProfile()"><i class="fas fa-pen"></i> Edit profile</button>
+                                <?php if (!$hasSocial): ?>
+                                <p class="text-muted" style="font-size:.75rem">No social links added.</p>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="gp-modal-actions" style="margin-top:12px; border-top:1px solid var(--gp-border); padding-top:20px">
+                    <button type="button" class="gp-btn gp-btn-ghost" data-close-modal>Close</button>
+                    <button type="button" class="gp-btn gp-btn-accent" onclick="editGamerProfile()"><i class="fas fa-pen-nib"></i> Edit Profile</button>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- ═══ Create/Edit Gamer Profile Modal ═══ -->
+<!-- ═══ Create/Edit Gamer Profile Modal (v2) ═══ -->
 <div class="gp-modal hidden" id="createGamerProfileModal">
-    <div class="gp-modal-panel gp-modal-full-mobile">
+    <div class="gp-modal-panel lg">
         <div class="gp-modal-head">
             <h3><i class="fas fa-id-card" style="color:#7c3aed"></i> <?php echo !empty($_SESSION['nickname']) ? 'Edit' : 'Create'; ?> Gamer Profile</h3>
             <button class="gp-modal-close" data-close-modal><i class="fas fa-times"></i></button>
         </div>
-        <div class="gp-modal-body">
-            <div class="gp-modal-step-indicator">
-                <span class="gp-step-dot active"></span>
-                <span class="gp-step-line"></span>
-                <span class="gp-step-dot"></span>
+        <div class="gp-modal-body" style="padding:0">
+            <div class="gp-form-tabs">
+                <button type="button" class="gp-form-tab active" data-tab="basic"><i class="fas fa-info-circle"></i> Basic Info</button>
+                <button type="button" class="gp-form-tab" data-tab="skills"><i class="fas fa-signal"></i> Game Skills</button>
+                <button type="button" class="gp-form-tab" data-tab="social"><i class="fas fa-share-nodes"></i> Social & More</button>
             </div>
 
-            <form id="gamerProfileForm">
+            <form id="gamerProfileForm" style="padding:24px">
                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
                 <input type="hidden" name="action" value="update_profile">
 
-                <div class="gp-form-group">
-                    <label><i class="fas fa-tag"></i> Gaming nickname</label>
-                    <input type="text" name="nickname" class="gp-input" placeholder="e.g. ShadowStrike" maxlength="50" value="<?php echo htmlspecialchars($_SESSION['nickname'] ?? ''); ?>" required>
-                    <span class="gp-form-hint">This will be displayed to other players</span>
-                </div>
-                <div class="gp-form-grid two">
-                    <div class="gp-form-group">
-                        <label><i class="fas fa-signal"></i> Skill level</label>
-                        <select name="skill_level" class="gp-input">
-                            <?php $levels = ['','Beginner','Intermediate','Advanced','Pro','Elite']; $current = $_SESSION['skill_level'] ?? ''; ?>
-                            <?php foreach ($levels as $lv): ?>
-                            <option value="<?php echo $lv; ?>" <?php echo $current === $lv ? 'selected' : ''; ?>><?php echo $lv ?: 'Select'; ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                <div class="gp-tab-content active" id="tab-basic">
+                    <div class="gp-form-grid two">
+                        <div class="gp-form-group">
+                            <label><i class="fas fa-tag"></i> Gaming nickname</label>
+                            <input type="text" name="nickname" class="gp-input" placeholder="e.g. ShadowStrike" maxlength="50" value="<?php echo htmlspecialchars($_SESSION['nickname'] ?? ''); ?>" required>
+                        </div>
+                        <div class="gp-form-group">
+                            <label><i class="fas fa-signal"></i> Overall Skill</label>
+                            <?php $levels = ['Beginner','Intermediate','Advanced','Pro','Elite']; $current = $_SESSION['skill_level'] ?? ''; ?>
+                            <div class="gp-custom-select" id="profileSkillLevelWrap">
+                                <div class="gp-select-trigger"><span><?php echo $current ?: 'Select level'; ?></span></div>
+                                <div class="gp-select-options">
+                                    <div class="gp-select-option <?php echo empty($current) ? 'active' : ''; ?>" data-value="">Select level</div>
+                                    <?php foreach ($levels as $lv): ?>
+                                    <div class="gp-select-option <?php echo $current === $lv ? 'active' : ''; ?>" data-value="<?php echo $lv; ?>"><?php echo $lv; ?></div>
+                                    <?php endforeach; ?>
+                                </div>
+                                <input type="hidden" name="skill_level" value="<?php echo htmlspecialchars($current); ?>">
+                            </div>
+                        </div>
                     </div>
-                    <div class="gp-form-group">
-                        <label><i class="fas fa-gamepad"></i> Favorite game</label>
-                        <select name="favorite_game" class="gp-input">
-                            <option value="">Select</option>
-                            <?php foreach ($categories as $gc): ?>
-                            <option value="<?php echo $gc; ?>" <?php echo ($_SESSION['favorite_game'] ?? '') === $gc ? 'selected' : ''; ?>><?php echo $gc; ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                    <div class="gp-form-group" style="margin-top:12px">
+                        <label><i class="fas fa-quote-left"></i> Bio</label>
+                        <textarea name="bio" class="gp-input" rows="3" placeholder="Tell other players about yourself..." maxlength="200"><?php echo htmlspecialchars($_SESSION['bio'] ?? ''); ?></textarea>
                     </div>
-                </div>
-                <div class="gp-form-group">
-                    <label><i class="fas fa-comment"></i> Bio</label>
-                    <textarea name="bio" class="gp-input" rows="2" placeholder="Tell other players about yourself..." maxlength="200"><?php echo htmlspecialchars($_SESSION['bio'] ?? ''); ?></textarea>
-                </div>
-                <div class="gp-form-group">
-                    <label><i class="fab fa-discord"></i> Discord (optional)</label>
-                    <div class="gp-input-group">
-                        <span class="gp-input-prefix"><i class="fab fa-discord"></i></span>
-                        <input type="text" name="discord" class="gp-input" placeholder="your#0000" value="<?php echo htmlspecialchars($_SESSION['discord'] ?? ''); ?>">
+                    <div class="gp-form-group" style="margin-top:12px">
+                        <label><i class="fas fa-gamepad"></i> Favorite Game</label>
+                        <?php $favGame = $_SESSION['favorite_game'] ?? ''; ?>
+                        <div class="gp-custom-select" id="profileFavoriteGameWrap">
+                            <div class="gp-select-trigger"><span><?php echo $favGame ?: 'Select game'; ?></span></div>
+                            <div class="gp-select-options">
+                                <div class="gp-select-option <?php echo empty($favGame) ? 'active' : ''; ?>" data-value="">Select game</div>
+                                <?php foreach ($categories as $gc): ?>
+                                <div class="gp-select-option <?php echo $favGame === $gc ? 'active' : ''; ?>" data-value="<?php echo $gc; ?>"><?php echo $gc; ?></div>
+                                <?php endforeach; ?>
+                            </div>
+                            <input type="hidden" name="favorite_game" value="<?php echo htmlspecialchars($favGame); ?>">
+                        </div>
                     </div>
                 </div>
 
-                <!-- ═══ PER-GAME SKILLS ═══ -->
-                <div class="gp-profile-stats-title" style="margin-top:6px"><i class="fas fa-signal"></i> Per-Game Skills</div>
-                <div id="gameSkillsContainer" class="gp-game-skills-editor">
-                    <?php if (!empty($gameSkills)): foreach ($gameSkills as $gs): ?>
-                    <div class="gp-game-skill-row">
-                        <span class="gp-game-skill-icon-preview"><i class="fas <?php echo htmlspecialchars($gs['game_icon'] ?? 'fa-gamepad'); ?>"></i></span>
-                        <span class="gp-game-skill-row-name"><?php echo htmlspecialchars($gs['game']); ?></span>
-                        <select class="gp-input gp-game-skill-row-select" onchange="saveGameSkill(this, '<?php echo htmlspecialchars($gs['game']); ?>')">
-                            <option value="">--</option>
-                            <?php foreach (['Beginner','Intermediate','Advanced','Pro','Elite'] as $lv): ?>
-                            <option value="<?php echo $lv; ?>" <?php echo $gs['skill_level'] === $lv ? 'selected' : ''; ?>><?php echo $lv; ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                <div class="gp-tab-content" id="tab-skills">
+                    <div id="gameSkillsContainer" class="gp-game-skills-editor">
+                        <?php if (!empty($gameSkills)): foreach ($gameSkills as $gs): ?>
+                        <div class="gp-game-skill-row">
+                            <span class="gp-game-skill-icon-preview"><i class="fas <?php echo htmlspecialchars($gs['game_icon'] ?? 'fa-gamepad'); ?>"></i></span>
+                            <span class="gp-game-skill-row-name"><?php echo htmlspecialchars($gs['game']); ?></span>
+                            <div class="gp-custom-select gp-game-skill-row-select" style="width:130px">
+                                <div class="gp-select-trigger"><span><?php echo $gs['skill_level'] ?: '--'; ?></span></div>
+                                <div class="gp-select-options">
+                                    <div class="gp-select-option <?php echo empty($gs['skill_level']) ? 'active' : ''; ?>" data-value="">--</div>
+                                    <?php foreach (['Beginner','Intermediate','Advanced','Pro','Elite'] as $lv): ?>
+                                    <div class="gp-select-option <?php echo $gs['skill_level'] === $lv ? 'active' : ''; ?>" data-value="<?php echo $lv; ?>"><?php echo $lv; ?></div>
+                                    <?php endforeach; ?>
+                                </div>
+                                <input type="hidden" onchange="saveGameSkill(this, '<?php echo htmlspecialchars($gs['game']); ?>')" value="<?php echo htmlspecialchars($gs['skill_level']); ?>">
+                            </div>
+                            <button type="button" class="gp-btn-remove-skill" onclick="removeGameSkill(this, '<?php echo htmlspecialchars($gs['game']); ?>')" title="Remove Skill"><i class="fas fa-trash-can"></i></button>
+                        </div>
+                        <?php endforeach; endif; ?>
+                        <button type="button" class="gp-btn gp-btn-sm gp-btn-ghost gp-add-game-skill-btn" style="width:100%; border-style:dashed; margin-top:10px" onclick="addGameSkillRow()"><i class="fas fa-plus"></i> Add Another Skill</button>
                     </div>
-                    <?php endforeach; endif; ?>
-                    <button type="button" class="gp-btn gp-btn-sm gp-btn-ghost gp-add-game-skill-btn" onclick="addGameSkillRow()"><i class="fas fa-plus"></i> Add game skill</button>
                 </div>
 
-                <?php if ($userRole !== 'agent'): ?>
-                <div class="gp-profile-become-agent">
-                    <span class="gp-profile-agent-icon"><i class="fas fa-crown"></i></span>
-                    <div>
-                        <strong>Want to host tournaments?</strong>
-                        <p>Become an agent and create your own events.</p>
+                <div class="gp-tab-content" id="tab-social">
+                    <div class="gp-form-grid two">
+                        <div class="gp-form-group">
+                            <label><i class="fab fa-discord"></i> Discord</label>
+                            <div class="gp-input-group">
+                                <span class="gp-input-prefix"><i class="fab fa-discord"></i></span>
+                                <input type="text" name="discord" class="gp-input" placeholder="e.g. shadow#1234" value="<?php echo htmlspecialchars($_SESSION['discord'] ?? ''); ?>">
+                            </div>
+                        </div>
+                        <div class="gp-form-group">
+                            <label><i class="fab fa-facebook"></i> Facebook</label>
+                            <div class="gp-input-group">
+                                <span class="gp-input-prefix"><i class="fab fa-facebook"></i></span>
+                                <input type="text" name="facebook" class="gp-input" placeholder="Profile URL or ID" value="<?php echo htmlspecialchars($_SESSION['facebook'] ?? ''); ?>">
+                            </div>
+                        </div>
+                        <div class="gp-form-group">
+                            <label><i class="fab fa-instagram"></i> Instagram</label>
+                            <div class="gp-input-group">
+                                <span class="gp-input-prefix"><i class="fab fa-instagram"></i></span>
+                                <input type="text" name="instagram" class="gp-input" placeholder="Username" value="<?php echo htmlspecialchars($_SESSION['instagram'] ?? ''); ?>">
+                            </div>
+                        </div>
+                        <div class="gp-form-group">
+                            <label><i class="fab fa-youtube"></i> Youtube</label>
+                            <div class="gp-input-group">
+                                <span class="gp-input-prefix"><i class="fab fa-youtube"></i></span>
+                                <input type="text" name="youtube" class="gp-input" placeholder="Channel URL" value="<?php echo htmlspecialchars($_SESSION['youtube'] ?? ''); ?>">
+                            </div>
+                        </div>
                     </div>
-                    <button type="button" class="gp-btn gp-btn-sm gp-btn-gradient" data-open-modal="becomeAgentModal"><i class="fas fa-arrow-right"></i> Upgrade</button>
-                </div>
-                <?php endif; ?>
 
-                <div class="gp-modal-actions">
+                    <?php if ($userRole !== 'agent'): ?>
+                    <div class="gp-profile-become-agent" style="margin-top:24px">
+                        <span class="gp-profile-agent-icon"><i class="fas fa-crown"></i></span>
+                        <div>
+                            <strong>Want to host tournaments?</strong>
+                            <p>Become an agent and create events.</p>
+                        </div>
+                        <button type="button" class="gp-btn gp-btn-sm gp-btn-gradient" data-open-modal="becomeAgentModal">Upgrade</button>
+                    </div>
+                    <?php endif; ?>
+                </div>
+
+                <div class="gp-modal-actions" style="margin-top:24px">
                     <button type="button" class="gp-btn gp-btn-ghost" data-close-modal>Cancel</button>
-                    <button type="submit" class="gp-btn gp-btn-accent"><i class="fas fa-check"></i> <?php echo !empty($_SESSION['nickname']) ? 'Save changes' : 'Create profile'; ?></button>
+                    <button type="submit" class="gp-btn gp-btn-accent"><i class="fas fa-check"></i> Save Changes</button>
                 </div>
-                <div class="gp-feedback hidden"></div>
+                <div class="gp-feedback hidden" id="profileFeedback"></div>
             </form>
         </div>
     </div>
@@ -1332,12 +1653,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     <div class="gp-form-group">
                         <label>Game / Category</label>
-                        <select name="category" class="gp-input">
-                            <option value="">Select game</option>
-                            <?php foreach ($categories as $cat): ?>
-                            <option value="<?php echo $cat; ?>"><?php echo $cat; ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                        <div class="gp-custom-select" id="createTournamentCategoryWrap">
+                            <div class="gp-select-trigger"><span>Select game</span></div>
+                            <div class="gp-select-options">
+                                <div class="gp-select-option active" data-value="">Select game</div>
+                                <?php foreach ($categories as $cat): ?>
+                                <div class="gp-select-option" data-value="<?php echo $cat; ?>"><?php echo $cat; ?></div>
+                                <?php endforeach; ?>
+                            </div>
+                            <input type="hidden" name="category" value="">
+                        </div>
                     </div>
                 </div>
                 <div class="gp-form-group">
@@ -1418,12 +1743,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
                 <div class="gp-form-group">
                     <label>Game</label>
-                    <select name="game" class="gp-input">
-                        <option value="">Select game</option>
-                        <?php foreach ($categories as $cat): ?>
-                        <option value="<?php echo $cat; ?>"><?php echo $cat; ?></option>
-                        <?php endforeach; ?>
-                    </select>
+                    <div class="gp-custom-select" id="createTeamGameWrap">
+                        <div class="gp-select-trigger"><span>Select game</span></div>
+                        <div class="gp-select-options">
+                            <div class="gp-select-option active" data-value="">Select game</div>
+                            <?php foreach ($categories as $cat): ?>
+                            <div class="gp-select-option" data-value="<?php echo $cat; ?>"><?php echo $cat; ?></div>
+                            <?php endforeach; ?>
+                        </div>
+                        <input type="hidden" name="game" value="">
+                    </div>
                 </div>
                 <div class="gp-form-group">
                     <label>Description</label>
@@ -1470,11 +1799,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
                 <div class="gp-form-group" id="teamSelectGroup" style="display:none">
                     <label>Select team</label>
-                    <select name="team_id" class="gp-input">
-                        <?php foreach ($myTeams as $team): ?>
-                        <option value="<?php echo (int)$team['id']; ?>"><?php echo htmlspecialchars($team['name']); ?></option>
-                        <?php endforeach; ?>
-                    </select>
+                    <div class="gp-custom-select" id="joinTournamentTeamWrap">
+                        <div class="gp-select-trigger"><span>Select team</span></div>
+                        <div class="gp-select-options">
+                            <?php if (!empty($myTeams)): ?>
+                                <?php foreach ($myTeams as $idx => $team): ?>
+                                <div class="gp-select-option <?php echo $idx === 0 ? 'active' : ''; ?>" data-value="<?php echo (int)$team['id']; ?>"><?php echo htmlspecialchars($team['name']); ?></div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <div class="gp-select-option" data-value="">No teams found</div>
+                            <?php endif; ?>
+                        </div>
+                        <input type="hidden" name="team_id" value="<?php echo !empty($myTeams) ? (int)$myTeams[0]['id'] : ''; ?>">
+                    </div>
                 </div>
                 <div class="gp-form-group" id="soloNameGroup">
                     <label>Team name <span class="text-gray-400">(optional)</span></label>
@@ -1566,21 +1903,74 @@ document.addEventListener('DOMContentLoaded', function() {
         }).catch(function(){ toast('Network error', 'error'); });
     };
 
+    window.removeGameSkill = function(btn, game) {
+        if (!confirm('Remove expertise for ' + game + '?')) return;
+        fetch('handlers/tournament_handler.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
+            body: JSON.stringify({ action: 'save_game_skill', game: game, skill_level: '', csrf_token: csrfToken })
+        }).then(function(r){ return r.json(); }).then(function(res){
+            if (res.success) {
+                toast('Skill removed', 'success');
+                btn.closest('.gp-game-skill-row').remove();
+            } else toast(res.message || 'Failed', 'error');
+        }).catch(function(){ toast('Network error', 'error'); });
+    };
+
     window.addGameSkillRow = function() {
         var container = document.getElementById('gameSkillsContainer');
         if (!container) return;
-        var usedGames = {};
-        container.querySelectorAll('.gp-game-skill-row-name').forEach(function(el){ usedGames[el.textContent.trim()] = true; });
-        var avail = availableGames.filter(function(g){ return !usedGames[g]; });
-        if (!avail.length) { toast('All games added!', 'info'); return; }
-        var game = avail[0];
-        var icon = gameIconsMap[game] || 'fa-gamepad';
+        
         var row = document.createElement('div');
         row.className = 'gp-game-skill-row';
-        row.innerHTML = '<span class="gp-game-skill-icon-preview"><i class="fas ' + icon + '"></i></span><span class="gp-game-skill-row-name">' + game + '</span><select class="gp-input gp-game-skill-row-select" onchange="saveGameSkill(this,\'' + game + '\')"><option value="">--</option><option value="Beginner">Beginner</option><option value="Intermediate">Intermediate</option><option value="Advanced">Advanced</option><option value="Pro">Pro</option><option value="Elite">Elite</option></select>';
+        
+        var gameOptions = availableGames.map(function(g){ return '<div class="gp-select-option" data-value="' + g + '">' + g + '</div>'; }).join('');
+        
+        row.innerHTML = `
+            <span class="gp-game-skill-icon-preview"><i class="fas fa-gamepad"></i></span>
+            <div class="gp-custom-select gp-game-select" style="width:120px">
+                <div class="gp-select-trigger"><span>Select Game</span></div>
+                <div class="gp-select-options">
+                    ${gameOptions}
+                </div>
+                <input type="hidden" class="game-input" value="">
+            </div>
+            <div class="gp-custom-select gp-game-skill-row-select" style="flex:1">
+                <div class="gp-select-trigger"><span>Skill Level</span></div>
+                <div class="gp-select-options">
+                    <div class="gp-select-option" data-value="Beginner">Beginner</div>
+                    <div class="gp-select-option" data-value="Intermediate">Intermediate</div>
+                    <div class="gp-select-option" data-value="Advanced">Advanced</div>
+                    <div class="gp-select-option" data-value="Pro">Pro</div>
+                    <div class="gp-select-option" data-value="Elite">Elite</div>
+                </div>
+                <input type="hidden" class="skill-input" value="">
+            </div>
+            <button type="button" class="gp-btn-remove-skill" onclick="this.closest('.gp-game-skill-row').remove()" title="Cancel"><i class="fas fa-times"></i></button>
+        `;
+        
         var addBtn = container.querySelector('.gp-add-game-skill-btn');
         container.insertBefore(row, addBtn);
-        row.querySelector('select').focus();
+        initAllCustomSelects();
+
+        var gameInp = row.querySelector('.game-input');
+        var skillInp = row.querySelector('.skill-input');
+        var iconEl = row.querySelector('.gp-game-skill-icon-preview i');
+        
+        var handleChange = function() {
+            var g = gameInp.value;
+            var s = skillInp.value;
+            if (g) {
+                var icon = gameIconsMap[g] || 'fa-gamepad';
+                iconEl.className = 'fas ' + icon;
+            }
+            if (g && s) {
+                saveGameSkill({value: s}, g);
+            }
+        };
+        
+        gameInp.addEventListener('change', handleChange);
+        skillInp.addEventListener('change', handleChange);
     };
 
     safe('Cards', function() {
@@ -1602,31 +1992,6 @@ document.addEventListener('DOMContentLoaded', function() {
         window._gpIntv = setInterval(function(){ document.querySelectorAll('.gp-countdown').forEach(tick); },1000);
     });
 
-    window.toggleFilterSelect = function() {
-        var sel = document.getElementById('gpFilterSelect');
-        if (sel) sel.classList.toggle('active');
-    };
-
-    window.selectFilterOption = function(el) {
-        var container = document.getElementById('gpFilterSelect');
-        if (!container) return;
-        container.querySelectorAll('.gp-select-option').forEach(function(o){ o.classList.remove('active'); });
-        el.classList.add('active');
-        var trigger = container.querySelector('.gp-select-trigger span');
-        if (trigger) trigger.textContent = el.textContent;
-        container.classList.remove('active');
-        var f = el.getAttribute('data-value');
-        document.querySelectorAll('.gp-card').forEach(function(c) {
-            c.classList.toggle('hidden', f !== 'all' && c.getAttribute('data-status') !== f);
-        });
-    };
-
-    // Close custom select on outside click
-    document.addEventListener('click', function(e) {
-        document.querySelectorAll('.gp-custom-select').forEach(function(sel) {
-            if (!sel.contains(e.target)) sel.classList.remove('active');
-        });
-    });
 
     window.openGamerProfile = function() {
         var hasProfile = <?php echo !empty($_SESSION['nickname']) ? 'true' : 'false'; ?>;
@@ -1792,12 +2157,17 @@ document.addEventListener('DOMContentLoaded', function() {
             card.addEventListener('click', function() {
                 document.querySelectorAll('.ba-method-card').forEach(function(c) {
                     c.classList.remove('active');
-                    c.style.borderColor = '#d1d5db'; c.style.background = '';
+                    c.style.borderColor = ''; c.style.background = '';
                 });
                 card.classList.add('active');
                 var m = card.getAttribute('data-method');
                 var d = baPmData[m];
-                if (d) { card.style.borderColor = '#E2136E'; card.style.background = '#fdf2f8'; }
+                var colors = {bkash:'#E2136E', nagad:'#E8522E', rocket:'#CC0000'};
+                var bgColors = {bkash:'rgba(226,19,110,.05)', nagad:'rgba(232,82,46,.05)', rocket:'rgba(204,0,0,.05)'};
+                if (d) { 
+                    card.style.borderColor = colors[m]; 
+                    card.style.background = bgColors[m]; 
+                }
                 baCurrentMethod = m;
                 baUpdateMerchant();
             });

@@ -8289,7 +8289,6 @@ body.gp-modal-open .header.scrolled {
     z-index: 9991;
     display: grid;
     place-items: center;
-    padding: 1rem;
     overflow-y: auto;
 }
 
@@ -9311,7 +9310,7 @@ body.gp-modal-open .header.scrolled {
 .p2p-coin-item .p2p-coin-svg { width:28px; height:28px; display:block; margin:0 auto 4px }
 
 /* ═══ Plus Jakarta Sans global ═══ */
-body, .p2p-input, .gp-b-transfer-input, .gp-modal-input, .ba-input, .gp-preset-btn, .p2p-preset-btn, .gp-coin-preset-btn, select, input, textarea, button { font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif }
+body, .p2p-input, .gp-b-transfer-input, .gp-modal-input, .ba-input, .gp-preset-btn, .p2p-preset-btn, .gp-coin-preset-btn, select, input, textarea, button { font-family: 'Hind Siliguri', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif }
 
 /* ═══ P2P V3 MODERN REDESIGN ═══ */
 
