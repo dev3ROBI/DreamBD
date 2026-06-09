@@ -51,22 +51,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $amt = (float)$req['amount'];
                     $stmt = $db->prepare("UPDATE payment_requests SET status = 'completed', admin_id = ?, admin_note = ? WHERE id = ?");
                     $stmt->execute([$userId, $adminNote, $reqId]);
-                    $stmt = $db->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
-                    $stmt->execute([$amt, $uid]);
-                    // If this is an agent activation request, activate the user as agent
                     $purpose = $req['purpose'] ?? 'add_money';
                     if ($purpose === 'agent_activation') {
+                        // Agent activation: NO balance credit, just activate role + debit transaction
                         $stmt = $db->prepare("UPDATE users SET role = 'agent', agent_verified_at = NOW() WHERE id = ? AND role = 'user'");
                         $stmt->execute([$uid]);
+                        // Get current balance for transaction history
+                        $stmt = $db->prepare("SELECT balance FROM users WHERE id = ?");
+                        $stmt->execute([$uid]);
+                        $uBal = (float)$stmt->fetchColumn();
+                        $stmt = $db->prepare("INSERT INTO agent_transactions (agent_id, type, amount, balance_before, balance_after, reference_type, reference_id, description) VALUES (?, 'debit', ?, ?, ?, 'agent_fee', ?, 'Agent activation fee')");
+                        $stmt->execute([$uid, $amt, $uBal, $uBal, $reqId]);
                         try { createNotification($db, $uid, $userId, 'agent_activation', 'Congratulations! Your agent account has been activated.'); } catch (Throwable $e) {}
                         $messages[] = 'User #' . $uid . ' activated as agent!';
+                    } else {
+                        // Regular deposit: credit balance + credit transaction
+                        $stmt = $db->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
+                        $stmt->execute([$amt, $uid]);
+                        $desc = 'Payment request #' . $reqId . ' approved: ' . $req['method'] . ' ' . $req['transaction_id'];
+                        $stmt = $db->prepare("INSERT INTO agent_transactions (agent_id, type, amount, reference_type, reference_id, description) VALUES (?, 'credit', ?, 'payment_request', ?, ?)");
+                        $stmt->execute([$uid, $amt, $reqId, $desc]);
+                        try { createNotification($db, $uid, $userId, 'payment_completed', 'Your ৳' . number_format($amt, 0) . ' payment has been approved and added to your balance.'); } catch (Throwable $e) {}
+                        $messages[] = 'Payment #' . $reqId . ' approved! ৳' . number_format($amt, 0) . ' credited to user #' . $uid;
                     }
-                    $desc = 'Payment request #' . $reqId . ' approved: ' . $req['method'] . ' ' . $req['transaction_id'];
-                    $stmt = $db->prepare("INSERT INTO agent_transactions (agent_id, type, amount, reference_type, reference_id, description) VALUES (?, 'credit', ?, 'payment_request', ?, ?)");
-                    $stmt->execute([$uid, $amt, $reqId, $desc]);
                     $db->commit();
-                    try { createNotification($db, $uid, $userId, 'payment_completed', 'Your ৳' . number_format($amt, 0) . ' payment has been approved and added to your balance.'); } catch (Throwable $e) {}
-                    $messages[] = 'Payment #' . $reqId . ' approved! ৳' . number_format($amt, 0) . ' credited to user #' . $uid;
                 }
             } elseif ($action === 'reject' && $reqId > 0) {
                 $stmt = $db->prepare("SELECT user_id, amount FROM payment_requests WHERE id = ? AND status = 'pending'");

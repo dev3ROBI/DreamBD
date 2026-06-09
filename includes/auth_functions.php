@@ -302,6 +302,9 @@ class Auth {
         $_SESSION['favorite_game'] = $user['favorite_game'] ?? '';
         $_SESSION['bio'] = $user['bio'] ?? '';
         $_SESSION['discord'] = $user['discord'] ?? '';
+        $_SESSION['facebook'] = $user['facebook'] ?? '';
+        $_SESSION['instagram'] = $user['instagram'] ?? '';
+        $_SESSION['youtube'] = $user['youtube'] ?? '';
         $_SESSION['nickname'] = $user['nickname'] ?? '';
         $_SESSION['logged_in'] = true;
         $_SESSION['login_time'] = time();
