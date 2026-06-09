@@ -63,6 +63,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $stmt = $db->prepare("INSERT INTO agent_transactions (agent_id, type, amount, balance_before, balance_after, reference_type, reference_id, description) VALUES (?, 'debit', ?, ?, ?, 'agent_fee', ?, 'Agent activation fee')");
                         $stmt->execute([$uid, $amt, $uBal, $uBal, $reqId]);
                         try { createNotification($db, $uid, $userId, 'agent_activation', 'Congratulations! Your agent account has been activated.'); } catch (Throwable $e) {}
+                        try {
+                            $stmt = $db->prepare("SELECT email, username FROM users WHERE id = ?");
+                            $stmt->execute([$uid]);
+                            $u = $stmt->fetch();
+                            if ($u && !empty($u['email'])) {
+                                require_once __DIR__ . '/../includes/mail_templates.php';
+                                require_once __DIR__ . '/../includes/mailer.php';
+                                $body = MailTemplates::agentActivated($u['username']);
+                                Mailer::getInstance()->send($u['email'], 'Agent Account Activated!', $body);
+                            }
+                        } catch (Throwable $em) { /* skip email error */ }
                         $messages[] = 'User #' . $uid . ' activated as agent!';
                     } else {
                         // Regular deposit: credit balance + credit transaction
@@ -77,14 +88,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $db->commit();
                 }
             } elseif ($action === 'reject' && $reqId > 0) {
-                $stmt = $db->prepare("SELECT user_id, amount FROM payment_requests WHERE id = ? AND status = 'pending'");
+                $stmt = $db->prepare("SELECT user_id, amount, purpose, admin_note FROM payment_requests WHERE id = ? AND status = 'pending'");
                 $stmt->execute([$reqId]);
                 $reqData = $stmt->fetch();
                 $stmt = $db->prepare("UPDATE payment_requests SET status = 'cancelled', admin_id = ?, admin_note = ? WHERE id = ? AND status = 'pending'");
                 $stmt->execute([$userId, $adminNote, $reqId]);
                 if ($stmt->rowCount() > 0) {
                     if ($reqData) {
-                        try { createNotification($db, (int)$reqData['user_id'], $userId, 'payment_cancelled', 'Your ৳' . number_format((float)$reqData['amount'], 0) . ' payment request has been cancelled by admin.'); } catch (Throwable $e) {}
+                        $ruid = (int)$reqData['user_id'];
+                        try { createNotification($db, $ruid, $userId, 'payment_cancelled', 'Your ৳' . number_format((float)$reqData['amount'], 0) . ' payment request has been cancelled by admin.'); } catch (Throwable $e) {}
+                        if (($reqData['purpose'] ?? '') === 'agent_activation') {
+                            try {
+                                $stmt = $db->prepare("SELECT email, username FROM users WHERE id = ?");
+                                $stmt->execute([$ruid]);
+                                $u = $stmt->fetch();
+                                if ($u && !empty($u['email'])) {
+                                    require_once __DIR__ . '/../includes/mail_templates.php';
+                                    require_once __DIR__ . '/../includes/mailer.php';
+                                    $reason = $reqData['admin_note'] ?? '';
+                                    $body = MailTemplates::agentDeclined($u['username'], $reason);
+                                    Mailer::getInstance()->send($u['email'], 'Agent Request Declined', $body);
+                                }
+                            } catch (Throwable $em) { /* skip email error */ }
+                        }
                     }
                     $messages[] = 'Payment #' . $reqId . ' rejected.';
                 } else {

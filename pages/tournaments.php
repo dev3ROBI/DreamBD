@@ -149,14 +149,13 @@ if ($viewerId) {
 .gp-search-clear:hover { background:rgba(139,92,246,.12); color:var(--gp-accent); transform:translateY(-50%) scale(1.1) }
 
 /* ═══ CARD GRID ═══ */
-.gp-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:16px; padding:0 8px }
-.gp-card { background:var(--gp-card); border-radius:22px; padding:0; transition:all .35s cubic-bezier(.34,1.56,.64,1); position:relative; overflow:hidden; border:1px solid var(--gp-border); box-shadow:0 4px 16px rgba(0,0,0,.02); display:flex; flex-direction:column }
-.gp-card::before { content:''; position:absolute; inset:0; border-radius:22px; padding:1px; background:linear-gradient(135deg,rgba(139,92,246,.12),transparent 40%,transparent 60%,rgba(5,150,105,.08)); -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); -webkit-mask-composite:xor; mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); mask-composite:exclude; pointer-events:none }
-.gp-card:hover { transform:translateY(-4px); box-shadow:0 16px 48px rgba(139,92,246,.08); border-color:rgba(139,92,246,.2) }
-.gp-card-accent { height:4px; flex-shrink:0 }
-.gp-card-head { display:flex; align-items:center; gap:10px; padding:16px 18px 0 }
-.gp-card-icon { width:44px; height:44px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0 }
-.gp-badge { font-size:.6rem; font-weight:700; padding:4px 12px; border-radius:999px; letter-spacing:.3px; display:inline-flex; align-items:center; gap:4px }
+.gp-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px; padding:0 8px }
+.gp-card { background:var(--gp-card); border-radius:18px; padding:0; transition:all .3s ease; position:relative; overflow:hidden; border:1px solid var(--gp-border); box-shadow:0 1px 4px rgba(0,0,0,.02); display:flex; flex-direction:column }
+.gp-card:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(139,92,246,.06); border-color:rgba(139,92,246,.12) }
+.gp-card-accent { height:3px; flex-shrink:0 }
+.gp-card-head { display:flex; align-items:center; gap:10px; padding:14px 16px 0 }
+.gp-card-icon { width:38px; height:38px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:17px; flex-shrink:0 }
+.gp-badge { font-size:.6rem; font-weight:700; padding:3px 10px; border-radius:999px; letter-spacing:.3px; display:inline-flex; align-items:center; gap:4px }
 .badge-live { background:rgba(5,150,105,.12); color:#059669 }
 .badge-upcoming { background:rgba(59,130,246,.12); color:#3b82f6 }
 .badge-ongoing { background:rgba(251,191,36,.12); color:#d97706 }
@@ -167,22 +166,24 @@ if ($viewerId) {
 .dark .badge-ongoing { background:rgba(251,191,36,.15); color:#fbbf24 }
 .dark .badge-completed { background:rgba(139,92,246,.15); color:#a78bfa }
 .dark .badge-cancelled { background:rgba(220,38,38,.15); color:#fca5a5 }
-.gp-card-body { padding:10px 18px 6px; flex:1 }
-.gp-card-body h3 { font-size:1rem; font-weight:800; color:var(--gp-text); margin:0 0 4px; letter-spacing:-.02em }
-.gp-card-tag { font-size:.7rem; color:var(--gp-muted); display:inline-flex; align-items:center; gap:4px; margin-right:8px }
-.gp-card-host { font-size:.7rem; color:var(--gp-muted); display:inline-flex; align-items:center; gap:4px }
-.gp-card-body p { font-size:.78rem; color:var(--gp-muted); margin:4px 0 0; line-height:1.45 }
-.gp-card-meta { display:grid; grid-template-columns:1fr 1fr; gap:6px 12px; padding:4px 18px 12px; font-size:.75rem; color:var(--gp-muted) }
-.gp-card-meta > div { display:flex; align-items:center; gap:6px }
-.gp-card-meta i { font-size:.65rem; width:14px; text-align:center; opacity:.7 }
-.gp-countdown { font-size:.68rem; font-weight:700; color:var(--gp-accent); margin-left:auto }
-.gp-card-actions { display:flex; align-items:center; gap:6px; padding:8px 18px 16px; flex-wrap:wrap; border-top:1px solid var(--gp-border); margin:0 18px 0; padding:12px 0 16px }
+.gp-card-body { padding:8px 16px 4px; flex:1 }
+.gp-card-body h3 { font-size:.95rem; font-weight:800; color:var(--gp-text); margin:0 0 2px; letter-spacing:-.02em }
+.gp-card-tag { font-size:.68rem; color:var(--gp-muted); display:inline-flex; align-items:center; gap:4px; margin-right:6px }
+.gp-card-host { font-size:.68rem; color:var(--gp-muted); display:inline-flex; align-items:center; gap:4px }
+.gp-card-body p { font-size:.75rem; color:var(--gp-muted); margin:4px 0 0; line-height:1.4 }
+.gp-card-meta { display:grid; grid-template-columns:1fr 1fr; gap:4px 10px; padding:4px 16px 10px; font-size:.73rem; color:var(--gp-muted) }
+.gp-card-meta > div { display:flex; align-items:center; gap:5px }
+.gp-card-meta i { font-size:.6rem; width:13px; text-align:center; opacity:.7 }
+.gp-countdown { font-size:.65rem; font-weight:700; color:var(--gp-accent); margin-left:auto }
+.gp-card-actions { display:flex; align-items:center; gap:6px; flex-wrap:wrap; border-top:1px solid var(--gp-border); margin:0 16px 0; padding:10px 0 14px }
 
 /* ═══ BUTTONS (P2P style) ═══ */
 .gp-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; border:0; cursor:pointer; transition:all .2s; font-weight:700; font-family:'Plus Jakarta Sans',sans-serif; text-decoration:none; flex-shrink:0; font-size:.78rem; padding:10px 18px; border-radius:12px }
 .gp-btn:active { transform:scale(.97) }
 .gp-btn-primary { background:linear-gradient(135deg,#8b5cf6,#7c3aed); color:#fff; box-shadow:0 4px 12px rgba(139,92,246,.2) }
 .gp-btn-primary:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(139,92,246,.3) }
+.gp-btn-danger { background:linear-gradient(135deg,#dc2626,#ef4444); color:#fff; box-shadow:0 4px 12px rgba(220,38,38,.2) }
+.gp-btn-danger:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(220,38,38,.3) }
 .gp-btn-accent { background:linear-gradient(135deg,#8b5cf6,#7c3aed); color:#fff; box-shadow:0 4px 12px rgba(139,92,246,.2) }
 .gp-btn-accent:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(139,92,246,.3) }
 .gp-btn-gradient { background:linear-gradient(135deg,#8b5cf6,#6366f1); color:#fff; box-shadow:0 4px 14px rgba(139,92,246,.25) }
@@ -571,6 +572,7 @@ if ($viewerId) {
 .gp-role-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:8px; font-size:.68rem; font-weight:700; background:rgba(0,0,0,.04); color:var(--gp-muted) }
 .dark .gp-role-badge { background:rgba(255,255,255,.05) }
 .gp-role-gamer { background:rgba(139,92,246,.1); color:var(--gp-accent) }
+.gp-role-gamer i:only-child { margin-right:0 }
 .gp-role-agent { background:rgba(245,158,11,.1); color:#d97706 }
 
 .gp-profile-balance { display:flex; align-items:center; gap:8px; padding:6px 14px; border-radius:16px; background:rgba(16,185,129,.08); border:1px solid rgba(16,185,129,.12); flex-shrink:0; margin-left:auto }
@@ -647,14 +649,21 @@ if ($viewerId) {
   .gp-stat-value { font-size:20px }
   .gp-stat-label { font-size:11px }
   .gp-stat-card:hover { transform:none }
-  .gp-profile-bar { flex-wrap:wrap; gap:8px; padding:10px 14px; border-radius:18px }
-  .gp-profile-avatar-wrap { width:36px; height:36px }
-  .gp-profile-name { font-size:.78rem }
-  .gp-profile-nick { font-size:.6rem }
-  .gp-profile-balance { padding:4px 10px; gap:4px }
-  .gp-balance-amount { font-size:.75rem }
-  .gp-profile-actions { gap:4px }
-  .gp-profile-actions .gp-btn { width:30px; height:30px; font-size:.65rem; border-radius:9px }
+  .gp-profile-bar { flex-wrap:wrap; gap:6px; padding:10px 12px; border-radius:16px }
+  .gp-profile-avatar-wrap { width:34px; height:34px }
+  .gp-profile-meta { flex:1; min-width:0 }
+  .gp-profile-name { font-size:.75rem; display:flex; align-items:center; gap:4px; flex-wrap:wrap }
+  .gp-profile-nick { font-size:.58rem }
+  .gp-profile-tags { margin-top:2px; gap:4px }
+  .gp-profile-tags .gp-role-badge { font-size:.58rem; padding:2px 7px; border-radius:6px; gap:3px }
+  .gp-profile-tags .gp-tag-cta { font-size:.6rem; padding:2px 8px; gap:3px }
+  .gp-profile-balance { padding:3px 8px; gap:3px; border-radius:999px }
+  .gp-balance-amount { font-size:.7rem }
+  .gp-balance-add { width:18px; height:18px; font-size:7px }
+  .gp-profile-actions { gap:4px; width:100%; justify-content:flex-end; border-top:1px solid var(--gp-border); padding-top:6px; margin-top:2px }
+  .gp-profile-actions .gp-btn { width:30px; height:30px; font-size:.65rem; border-radius:9px; min-width:30px }
+  .gp-profile-actions .gp-btn-accent span { display:none }
+  .gp-profile-actions .gp-btn-accent { width:30px; padding:0; justify-content:center }
   .gp-section-switcher { overflow-x:auto; -webkit-overflow-scrolling:touch; gap:0; padding:3px; border-radius:14px }
   .gp-switcher-btn { white-space:nowrap; font-size:.75rem; padding:8px 12px; flex-shrink:0 }
   .gp-section { padding:10px 4px }
@@ -716,40 +725,54 @@ if ($viewerId) {
   .gp-my-panel .gp-my-icon { width:34px; height:34px; font-size:15px; border-radius:10px }
   .gp-badge.sm { font-size:8px; padding:2px 7px }
 }
+@media(max-width:768px) {
+  .gp-grid { grid-template-columns:repeat(auto-fill,minmax(280px,1fr)) }
+  .gp-card-body h3 { font-size:.9rem }
+}
 @media (max-width:480px) {
-  .gp-hero-stats { gap:8px; padding:10px 2px 14px }
-  .gp-stat-card { padding:12px 8px; border-radius:16px }
-  .gp-stat-card .gp-stat-icon { font-size:18px; width:40px; height:40px; border-radius:12px; margin-bottom:6px }
-  .gp-stat-value { font-size:17px }
-  .gp-stat-label { font-size:10px }
+  .gp-hero-stats { gap:6px; padding:10px 2px 14px }
+  .gp-stat-card { padding:10px 6px; border-radius:14px }
+  .gp-stat-card .gp-stat-icon { font-size:16px; width:34px; height:34px; border-radius:10px; margin-bottom:4px }
+  .gp-stat-value { font-size:15px }
+  .gp-stat-label { font-size:9px }
   .gp-card { padding:0 }
-  .gp-card-head { gap:8px; padding:12px 14px 0 }
-  .gp-card-body { padding:8px 14px 4px }
-  .gp-card-meta { padding:2px 14px 10px; grid-template-columns:1fr }
-  .gp-card-actions { padding:8px 14px 14px; margin:0 14px 0; gap:5px }
-  .gp-card-icon { width:34px; height:34px; font-size:15px; border-radius:10px }
-  .gp-badge { font-size:9px; padding:3px 8px }
-  .gp-card-actions .gp-btn { font-size:9px; padding:5px 8px; border-radius:8px }
+  .gp-card-accent { height:2px }
+  .gp-card-head { gap:6px; padding:10px 12px 0 }
+  .gp-card-head .gp-card-icon { width:30px; height:30px; font-size:13px; border-radius:9px }
+  .gp-card-body { padding:6px 12px 2px }
+  .gp-card-body h3 { font-size:.85rem }
+  .gp-card-meta { padding:2px 12px 8px; grid-template-columns:1fr; gap:3px 8px; font-size:.7rem }
+  .gp-card-actions { margin:0 12px 0; padding:8px 0 12px; gap:4px }
+  .gp-card-actions .gp-btn { font-size:10px; padding:5px 7px; border-radius:8px; min-width:0 }
+  .gp-badge { font-size:8px; padding:2px 7px }
   .gp-countdown { font-size:9px }
-  .gp-section-header h2 { font-size:.9rem }
-  .gp-section-header { padding:0 6px 10px; gap:8px }
-  .gp-grid { padding:0 2px; gap:10px }
-  .gp-profile-bar { padding:8px 10px; gap:6px; border-radius:16px }
-  .gp-profile-avatar-wrap { width:32px; height:32px }
-  .gp-profile-name { font-size:.72rem; gap:4px }
-  .gp-profile-nick { font-size:.55rem }
-  .gp-profile-balance { padding:3px 8px; gap:3px; border-radius:999px }
-  .gp-balance-amount { font-size:.68rem }
-  .gp-balance-add { width:16px; height:16px; font-size:7px }
-  .gp-profile-actions .gp-btn { width:28px; height:28px; font-size:.6rem; border-radius:8px }
+  .gp-section-header h2 { font-size:.85rem }
+  .gp-section-header { padding:0 4px 8px; gap:6px }
+  .gp-grid { padding:0 2px; gap:8px; grid-template-columns:1fr }
+  .gp-profile-bar { padding:6px 8px; gap:4px; border-radius:12px }
+  .gp-profile-avatar-wrap { width:28px; height:28px }
+  .gp-profile-name { font-size:.6rem; gap:2px }
+  .gp-profile-nick { font-size:.5rem }
+  .gp-profile-tags .gp-role-badge { font-size:.5rem; padding:1px 5px; border-radius:4px }
+  .gp-profile-tags .gp-tag-cta { font-size:.52rem; padding:2px 5px }
+  .gp-profile-balance { padding:2px 6px; gap:2px }
+  .gp-balance-amount { font-size:.6rem }
+  .gp-balance-add { width:14px; height:14px; font-size:5px }
+  .gp-profile-actions { gap:2px; padding-top:3px; margin-top:1px }
+  .gp-profile-actions .gp-btn { width:24px; height:24px; font-size:.5rem; border-radius:6px; min-width:24px }
   .gp-modal-panel { border-radius:18px; margin:8px }
   .gp-modal-body { padding:14px }
-  .gp-modal-head { padding:14px 16px }
-  .gp-hero { padding:12px 10px 0; border-radius:0 0 20px 20px }
-  .gp-hero-bg { min-height:260px; border-radius:0 0 20px 20px }
+  .gp-modal-head { padding:12px 14px }
+  .gp-hero { padding:10px 8px 0; border-radius:0 0 18px 18px }
+  .gp-hero-bg { min-height:240px; border-radius:0 0 18px 18px }
+  .gp-hero-content h1 { font-size:clamp(20px,5vw,30px) }
+  .gp-hero-content p { font-size:.78rem }
+  .gp-my-grid { grid-template-columns:1fr }
+  .gp-section-switcher { gap:4px; padding:3px; border-radius:12px }
+  .gp-switcher-btn { font-size:.7rem; padding:8px 10px; border-radius:10px }
 }
 </style>
-<div class="gp-page" id="tournamentsPage" data-csrf="<?php echo htmlspecialchars($csrfToken); ?>" data-user-id="<?php echo (int)($viewerId ?? 0); ?>" data-role="<?php echo htmlspecialchars($userRole); ?>" data-balance="<?php echo $userBalance; ?>">
+<div class="gp-page" id="tournamentsPage" data-csrf="<?php echo htmlspecialchars($csrfToken); ?>" data-user-id="<?php echo (int)($viewerId ?? 0); ?>" data-role="<?php echo htmlspecialchars($userRole); ?>" data-balance="<?php echo $userBalance; ?>" data-has-profile="<?php echo !empty($_SESSION['nickname']) ? '1' : '0'; ?>">
 
     <!-- ═══ HERO ═══ -->
     <section class="gp-hero">
@@ -783,11 +806,11 @@ if ($viewerId) {
         $gpFullName = htmlspecialchars($_SESSION['full_name'] ?? ($_SESSION['username'] ?? 'User'));
     ?>
     <section class="gp-profile-bar">
-        <div class="gp-profile-avatar-wrap" onclick="openGamerProfile()" title="View profile">
+        <div class="gp-profile-avatar-wrap" data-gp-profile title="View profile">
             <img src="assets/avatars/<?php echo $gpAvatar; ?>" alt="" onerror="this.src='assets/avatars/default.png'">
             <span class="gp-profile-avatar-ring"></span>
         </div>
-        <div class="gp-profile-meta" onclick="openGamerProfile()">
+        <div class="gp-profile-meta" data-gp-profile>
             <div class="gp-profile-name">
                 <?php if ($gpNickname): ?>
                     <span class="gp-profile-nick">@<?php echo htmlspecialchars($gpNickname); ?></span>
@@ -802,7 +825,7 @@ if ($viewerId) {
                     </span>
                 <?php else: ?>
                     <span class="gp-role-badge gp-role-gamer">
-                        <i class="fas fa-gamepad"></i> <?php echo htmlspecialchars($_SESSION['skill_level'] ?? 'Gamer'); ?>
+                        <i class="fas fa-gamepad"></i> <?php echo htmlspecialchars($_SESSION['skill_level'] ?? ''); ?>
                     </span>
                 <?php endif; ?>
             </div>
@@ -924,12 +947,19 @@ if ($viewerId) {
                     <div class="gp-card-head">
                         <span class="gp-card-icon" style="background:<?php echo $accent; ?>;color:#fff"><i class="fas <?php echo $icon; ?>"></i></span>
                         <span class="gp-badge <?php echo $badgeClass; ?>"><?php echo strtoupper($status); ?></span>
+                        <?php if ($prize): ?>
+                        <span style="margin-left:auto;font-size:.7rem;font-weight:800;color:#f59e0b;display:inline-flex;align-items:center;gap:3px;padding:3px 10px;border-radius:999px;background:rgba(245,158,11,.1)"><i class="fas fa-trophy" style="font-size:.6rem"></i> ৳<?php echo $prize; ?></span>
+                        <?php endif; ?>
                     </div>
                     <div class="gp-card-body">
                         <h3><?php echo $title; ?></h3>
-                        <?php if ($cat): ?><span class="gp-card-tag"><i class="fas fa-tag"></i> <?php echo $cat; ?></span><?php endif; ?>
+                        <?php if ($cat || $agentName): ?>
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:2px 0 0">
+                            <?php if ($cat): ?><span class="gp-card-tag"><i class="fas fa-tag"></i> <?php echo $cat; ?></span><?php endif; ?>
+                            <?php if ($agentName): ?><span class="gp-card-host"><i class="fas fa-crown" style="color:#f59e0b"></i> <?php echo $agentName; ?></span><?php endif; ?>
+                        </div>
+                        <?php endif; ?>
                         <?php if ($desc): ?><p><?php echo $desc; ?></p><?php endif; ?>
-                        <?php if ($agentName): ?><span class="gp-card-host"><i class="fas fa-crown" style="color:#f59e0b"></i> Host: <?php echo $agentName; ?></span><?php endif; ?>
                     </div>
                     <div class="gp-card-meta">
                         <div><i class="fas fa-calendar"></i> <span class="gp-date"><?php echo $startDate; ?></span> <?php if ($startTime): ?><span class="gp-time"><?php echo $startTime; ?></span><?php endif; ?>
@@ -937,7 +967,6 @@ if ($viewerId) {
                             <span class="gp-countdown" data-starts="<?php echo strtotime($startsAt); ?>"></span>
                             <?php endif; ?>
                         </div>
-                        <?php if ($prize): ?><div><i class="fas fa-trophy" style="color:#f59e0b"></i> ৳<?php echo $prize; ?></div><?php endif; ?>
                         <div><i class="fas fa-users"></i> <?php echo $regd; ?><?php echo $maxTeams > 0 ? "/$maxTeams" : ''; ?> teams</div>
                         <?php if ($entryFee > 0): ?><div><i class="fas fa-coins" style="color:#10b981"></i> ৳<?php echo number_format($entryFee, 0); ?> entry</div><?php endif; ?>
                         <?php if ($status === 'cancelled'): ?><div style="color:#dc2626"><i class="fas fa-ban"></i> Cancelled</div><?php endif; ?>
@@ -975,7 +1004,7 @@ if ($viewerId) {
                             <span class="gp-btn gp-btn-sm gp-btn-disabled"><i class="fas fa-ban"></i> Cancelled</span>
                         <?php elseif ($isRegistered): ?>
                             <button class="gp-btn gp-btn-sm gp-btn-success" disabled><i class="fas fa-check-circle"></i> Registered</button>
-                            <button class="gp-btn gp-btn-sm gp-btn-ghost gp-unregister" data-id="<?php echo $tid; ?>"><i class="fas fa-xmark"></i></button>
+                            <button class="gp-btn gp-btn-sm gp-btn-ghost gp-unregister" data-id="<?php echo $tid; ?>" data-fee="<?php echo $entryFee; ?>"><i class="fas fa-xmark"></i></button>
                         <?php elseif ($canRegister && !$isFull): ?>
                             <button class="gp-btn gp-btn-sm gp-btn-primary gp-join-btn" data-id="<?php echo $tid; ?>" data-title="<?php echo htmlspecialchars($title, ENT_QUOTES); ?>" data-fee="<?php echo $entryFee; ?>"><i class="fas fa-right-to-bracket"></i> <?php echo $entryFee > 0 ? 'Join (৳'.number_format($entryFee,0).')' : 'Join free'; ?></button>
                         <?php elseif ($isFull): ?>
@@ -1022,7 +1051,7 @@ if ($viewerId) {
                         </div>
                         <div style="display:flex;gap:8px;align-items:center">
                             <a class="gp-btn gp-btn-xs gp-btn-outline" href="index.php?page=tournament-room&id=<?php echo (int)$reg['tournament_id']; ?>" data-no-ajax><i class="fas fa-door-open"></i> Room</a>
-                            <button class="gp-btn gp-btn-xs gp-btn-ghost gp-unregister" data-id="<?php echo (int)$reg['tournament_id']; ?>"><i class="fas fa-xmark"></i> Leave</button>
+                            <button class="gp-btn gp-btn-xs gp-btn-ghost gp-unregister" data-id="<?php echo (int)$reg['tournament_id']; ?>" data-fee="<?php echo (float)($reg['entry_fee'] ?? 0); ?>"><i class="fas fa-xmark"></i> Leave</button>
                         </div>
                     </div>
                     <?php endforeach; endif; ?>
@@ -1460,7 +1489,7 @@ var filter = document.getElementById('lbFilter');
                                 <div class="gp-no-skills-visual">
                                     <i class="fas fa-ghost"></i>
                                     <p>Expertise pending assessment.</p>
-                                    <button class="gp-btn gp-btn-sm gp-btn-ghost" onclick="editGamerProfile()">Setup Skills</button>
+                                    <button class="gp-btn gp-btn-sm gp-btn-ghost" data-edit-profile>Setup Skills</button>
                                 </div>
                                 <?php else: foreach ($gameSkills as $gs): ?>
                                 <div class="gp-skill-visual-item">
@@ -1510,7 +1539,7 @@ var filter = document.getElementById('lbFilter');
 
                 <div class="gp-modal-actions" style="margin-top:12px; border-top:1px solid var(--gp-border); padding-top:20px">
                     <button type="button" class="gp-btn gp-btn-ghost" data-close-modal>Close</button>
-                    <button type="button" class="gp-btn gp-btn-accent" onclick="editGamerProfile()"><i class="fas fa-pen-nib"></i> Edit Profile</button>
+                    <button type="button" class="gp-btn gp-btn-accent" data-edit-profile><i class="fas fa-pen-nib"></i> Edit Profile</button>
                 </div>
             </div>
         </div>
@@ -2014,126 +2043,12 @@ var filter = document.getElementById('lbFilter');
     });
 
 
-    window.openGamerProfile = function() {
-        var hasProfile = <?php echo !empty($_SESSION['nickname']) ? 'true' : 'false'; ?>;
-        var modalId = hasProfile ? 'viewGamerProfileModal' : 'createGamerProfileModal';
-        var modal = document.getElementById(modalId);
-        if (modal) {
-            var ov = document.getElementById('gpOverlay');
-            if (ov) ov.classList.remove('hidden');
-            modal.classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
-        }
-    };
-
-    window.editGamerProfile = function() {
-        var viewModal = document.getElementById('viewGamerProfileModal');
-        var editModal = document.getElementById('createGamerProfileModal');
-        if (viewModal) viewModal.classList.add('hidden');
-        if (editModal) {
-            editModal.classList.remove('hidden');
-        }
-    };
-
-    safe('Search', function() {
-        var inp = document.getElementById('gpSearch'); if (!inp) return;
-        var clearBtn = document.getElementById('gpSearchClear');
-        function filterCards() {
-            var q = inp.value.trim().toLowerCase();
-            document.querySelectorAll('.gp-card').forEach(function(c){ c.classList.toggle('hidden', q && !((c.querySelector('h3')||{}).textContent||'').toLowerCase().includes(q)); });
-            if (clearBtn) clearBtn.style.display = q ? 'flex' : 'none';
-        }
-        inp.addEventListener('input', filterCards);
-        if (clearBtn) {
-            clearBtn.addEventListener('click', function() {
-                inp.value = '';
-                filterCards();
-                inp.focus();
-            });
-        }
-    });
-
     function gpModalBody(open) {
         document.body.classList.toggle('gp-modal-open', open);
         document.body.style.overflow = open ? 'hidden' : '';
     }
 
-    safe('Modals', function() {
-        var ov = document.getElementById('gpOverlay'); if (!ov) return;
-        var close = function() {
-            document.querySelectorAll('.gp-modal').forEach(function(m){ m.classList.add('hidden'); });
-            ov.classList.add('hidden');
-            gpModalBody(false);
-        };
-        document.querySelectorAll('[data-open-modal]').forEach(function(b) {
-            b.addEventListener('click', function() {
-                var m = document.getElementById(b.getAttribute('data-open-modal')); if (!m) return;
-                ov.classList.remove('hidden'); m.classList.remove('hidden');
-                gpModalBody(true);
-            });
-        });
-        document.querySelectorAll('[data-close-modal]').forEach(function(b){ b.addEventListener('click',close); });
-        ov.addEventListener('click',close);
-        document.addEventListener('keydown',function(e){ if (e.key==='Escape') close(); });
-    });
-
-    safe('Forms', function() {
-        function otpInputs(container, hiddenId) {
-            var ins = document.querySelectorAll('#'+container+' .gp-otp-box');
-            ins.forEach(function(inp,i) {
-                inp.addEventListener('input',function(){ if (inp.value&&i<ins.length-1) ins[i+1].focus(); document.getElementById(hiddenId).value=Array.from(ins).map(function(x){return x.value;}).join(''); });
-                inp.addEventListener('keydown',function(e){ if (e.key==='Backspace'&&!inp.value&&i>0) ins[i-1].focus(); if (e.key==='Enter'){ document.getElementById(hiddenId).value=Array.from(ins).map(function(x){return x.value;}).join(''); var f=inp.closest('form'); if(f)f.requestSubmit(); } });
-                inp.addEventListener('paste',function(e){ e.preventDefault(); var cd=e.clipboardData||window.clipboardData; if(!cd)return; var p=cd.getData('text').replace(/\D/g,'').slice(0,6); p.split('').forEach(function(ch,j){ if(ins[j])ins[j].value=ch; }); var nxt=ins[Math.min(p.length,ins.length-1)]; if(nxt)nxt.focus(); document.getElementById(hiddenId).value=Array.from(ins).map(function(x){return x.value;}).join(''); });
-            });
-        }
-        otpInputs('bkashOtpInputs','bkashOtpHidden');
-
-        // Step 1 handler helper
-        function step1Handler(formId, step1Id, step2Id, phoneDisplayId, otpContainer, demoOtpId, btnText, apiAction) {
-            var f = document.getElementById(formId); if (!f) return;
-            f.addEventListener('submit', function(e) {
-                e.preventDefault(); var b = f.querySelector('button[type="submit"]'); b.disabled=true; b.innerHTML='<i class="fas fa-spinner fa-spin"></i> Sending OTP...';
-                var d = Object.fromEntries(new FormData(f)); d.csrf_token=csrfToken; d.action=apiAction;
-                api(d).then(function(r) {
-                    fb(f,r);
-                    if (r.success) {
-                        document.getElementById(step1Id).style.display='none'; document.getElementById(step2Id).style.display='block';
-                        var pd = document.getElementById(phoneDisplayId); if (pd) pd.textContent=d.bkash_phone||'';
-                        var dop = document.getElementById(demoOtpId); if (dop) dop.textContent=r.demo_otp||'------';
-                        var fo = document.querySelector('#'+otpContainer+' .gp-otp-box'); if (fo) setTimeout(function(){fo.focus();},100);
-                    } else { b.disabled=false; b.innerHTML=btnText; }
-                });
-            });
-        }
-
-        // Step 2 handler helper
-        function step2Handler(formId, otpContainer, hiddenId, btnText, successMsg, apiAction) {
-            var f = document.getElementById(formId); if (!f) return;
-            f.addEventListener('submit', function(e) {
-                e.preventDefault();
-                document.getElementById(hiddenId).value = Array.from(document.querySelectorAll('#'+otpContainer+' .gp-otp-box')).map(function(x){return x.value;}).join('');
-                var b = f.querySelector('button[type="submit"]'); b.disabled=true; b.innerHTML='<i class="fas fa-spinner fa-spin"></i> Processing...';
-                var d = Object.fromEntries(new FormData(f)); d.csrf_token=csrfToken; d.action=apiAction;
-                api(d).then(function(r) {
-                    fb(f,r);
-                    if (r.success) { b.innerHTML='<i class="fas fa-check"></i> Done!'; toast(successMsg); setTimeout(function(){location.reload();},1200); }
-                    else { b.disabled=false; b.innerHTML=btnText; }
-                });
-            });
-        }
-
-        // Back button helper
-        function backBtn(btnId, step2Id, step1Id, otpContainer, hiddenId, formId) {
-            var b = document.getElementById(btnId); if (!b) return;
-            b.addEventListener('click', function() {
-                document.getElementById(step2Id).style.display='none'; document.getElementById(step1Id).style.display='block';
-                document.querySelectorAll('#'+otpContainer+' .gp-otp-box').forEach(function(x){x.value='';});
-                document.getElementById(hiddenId).value='';
-                var f = document.getElementById(formId); if (f) f.querySelectorAll('.gp-feedback').forEach(function(el){el.classList.add('hidden');el.textContent='';});
-            });
-        }
-
-        // Become agent flow — step transition
+    // Become agent flow — step transition
         var baInfoStep = document.getElementById('baInfoStep');
         var baPayStep = document.getElementById('baPayStep');
         var baProceedBtn = document.getElementById('baProceedBtn');
@@ -2306,20 +2221,6 @@ var filter = document.getElementById('lbFilter');
             });
         }
 
-        // Create Tournament
-        document.getElementById('createTournamentForm') && document.getElementById('createTournamentForm').addEventListener('submit', function(e) {
-            e.preventDefault(); var b=this.querySelector('button[type="submit"]'); b.disabled=true; b.innerHTML='<i class="fas fa-spinner fa-spin"></i> Creating...';
-            var d=Object.fromEntries(new FormData(this)); d.csrf_token=csrfToken; d.action='agent_create_tournament';
-            api(d).then(function(r){ fb(e.target,r); if(r.success){b.innerHTML='<i class="fas fa-check"></i> Created!';setTimeout(function(){location.reload();},1200);}else{b.disabled=false;b.innerHTML='<i class="fas fa-trophy"></i> Create tournament';} });
-        });
-
-        // Create Team
-        document.getElementById('createTeamForm') && document.getElementById('createTeamForm').addEventListener('submit', function(e) {
-            e.preventDefault(); var b=this.querySelector('button[type="submit"]'); b.disabled=true; b.innerHTML='<i class="fas fa-spinner fa-spin"></i> Creating...';
-            var d=Object.fromEntries(new FormData(this)); d.csrf_token=csrfToken; d.action='create_team';
-            api(d).then(function(r){ fb(e.target,r); if(r.success){b.innerHTML='<i class="fas fa-check"></i> Created!';setTimeout(function(){location.reload();},1000);}else{b.disabled=false;b.innerHTML='<i class="fas fa-check"></i> Create team';} });
-        });
-
         // Gamer Profile
         document.getElementById('gamerProfileForm') && document.getElementById('gamerProfileForm').addEventListener('submit', function(e) {
             e.preventDefault(); var b=this.querySelector('button[type="submit"]'); b.disabled=true; b.innerHTML='<i class="fas fa-spinner fa-spin"></i> Saving...';
@@ -2327,152 +2228,5 @@ var filter = document.getElementById('lbFilter');
             api(d).then(function(r){ fb(e.target,r); if(r.success){b.innerHTML='<i class="fas fa-check"></i> Saved!';setTimeout(function(){location.reload();},1000);}else{b.disabled=false;b.innerHTML='<i class="fas fa-check"></i> Save profile';} });
         });
 
-        // Join Tournament
-        var jtForm = document.getElementById('joinTournamentForm');
-        if (jtForm) {
-            jtForm.querySelectorAll('input[name="join_type"]').forEach(function(r) {
-                r.addEventListener('change', function() {
-                    document.getElementById('teamSelectGroup').style.display = r.value === 'team' ? 'block' : 'none';
-                    document.getElementById('soloNameGroup').style.display = r.value === 'solo' ? 'block' : 'none';
-                });
-            });
-            jtForm.addEventListener('submit', function(e) {
-                e.preventDefault(); var b=this.querySelector('button[type="submit"]'); b.disabled=true; b.innerHTML='<i class="fas fa-spinner fa-spin"></i> Joining...';
-                var d=Object.fromEntries(new FormData(this)); d.csrf_token=csrfToken; d.action='register';
-                if (d.join_type !== 'team') delete d.team_id;
-                api(d).then(function(r){ fb(e.target,r); if(r.success){b.innerHTML='<i class="fas fa-check"></i> Joined!';setTimeout(function(){location.reload();},1000);}else{b.disabled=false;b.innerHTML='<i class="fas fa-check"></i> Confirm join';} });
-            });
-        }
-
-        // Join buttons
-        document.querySelectorAll('.gp-join-btn').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                document.getElementById('joinTournamentId').value = btn.getAttribute('data-id');
-                document.getElementById('joinTournamentTitle').textContent = btn.getAttribute('data-title');
-                var fee = parseFloat(btn.getAttribute('data-fee')||'0'), feeEl=document.getElementById('joinTournamentFee');
-                if (fee>0) { feeEl.textContent='Entry fee: ৳'+fee.toFixed(0)+' will be deducted from your balance.'; feeEl.style.display='block'; } else { feeEl.style.display='none'; }
-                document.querySelectorAll('#joinTournamentForm .gp-feedback').forEach(function(el){el.classList.add('hidden');el.textContent='';});
-                var solo = document.querySelector('#joinTournamentForm input[value="solo"]'); if (solo) solo.checked=true;
-                document.getElementById('teamSelectGroup').style.display='none'; document.getElementById('soloNameGroup').style.display='block';
-                var ov=document.getElementById('gpOverlay'), m=document.getElementById('joinTournamentModal');
-                if (ov) ov.classList.remove('hidden'); if (m) m.classList.remove('hidden'); document.body.style.overflow='hidden';
-            });
-        });
-
-        // Unregister
-        document.querySelectorAll('.gp-unregister').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                if (!confirm('Leave this tournament?')) return; var tid=btn.getAttribute('data-id'); btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
-                api({action:'unregister',tournament_id:tid,csrf_token:csrfToken}).then(function(r){ if(r.success){toast(r.message);setTimeout(function(){location.reload();},800);}else{toast(r.message,'error');btn.disabled=false;btn.innerHTML='<i class="fas fa-xmark"></i>';} });
-            });
-        });
-
-        // View participants
-        document.querySelectorAll('.gp-view-btn').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                var tid=btn.getAttribute('data-id'), list=document.getElementById('participantsList'), ov=document.getElementById('gpOverlay'), mo=document.getElementById('viewParticipantsModal');
-                if (!list||!mo) return; if (ov) ov.classList.remove('hidden'); mo.classList.remove('hidden'); document.body.style.overflow='hidden';
-                list.innerHTML='<div class="gp-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
-                api({action:'get_participants',tournament_id:tid,csrf_token:csrfToken}).then(function(r) {
-                    if (r.success&&r.participants&&r.participants.length) {
-                        var uid=parseInt((document.getElementById('tournamentsPage')||{}).getAttribute('data-user-id')||'0',10);
-                        list.innerHTML='<div class="gp-participants">'+r.participants.map(function(p,i){ var n=p.full_name||p.username||'Player', a=p.avatar||'default.png'; return '<div class="gp-participant"><img src="assets/avatars/'+escHtml(a)+'" alt="" onerror="this.src=\'assets/avatars/default.png\'"><div class="gp-participant-info"><strong>'+escHtml(n)+(parseInt(p.user_id,10)===uid?' <span class="text-purple-500">(you)</span>':'')+'</strong><span>'+(p.team_name?'Team: '+escHtml(p.team_name):'Solo')+'</span></div><span class="text-gray-400 text-xs">#'+(i+1)+'</span></div>'; }).join('')+'</div>';
-                    } else { list.innerHTML='<div class="gp-loading" style="padding:3rem"><i class="fas fa-users text-2xl mb-2 block opacity-40"></i><p>No participants yet.</p></div>'; }
-                });
-            });
-        });
-
-        // Team Manage
-        document.querySelectorAll('.gp-manage-team').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                var tid=btn.getAttribute('data-team-id'), tname=btn.getAttribute('data-team-name'), ov=document.getElementById('gpOverlay'), mo=document.getElementById('teamManageModal'), body=document.getElementById('teamManageBody'), title=document.getElementById('teamManageTitle');
-                if (!mo||!body) return; if (title) title.textContent=tname;
-                if (ov) ov.classList.remove('hidden'); mo.classList.remove('hidden'); document.body.style.overflow='hidden';
-                body.innerHTML='<div class="gp-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
-                api({action:'get_team_members',team_id:tid,csrf_token:csrfToken}).then(function(r) {
-                    if (r.success&&r.members&&r.members.length) {
-                        var uid=parseInt((document.getElementById('tournamentsPage')||{}).getAttribute('data-user-id')||'0',10), isCap=r.members.some(function(m){return parseInt(m.id,10)===uid&&m.role==='captain';});
-                        var html='<div class="gp-team-members">';
-                        r.members.forEach(function(m){ var n=m.full_name||m.username||'Player', a=m.avatar||'default.png', me=parseInt(m.id,10)===uid; html+='<div class="gp-team-member"><img src="assets/avatars/'+escHtml(a)+'" alt="" onerror="this.src=\'assets/avatars/default.png\'"><div class="gp-team-member-info"><strong>'+escHtml(n)+(me?' (you)':'')+'</strong><span class="gp-team-member-role">'+m.role+'</span></div>'+(isCap&&!me&&m.role!=='captain'?'<button class="gp-btn gp-btn-xs gp-btn-ghost gp-remove-member" data-team="'+tid+'" data-user="'+m.id+'" style="color:#dc2626"><i class="fas fa-user-minus"></i></button>':'')+'</div>'; });
-                        html+='</div>';
-                        if (isCap) html+='<div class="gp-team-add"><input type="text" class="gp-input gp-add-member-input" placeholder="Enter user ID or username" data-team="'+tid+'"><button class="gp-btn gp-btn-sm gp-btn-primary gp-add-member-btn" data-team="'+tid+'"><i class="fas fa-plus"></i> Add</button></div>';
-                        body.innerHTML=html;
-                        body.querySelectorAll('.gp-remove-member').forEach(function(rb){ rb.addEventListener('click',function(){ if(!confirm('Remove this member?'))return; api({action:'remove_member',team_id:rb.getAttribute('data-team'),member_id:rb.getAttribute('data-user'),csrf_token:csrfToken}).then(function(res){if(res.success){toast(res.message);setTimeout(function(){location.reload();},800);}else{toast(res.message,'error');}}); }); });
-                        body.querySelectorAll('.gp-add-member-btn').forEach(function(ab){ ab.addEventListener('click',function(){ var inp=body.querySelector('.gp-add-member-input'), val=inp?inp.value.trim():''; if(!val)return; api({action:'add_member',team_id:ab.getAttribute('data-team'),member_id:parseInt(val,10)||val,csrf_token:csrfToken}).then(function(res){if(res.success){toast(res.message);setTimeout(function(){location.reload();},800);}else{toast(res.message,'error');}}); }); });
-                    } else { body.innerHTML='<div class="gp-loading">No members.</div>'; }
-                });
-            });
-        });
-
-        // History
-        document.querySelectorAll('[data-open-modal="agentHistoryModal"]').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                var body=document.getElementById('agentHistoryBody'); if (!body) return;
-                body.innerHTML='<div class="gp-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
-                api({action:'agent_stats',csrf_token:csrfToken}).then(function(r) {
-                    if (r.success&&r.transactions&&r.transactions.length) {
-                        var html='<div class="gp-txns">';
-                        r.transactions.forEach(function(t){ var cr=t.type==='credit'; html+='<div class="gp-txn-item"><span class="gp-txn-icon '+t.type+'"><i class="fas '+(cr?'fa-arrow-down':'fa-arrow-up')+'"></i></span><div class="gp-txn-info"><strong>'+escHtml(t.description||t.reference_type||'')+'</strong><span>'+(t.created_at?new Date(t.created_at).toLocaleDateString():'')+'</span></div><span class="gp-txn-amount '+t.type+'">'+(cr?'+':'-')+'৳'+parseFloat(t.amount).toFixed(0)+'</span></div>'; });
-                        html+='</div>'; body.innerHTML=html;
-                    } else { body.innerHTML='<div class="gp-loading">No transactions yet.</div>'; }
-                });
-            });
-        });
-
-        // Icon picker
-        document.querySelectorAll('.gp-icon-opt').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                var p = btn.closest('.gp-icon-picker'); if (p) p.querySelectorAll('.gp-icon-opt').forEach(function(b){b.classList.remove('active');});
-                btn.classList.add('active');
-                var h = btn.closest('.gp-form-group').querySelector('input[type="hidden"]'); if (h) h.value=btn.getAttribute('data-icon')||'';
-            });
-        });
-
-        // Color picker
-        document.querySelectorAll('.gp-color-opt').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                var p = btn.closest('.gp-color-picker'); if (p) p.querySelectorAll('.gp-color-opt').forEach(function(b){b.classList.remove('active');});
-                btn.classList.add('active');
-                var h = btn.closest('.gp-form-group').querySelector('input[type="hidden"]'); if (h) h.value=btn.getAttribute('data-color')||'';
-            });
-        });
-
-        // Section switcher
-        document.querySelectorAll('.gp-switcher-btn').forEach(function(btn) {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                var target = btn.getAttribute('data-scroll-to'), el = document.getElementById(target);
-                if (el) {
-                    document.querySelectorAll('.gp-switcher-btn').forEach(function(b){b.classList.remove('active');});
-                    btn.classList.add('active');
-                    el.scrollIntoView({behavior:'smooth',block:'start'});
-                }
-            });
-        });
-        // Update active section on scroll
-        var sections = document.querySelectorAll('.gp-section[id]');
-        if (sections.length) {
-            var switcherUpdate = function() {
-                var scrollY = window.scrollY + 120;
-                var activeId = '';
-                sections.forEach(function(s) {
-                    if (s.offsetTop <= scrollY) activeId = s.getAttribute('id');
-                });
-                document.querySelectorAll('.gp-switcher-btn').forEach(function(b) {
-                    b.classList.toggle('active', b.getAttribute('data-scroll-to') === activeId);
-                });
-            };
-            window.addEventListener('scroll', switcherUpdate, {passive:true});
-            setTimeout(switcherUpdate, 100);
-        }
-
-        // Legacy scroll-to
-        document.querySelectorAll('[data-scroll-to]').forEach(function(link) {
-            link.addEventListener('click', function(e) {
-                var target = link.getAttribute('data-scroll-to'), el = document.getElementById(target);
-                if (el) { e.preventDefault(); el.scrollIntoView({behavior:'smooth',block:'start'}); }
-            });
-        });
     });
-})();
 </script>

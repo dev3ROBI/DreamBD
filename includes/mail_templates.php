@@ -524,4 +524,83 @@ HTML;
 HTML;
         return self::baseTemplate('Welcome to RobiCodes!', $content, '#3b82f6', '#8b5cf6');
     }
+
+    // ─── AGENT ACTIVATION TEMPLATES ───────────────────────────────────────
+
+    public static function agentRequestSubmitted(string $username): string {
+        $greeting = self::greeting($username);
+        $alertBox = self::alertBox('Your agent activation request has been received. We will review it and notify you once approved.', '#fefce8', '#fde68a', '#92400e', '⏳');
+        $content = $greeting . <<<HTML
+<p style="margin:0 0 20px;font-size:15px;color:#4b5563;line-height:1.7;">
+  Thank you for your interest in becoming an <strong>Agent</strong> on RobiCodes!
+</p>
+<p style="margin:0 0 20px;font-size:15px;color:#4b5563;line-height:1.7;">
+  Your payment has been received and your request is now <strong>pending admin review</strong>. You will receive another email once your account has been activated.
+</p>
+{$alertBox}
+<p style="margin:20px 0 0;font-size:13px;color:#6b7280;line-height:1.6;">
+  If you have any questions, please contact support at <a href="mailto:support@robicodes.xyz" style="color:#8b5cf6;font-weight:600;text-decoration:none;">support@robicodes.xyz</a>.
+</p>
+HTML;
+        return self::baseTemplate('Agent Request Submitted', $content, '#f59e0b', '#d97706');
+    }
+
+    public static function agentActivated(string $username): string {
+        $url = env('APP_URL', 'http://localhost/Dream');
+        $greeting = self::greeting($username);
+        $alertBox = self::alertBox('Congratulations! You are now an official Agent on RobiCodes. Start creating tournaments and earning today!', '#f0fdf4', '#86efac', '#065f46', '✓');
+        $btn = self::ctaButton('&#127942; Go to Agent Dashboard', $url . '/index.php?page=agent-dashboard', 'linear-gradient(135deg,#f59e0b,#d97706)');
+        $content = $greeting . <<<HTML
+<p style="margin:0 0 20px;font-size:15px;color:#4b5563;line-height:1.7;">
+  Great news! Your agent account has been <strong>approved and activated</strong>. You now have access to all agent features:
+</p>
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:0 0 24px;">
+  <tr>
+    <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0"><tr>
+        <td style="font-size:16px;padding-right:12px;width:32px;font-weight:700;color:#f59e0b;">🏆</td>
+        <td><p style="margin:0;font-size:14px;color:#374151;font-weight:600;">Create Tournaments</p><p style="margin:2px 0 0;font-size:12px;color:#6b7280;">Host unlimited gaming events</p></td>
+      </tr></table>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0"><tr>
+        <td style="font-size:16px;padding-right:12px;width:32px;font-weight:700;color:#059669;">💰</td>
+        <td><p style="margin:0;font-size:14px;color:#374151;font-weight:600;">Earn Commissions</p><p style="margin:2px 0 0;font-size:12px;color:#6b7280;">Get a share of entry fees</p></td>
+      </tr></table>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:10px 0;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0"><tr>
+        <td style="font-size:16px;padding-right:12px;width:32px;font-weight:700;color:#8b5cf6;">👑</td>
+        <td><p style="margin:0;font-size:14px;color:#374151;font-weight:600;">Verified Agent Badge</p><p style="margin:2px 0 0;font-size:12px;color:#6b7280;">Stand out with a golden badge on your profile</p></td>
+      </tr></table>
+    </td>
+  </tr>
+</table>
+{$alertBox}
+{$btn}
+HTML;
+        return self::baseTemplate('Agent Account Activated!', $content, '#f59e0b', '#d97706');
+    }
+
+    public static function agentDeclined(string $username, string $reason = ''): string {
+        $greeting = self::greeting($username);
+        $reasonText = $reason ?: 'Your payment could not be verified or the request did not meet our requirements.';
+        $alertBox = self::alertBox($reasonText, '#fef2f2', '#fecaca', '#991b1b', '!');
+        $btn = self::ctaButton('&#128640; Try Again', env('APP_URL', 'http://localhost/Dream') . '/index.php?page=tournaments', 'linear-gradient(135deg,#6b7280,#4b5563)');
+        $content = $greeting . <<<HTML
+<p style="margin:0 0 20px;font-size:15px;color:#4b5563;line-height:1.7;">
+  Unfortunately, your <strong>Agent Activation Request</strong> has been declined.
+</p>
+{$alertBox}
+<p style="margin:20px 0 0;font-size:14px;color:#4b5563;line-height:1.7;">
+  You can submit a new request anytime. If you believe this was a mistake, please contact support at <a href="mailto:support@robicodes.xyz" style="color:#8b5cf6;font-weight:600;text-decoration:none;">support@robicodes.xyz</a>.
+</p>
+{$btn}
+HTML;
+        return self::baseTemplate('Agent Request Declined', $content, '#ef4444', '#dc2626');
+    }
 }

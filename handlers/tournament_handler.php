@@ -358,6 +358,19 @@ try {
                 $msg = $purpose === 'agent_activation' ? 'Agent activation request submitted! Admin will verify and activate your account shortly.' : 'Payment request submitted! Admin will verify and approve shortly.';
                 $ntype = $purpose === 'agent_activation' ? 'agent_activation' : 'payment_pending';
                 createNotification($db, $userId, $userId, $ntype, $purpose === 'agent_activation' ? 'Agent activation request submitted. Waiting for admin approval.' : 'Payment of ৳' . number_format($amount, 0) . ' submitted. Waiting for admin approval.');
+                if ($purpose === 'agent_activation') {
+                    try {
+                        $stmt = $db->prepare("SELECT email, username FROM users WHERE id = ?");
+                        $stmt->execute([$userId]);
+                        $u = $stmt->fetch();
+                        if ($u && !empty($u['email'])) {
+                            require_once __DIR__ . '/../includes/mail_templates.php';
+                            require_once __DIR__ . '/../includes/mailer.php';
+                            $body = MailTemplates::agentRequestSubmitted($u['username']);
+                            Mailer::getInstance()->send($u['email'], 'Agent Activation Request Received', $body);
+                        }
+                    } catch (Throwable $em) { /* skip email error */ }
+                }
                 $response = ['success' => true, 'message' => $msg];
             } catch (Throwable $e) {
                 if ($db->inTransaction()) $db->rollBack();

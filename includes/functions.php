@@ -2167,10 +2167,10 @@ function getUserTournamentResults(PDO $pdo, int $userId, int $limit = 8): array 
 
 function getUserTournamentRegistrations(PDO $pdo, int $userId): array {
     $stmt = $pdo->prepare("
-        SELECT tp.*, t.title, t.status AS tournament_status, t.starts_at, t.prize_money, t.game_icon, t.accent_color, t.category
+        SELECT tp.*, t.title, t.status AS tournament_status, t.starts_at, t.prize_money, t.game_icon, t.accent_color, t.category, t.entry_fee
         FROM tournament_participants tp
         JOIN tournaments t ON t.id = tp.tournament_id
-        WHERE tp.user_id = ?
+        WHERE tp.user_id = ? AND tp.status = 'confirmed'
         ORDER BY t.starts_at DESC
     ");
     $stmt->execute([$userId]);
@@ -2265,15 +2265,34 @@ function unregisterFromTournament(PDO $pdo, int $userId, int $tournamentId): arr
         // Refund entry fee if paid
         $entryFee = (float)$tournament['entry_fee'];
         if ($entryFee > 0 && ($participant['fee_paid'] ?? 0)) {
+            // Get user balance before refund
+            $stmt = $pdo->prepare("SELECT balance FROM users WHERE id = ? FOR UPDATE");
+            $stmt->execute([$userId]);
+            $userBal = (float)($stmt->fetchColumn() ?: 0);
+            $userAfter = $userBal + $entryFee;
+
             // Refund to user
-            $stmt = $pdo->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
-            $stmt->execute([$entryFee, $userId]);
+            $stmt = $pdo->prepare("UPDATE users SET balance = ? WHERE id = ?");
+            $stmt->execute([$userAfter, $userId]);
+
+            // Log user refund
+            $stmt = $pdo->prepare("INSERT INTO agent_transactions (agent_id, type, amount, balance_before, balance_after, reference_type, reference_id, description) VALUES (?, 'credit', ?, ?, ?, 'entry_fee_refund', ?, 'Entry fee refund for leaving tournament')");
+            $stmt->execute([$userId, $entryFee, $userBal, $userAfter, $tournamentId]);
 
             // Deduct from agent
             $agentId = (int)$tournament['agent_id'];
             if ($agentId > 0) {
-                $stmt = $pdo->prepare("UPDATE users SET balance = balance - ? WHERE id = ? AND balance >= ?");
-                $stmt->execute([$entryFee, $agentId, $entryFee]);
+                $stmt = $pdo->prepare("SELECT balance FROM users WHERE id = ? FOR UPDATE");
+                $stmt->execute([$agentId]);
+                $agentBal = (float)($stmt->fetchColumn() ?: 0);
+                $agentAfter = $agentBal - $entryFee;
+
+                $stmt = $pdo->prepare("UPDATE users SET balance = ? WHERE id = ? AND balance >= ?");
+                $stmt->execute([$agentAfter, $agentId, $entryFee]);
+
+                // Log agent deduction
+                $stmt = $pdo->prepare("INSERT INTO agent_transactions (agent_id, type, amount, balance_before, balance_after, reference_type, reference_id, description) VALUES (?, 'debit', ?, ?, ?, 'entry_fee_refund', ?, 'Entry fee refunded to participant')");
+                $stmt->execute([$agentId, $entryFee, $agentBal, $agentAfter, $tournamentId]);
             }
         }
 
@@ -2282,7 +2301,8 @@ function unregisterFromTournament(PDO $pdo, int $userId, int $tournamentId): arr
         $stmt->execute([$participant['id']]);
 
         $pdo->commit();
-        return ['success' => true, 'message' => 'Registration cancelled.' . ($entryFee > 0 ? ' Entry fee refunded.' : '')];
+        $msg = 'Registration cancelled.' . ($entryFee > 0 ? ' Entry fee of ৳' . number_format($entryFee, 0) . ' refunded.' : '');
+        return ['success' => true, 'message' => $msg, 'refund' => $entryFee];
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
         return ['success' => false, 'message' => 'Server error.'];

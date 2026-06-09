@@ -34,6 +34,7 @@ class AjaxNavigation {
         if (link.hasAttribute('download')) return true;
         if (link.getAttribute('target') === '_blank') return true;
         if (link.hostname && link.hostname !== window.location.hostname) return true;
+        if (link.hasAttribute('data-no-ajax')) return true;
         return false;
     }
 

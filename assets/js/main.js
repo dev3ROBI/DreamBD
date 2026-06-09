@@ -1610,12 +1610,39 @@ class DreamBDApp {
                 document.body.style.overflow = 'hidden';
             });
         });
+
+        // Gamer Profile — click avatar/meta to open modal
+        document.querySelectorAll('[data-gp-profile]').forEach(el => {
+            el.addEventListener('click', () => {
+                if (this._closeModals) this._closeModals();
+                const pageEl = document.getElementById('tournamentsPage');
+                const hasProfile = pageEl?.getAttribute('data-has-profile') === '1';
+                const modalId = hasProfile ? 'viewGamerProfileModal' : 'createGamerProfileModal';
+                const overlay = document.getElementById('gpOverlay');
+                const modal = document.getElementById(modalId);
+                if (overlay) overlay.classList.remove('hidden');
+                if (modal) modal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            });
+        });
+
+        // Edit Profile — switch from view to edit modal
+        document.querySelectorAll('[data-edit-profile]').forEach(el => {
+            el.addEventListener('click', () => {
+                const viewModal = document.getElementById('viewGamerProfileModal');
+                const editModal = document.getElementById('createGamerProfileModal');
+                if (viewModal) viewModal.classList.add('hidden');
+                if (editModal) editModal.classList.remove('hidden');
+            });
+        });
     }
 
     initGPUnregister() {
         document.querySelectorAll('.gp-unregister').forEach(btn => {
             btn.addEventListener('click', async () => {
-                if (!confirm('Leave this tournament?')) return;
+                const fee = parseFloat(btn.getAttribute('data-fee') || '0');
+                const confirmed = await this._gpConfirmLeave(fee);
+                if (!confirmed) return;
                 const tid = btn.getAttribute('data-id');
                 const csrf = document.getElementById('tournamentsPage')?.getAttribute('data-csrf') || '';
                 btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
@@ -1623,6 +1650,47 @@ class DreamBDApp {
                 if (result.success) { this._toast(result.message); setTimeout(() => window.location.reload(), 800); }
                 else { this._toast(result.message, 'error'); btn.disabled = false; btn.innerHTML = '<i class="fas fa-xmark"></i>'; }
             });
+        });
+    }
+
+    _gpConfirmLeave(fee) {
+        return new Promise(resolve => {
+            const ov = document.createElement('div');
+            ov.style.cssText = 'position:fixed;inset:0;background:var(--bg-overlay,rgba(0,0,0,.5));z-index:99998;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center';
+            document.body.appendChild(ov);
+            document.body.style.overflow = 'hidden';
+
+            const p = document.createElement('div');
+            p.style.cssText = 'background:var(--bg-card,#fff);border-radius:20px;padding:24px;max-width:400px;width:90%;box-shadow:var(--shadow-2xl,0 25px 50px -12px rgba(0,0,0,.25));opacity:0;transform:translateY(30px) scale(.97);transition:opacity .35s cubic-bezier(.34,1.56,.64,1),transform .35s cubic-bezier(.34,1.56,.64,1)';
+            const feeHtml = fee > 0
+                ? '<div style="margin:14px 0 0;padding:12px 14px;border-radius:12px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.15)"><div style="font-size:.8rem;color:var(--green,#10b981);font-weight:700;margin-bottom:2px"><i class="fas fa-coins"></i> Refund details</div><div style="font-size:.76rem;color:var(--text-muted,#64748b);line-height:1.5">Entry fee of \u09F3' + fee.toFixed(0) + ' will be refunded to your balance.</div></div>'
+                : '';
+            p.innerHTML = '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px"><i class="fas fa-question-circle" style="color:var(--warning,#f59e0b);font-size:1.2rem"></i><h3 style="margin:0;font-size:1rem;font-weight:700;color:var(--text-primary,#0f172a)">Leave tournament?</h3></div>'
+                + '<div style="font-size:.82rem;color:var(--text-muted,#64748b);line-height:1.65;margin-bottom:2px">By leaving you will:</div>'
+                + '<ul style="font-size:.78rem;color:var(--text-secondary,#475569);line-height:1.85;margin:8px 0 0;padding-left:16px;list-style:none">'
+                + '<li style="position:relative;padding-left:18px;margin-bottom:4px"><span style="position:absolute;left:0;color:#ef4444">\u2716</span> Be removed from the tournament</li>'
+                + '<li style="position:relative;padding-left:18px;margin-bottom:4px"><span style="position:absolute;left:0;color:#ef4444">\u2716</span> Free up your slot for other players</li>'
+                + (fee > 0 ? '<li style="position:relative;padding-left:18px"><span style="position:absolute;left:0;color:var(--green,#10b981)">\u2714</span> Get \u09F3' + fee.toFixed(0) + ' refunded to your balance</li>' : '')
+                + '</ul>'
+                + feeHtml
+                + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--border,#e2e8f0)">'
+                + '<button class="gp-btn gp-btn-ghost" id="_gpcCancel" style="min-width:90px;justify-content:center">Cancel</button>'
+                + '<button class="gp-btn gp-btn-primary" id="_gpcOk" style="min-width:90px;justify-content:center"><i class="fas fa-check"></i> Leave</button>'
+                + '</div>';
+            ov.appendChild(p);
+
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    p.style.opacity = '1';
+                    p.style.transform = 'translateY(0) scale(1)';
+                });
+            });
+
+            const cleanup = () => { ov.remove(); document.body.style.overflow = ''; };
+            document.getElementById('_gpcOk').onclick = () => { cleanup(); resolve(true); };
+            const nope = () => { cleanup(); resolve(false); };
+            document.getElementById('_gpcCancel').onclick = nope;
+            ov.addEventListener('click', e => { if (e.target === ov) nope(); });
         });
     }
 

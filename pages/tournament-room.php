@@ -746,6 +746,12 @@ $title = htmlspecialchars($tournament['title'] ?? 'Tournament');
         if (liveBadge) { liveBadge.textContent = 'LIVE'; liveBadge.style.background = 'rgba(16,185,129,0.14)'; liveBadge.style.color = '#047857'; liveBadge.style.animation = 'none'; }
     };
 
+    function closeSSE() { evtSource.close(); }
+    window.addEventListener('pagehide', closeSSE);
+    window.addEventListener('beforeunload', closeSSE);
+    var backLink = document.querySelector('.tr-back');
+    if (backLink) { backLink.addEventListener('click', closeSSE); }
+
     // Also update SSE URL after sending a message to ensure we get new messages
     var origSend = api;
     api = function (payload) {
