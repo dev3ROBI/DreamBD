@@ -1223,10 +1223,13 @@ function initAllCustomSelects() {
     });
 }
 
-// Global click to close selects
-document.addEventListener('click', () => {
-    document.querySelectorAll('.gp-custom-select.active').forEach(s => s.classList.remove('active'));
-});
+// Global click to close selects (guard against duplicate on ajax nav)
+if (!window._gpCloseSelectsInit) {
+    window._gpCloseSelectsInit = true;
+    document.addEventListener('click', () => {
+        document.querySelectorAll('.gp-custom-select.active').forEach(s => s.classList.remove('active'));
+    });
+}
 
 document.addEventListener('DOMContentLoaded', function() {
 initAllCustomSelects();
@@ -1927,8 +1930,6 @@ var filter = document.getElementById('lbFilter');
 
 <script>
 (function() {
-    if (window._gpInitDone) return;
-    window._gpInitDone = true;
 
     function escHtml(str) { var d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
     function api(data) { return fetch('handlers/tournament_handler.php', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, body: JSON.stringify(data) }).then(function(r) { return r.json(); }); }
@@ -2220,13 +2221,6 @@ var filter = document.getElementById('lbFilter');
                 });
             });
         }
-
-        // Gamer Profile
-        document.getElementById('gamerProfileForm') && document.getElementById('gamerProfileForm').addEventListener('submit', function(e) {
-            e.preventDefault(); var b=this.querySelector('button[type="submit"]'); b.disabled=true; b.innerHTML='<i class="fas fa-spinner fa-spin"></i> Saving...';
-            var d=Object.fromEntries(new FormData(this)); d.csrf_token=csrfToken; d.action='update_profile';
-            api(d).then(function(r){ fb(e.target,r); if(r.success){b.innerHTML='<i class="fas fa-check"></i> Saved!';setTimeout(function(){location.reload();},1000);}else{b.disabled=false;b.innerHTML='<i class="fas fa-check"></i> Save profile';} });
-        });
 
     });
 </script>

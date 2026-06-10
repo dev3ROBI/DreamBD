@@ -1635,6 +1635,87 @@ class DreamBDApp {
                 if (editModal) editModal.classList.remove('hidden');
             });
         });
+
+        // Gamer Profile Form — save via AJAX
+        const gpForm = document.getElementById('gamerProfileForm');
+        if (gpForm) {
+            gpForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = gpForm.querySelector('button[type="submit"]');
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+                const data = Object.fromEntries(new FormData(gpForm));
+                data.csrf_token = csrf;
+                data.action = 'update_profile';
+                const result = await this._api(data);
+                this._showFeedback(gpForm, result);
+                if (result.success) {
+                    btn.innerHTML = '<i class="fas fa-check"></i> Saved!';
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-check"></i> Save Changes';
+                }
+            });
+        }
+
+        // Become Agent — step transition
+        const baInfoStep = document.getElementById('baInfoStep');
+        const baPayStep = document.getElementById('baPayStep');
+        const baProceedBtn = document.getElementById('baProceedBtn');
+        const baBackToInfo = document.getElementById('baBackToInfo');
+        if (baProceedBtn) {
+            baProceedBtn.addEventListener('click', () => {
+                baInfoStep?.classList.remove('active');
+                baPayStep?.classList.add('active');
+            });
+        }
+        if (baBackToInfo) {
+            baBackToInfo.addEventListener('click', () => {
+                baPayStep?.classList.remove('active');
+                baInfoStep?.classList.add('active');
+                const fb = document.getElementById('baFeedback');
+                if (fb) { fb.classList.add('hidden'); fb.textContent = ''; }
+            });
+        }
+        // Reset step when modal opened
+        document.querySelectorAll('[data-open-modal="becomeAgentModal"]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                setTimeout(() => {
+                    baInfoStep?.classList.add('active');
+                    baPayStep?.classList.remove('active');
+                    const fb = document.getElementById('baFeedback');
+                    if (fb) { fb.classList.add('hidden'); fb.textContent = ''; }
+                }, 10);
+            });
+        });
+
+        // Init custom selects + re-init when any modal opens
+        if (typeof initAllCustomSelects === 'function') initAllCustomSelects();
+        document.querySelectorAll('[data-open-modal]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                setTimeout(() => {
+                    if (typeof initAllCustomSelects === 'function') initAllCustomSelects();
+                }, 50);
+            });
+        });
+
+        // Profile Edit Tab Switching
+        document.querySelectorAll('.gp-form-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const target = tab.dataset.tab;
+                const modal = tab.closest('.gp-modal');
+                if (!modal) return;
+                modal.querySelectorAll('.gp-form-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                modal.querySelectorAll('.gp-tab-content').forEach(c => c.classList.remove('active'));
+                const content = modal.querySelector(`#tab-${target}`);
+                if (content) content.classList.add('active');
+                setTimeout(() => {
+                    if (typeof initAllCustomSelects === 'function') initAllCustomSelects();
+                }, 20);
+            });
+        });
     }
 
     initGPUnregister() {
