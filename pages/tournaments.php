@@ -1222,6 +1222,7 @@ function initAllCustomSelects() {
         });
     });
 }
+window.initAllCustomSelects = initAllCustomSelects;
 
 // Global click to close selects (guard against duplicate on ajax nav)
 if (!window._gpCloseSelectsInit) {
@@ -2002,7 +2003,8 @@ var filter = document.getElementById('lbFilter');
         
         var addBtn = container.querySelector('.gp-add-game-skill-btn');
         container.insertBefore(row, addBtn);
-        initAllCustomSelects();
+        if (typeof initAllCustomSelects === 'function') initAllCustomSelects();
+        else if (typeof window.initAllCustomSelects === 'function') window.initAllCustomSelects();
 
         var gameInp = row.querySelector('.game-input');
         var skillInp = row.querySelector('.skill-input');

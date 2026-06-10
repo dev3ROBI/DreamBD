@@ -1703,11 +1703,17 @@ class DreamBDApp {
         const baFeedback = document.getElementById('baFeedback');
         const baMerchantBox = document.getElementById('baMerchantBox');
 
-        const baPmData = window.baPmData || {};
         let baCurrentMethod = 'bkash';
 
+        const _baPmFallback = {
+            bkash: { number: '01888780877', instruction: 'send_money' },
+            nagad: { number: '01888780877', instruction: 'send_money' },
+            rocket: { number: '01888780877', instruction: 'send_money' }
+        };
+        const _baPmData = () => (window.baPmData && Object.keys(window.baPmData).length ? window.baPmData : _baPmFallback);
+
         const baUpdateMerchant = () => {
-            const d = baPmData[baCurrentMethod];
+            const d = _baPmData()[baCurrentMethod];
             if (!d) { if (baMerchantBox) baMerchantBox.style.display = 'none'; return; }
             const label = d.instruction === 'cashout' ? 'ক্যাশ আউট' : 'সেন্ড মানি';
             const colors = {bkash:'#E2136E', nagad:'#E8522E', rocket:'#CC0000'};
@@ -1719,13 +1725,13 @@ class DreamBDApp {
             if (!baMerchantBox) return;
             baMerchantBox.innerHTML =
                 '<div class="ba-merchant-header"><img src="assets/images/payment-icon/'+baCurrentMethod+'-logo-mobile-banking.png" alt="" onerror="this.style.display=\'none\'"><span style="color:'+c+'">'+n+'</span></div>' +
-                '<div class="ba-instr-step"><strong>'+dials[baCurrentMethod]+'</strong> ডায়াল করুন অথবা '+n+' অ্যাপ খুলুন</div>' +
-                '<div class="ba-instr-step"><strong>"'+label+'"</strong> অপশন সিলেক্ট করুন</div>' +
-                '<div class="ba-instr-step">প্রাপক নম্বর <strong class="ba-merchant-num" style="color:'+c+'">'+mNum+'</strong> <button onclick="baCopyNumber()" class="ba-copy-btn"><i class="fas fa-copy"></i> কপি</button></div>' +
-                '<div class="ba-instr-step">টাকার পরিমাণ <strong>৳৫০০</strong></div>' +
-                '<div class="ba-instr-step">পিন দিন এবং কনফার্ম করুন</div>' +
-                '<div class="ba-instr-step">কনফার্মেশন থেকে <strong>TXID</strong> কপি করে নিচে দিন</div>' +
-                '<div class="ba-instr-footer">✅ TXID নিচের বক্সে দিন এবং <strong style="color:#7c3aed">সাবমিট</strong> ক্লিক করুন</div>';
+                '<div class="ba-instr-step">১. <strong>'+dials[baCurrentMethod]+'</strong> ডায়াল করুন অথবা '+n+' অ্যাপ খুলুন।</div>' +
+                '<div class="ba-instr-step">২. <strong>"'+label+'"</strong> অপশন সিলেক্ট করুন।</div>' +
+                '<div class="ba-instr-step">৩. প্রাপক নম্বর লিখুন: <strong class="ba-merchant-num" style="color:'+c+'">'+mNum+'</strong> <button onclick="baCopyNumber()" class="ba-copy-btn"><i class="fas fa-copy"></i> কপি</button></div>' +
+                '<div class="ba-instr-step">৪. টাকার পরিমাণ লিখুন: <strong>৳৫০০</strong></div>' +
+                '<div class="ba-instr-step">৫. আপনার পিন দিন এবং কনফার্ম বাটনে ক্লিক করুন।</div>' +
+                '<div class="ba-instr-step">৬. কনফার্মেশন মেসেজ থেকে <strong>Transaction ID</strong> কপি করে নিচে দিন।</div>' +
+                '<div class="ba-instr-footer">এখন নিচের বক্সে TXID দিন এবং <strong style="color:#7c3aed">সাবমিট</strong> বাটনে ক্লিক করুন। ✅</div>';
             baMerchantBox.style.display = 'block';
         };
 
@@ -1733,7 +1739,7 @@ class DreamBDApp {
 
         // Copy number helper
         window.baCopyNumber = () => {
-            const d = baPmData[baCurrentMethod];
+            const d = _baPmData()[baCurrentMethod];
             if (!d || !baMerchantBox) return;
             navigator.clipboard.writeText(d.number).then(() => {
                 const btn = baMerchantBox.querySelector('.ba-copy-btn');
@@ -1775,7 +1781,7 @@ class DreamBDApp {
                 });
                 card.classList.add('active');
                 const m = card.getAttribute('data-method');
-                const d = baPmData[m];
+                const d = _baPmData()[m];
                 const colors = {bkash:'#E2136E', nagad:'#E8522E', rocket:'#CC0000'};
                 const bgColors = {bkash:'rgba(226,19,110,.05)', nagad:'rgba(232,82,46,.05)', rocket:'rgba(204,0,0,.05)'};
                 if (d) { 
@@ -1828,11 +1834,11 @@ class DreamBDApp {
         }
 
         // Init custom selects + re-init when any modal opens
-        if (typeof initAllCustomSelects === 'function') initAllCustomSelects();
+        if (typeof initAllCustomSelects === 'function') initAllCustomSelects(); else if (typeof window.initAllCustomSelects === 'function') window.initAllCustomSelects();
         document.querySelectorAll('[data-open-modal]').forEach(btn => {
             btn.addEventListener('click', () => {
                 setTimeout(() => {
-                    if (typeof initAllCustomSelects === 'function') initAllCustomSelects();
+                    if (typeof initAllCustomSelects === 'function') initAllCustomSelects(); else if (typeof window.initAllCustomSelects === 'function') window.initAllCustomSelects();
                 }, 50);
             });
         });
@@ -1849,7 +1855,7 @@ class DreamBDApp {
                 const content = modal.querySelector(`#tab-${target}`);
                 if (content) content.classList.add('active');
                 setTimeout(() => {
-                    if (typeof initAllCustomSelects === 'function') initAllCustomSelects();
+                    if (typeof initAllCustomSelects === 'function') initAllCustomSelects(); else if (typeof window.initAllCustomSelects === 'function') window.initAllCustomSelects();
                 }, 20);
             });
         });
