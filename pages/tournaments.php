@@ -2064,5 +2064,5 @@ var filter = document.getElementById('lbFilter');
 
         window.baPmData = <?php echo json_encode($pmData); ?>;
 
-    });
+    })();
 </script>
