@@ -1296,6 +1296,38 @@ class DreamBDApp {
         fb.classList.add(result.success ? 'success' : 'error');
     }
 
+    _showBaResult(success, title, sub) {
+        const overlay = document.getElementById('baResultOverlay');
+        const icon = document.getElementById('baResultIcon');
+        const titleEl = document.getElementById('baResultTitle');
+        const subEl = document.getElementById('baResultSub');
+        const doneBtn = document.getElementById('baResultDoneBtn');
+        const closeBtn = document.getElementById('baResultClose');
+        if (!overlay) return;
+        overlay.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        if (icon) {
+            icon.className = 'gp-success-icon-wrap ' + (success ? 'success' : 'fail');
+            icon.innerHTML = success ? '<i class="fas fa-check"></i>' : '<i class="fas fa-times"></i>';
+        }
+        if (titleEl) titleEl.textContent = title.replace(/[✅❌]/g,'').trim();
+        if (subEl) subEl.textContent = sub;
+        if (doneBtn) {
+            if (success) {
+                doneBtn.innerHTML = '<i class="fas fa-check-circle"></i> ঠিক আছে';
+                doneBtn.className = 'gp-success-btn primary';
+                doneBtn.onclick = () => { overlay.style.display = 'none'; document.body.style.overflow = ''; location.reload(); };
+            } else {
+                doneBtn.innerHTML = '<i class="fas fa-undo"></i> আবার চেষ্টা করুন';
+                doneBtn.className = 'gp-success-btn secondary';
+                doneBtn.onclick = () => { overlay.style.display = 'none'; document.body.style.overflow = ''; };
+            }
+        }
+        if (closeBtn) {
+            closeBtn.onclick = () => { overlay.style.display = 'none'; document.body.style.overflow = ''; if (success) location.reload(); };
+        }
+    }
+
     _toast(msg, type = 'success') {
         const old = document.querySelector('.gp-toast');
         if (old) old.remove();
@@ -1308,6 +1340,7 @@ class DreamBDApp {
 
     initGPForms() {
         const csrf = document.getElementById('tournamentsPage')?.getAttribute('data-csrf') || '';
+        const pageEl = document.getElementById('tournamentsPage');
 
         // ─── Become Agent via bKash ───
         const baStep1Form = document.getElementById('baStep1Form');
@@ -1659,23 +1692,67 @@ class DreamBDApp {
             });
         }
 
-        // Become Agent — step transition
+        // Become Agent — step transition + payment flow
         const baInfoStep = document.getElementById('baInfoStep');
         const baPayStep = document.getElementById('baPayStep');
         const baProceedBtn = document.getElementById('baProceedBtn');
         const baBackToInfo = document.getElementById('baBackToInfo');
+        const baPayBtn = document.getElementById('baPayBtn');
+        const baPhone = document.getElementById('baPhone');
+        const baTxid = document.getElementById('baTxid');
+        const baFeedback = document.getElementById('baFeedback');
+        const baMerchantBox = document.getElementById('baMerchantBox');
+
+        const baPmData = window.baPmData || {};
+        let baCurrentMethod = 'bkash';
+
+        const baUpdateMerchant = () => {
+            const d = baPmData[baCurrentMethod];
+            if (!d) { if (baMerchantBox) baMerchantBox.style.display = 'none'; return; }
+            const label = d.instruction === 'cashout' ? 'ক্যাশ আউট' : 'সেন্ড মানি';
+            const colors = {bkash:'#E2136E', nagad:'#E8522E', rocket:'#CC0000'};
+            const names = {bkash:'bKash', nagad:'Nagad', rocket:'Rocket'};
+            const dials = {bkash:'*247#', nagad:'*167#', rocket:'*322#'};
+            const c = colors[baCurrentMethod] || '#6b7280';
+            const n = names[baCurrentMethod] || baCurrentMethod.toUpperCase();
+            const mNum = d.number || '01888780877';
+            if (!baMerchantBox) return;
+            baMerchantBox.innerHTML =
+                '<div class="ba-merchant-header"><img src="assets/images/payment-icon/'+baCurrentMethod+'-logo-mobile-banking.png" alt="" onerror="this.style.display=\'none\'"><span style="color:'+c+'">'+n+'</span></div>' +
+                '<div class="ba-instr-step"><strong>'+dials[baCurrentMethod]+'</strong> ডায়াল করুন অথবা '+n+' অ্যাপ খুলুন</div>' +
+                '<div class="ba-instr-step"><strong>"'+label+'"</strong> অপশন সিলেক্ট করুন</div>' +
+                '<div class="ba-instr-step">প্রাপক নম্বর <strong class="ba-merchant-num" style="color:'+c+'">'+mNum+'</strong> <button onclick="baCopyNumber()" class="ba-copy-btn"><i class="fas fa-copy"></i> কপি</button></div>' +
+                '<div class="ba-instr-step">টাকার পরিমাণ <strong>৳৫০০</strong></div>' +
+                '<div class="ba-instr-step">পিন দিন এবং কনফার্ম করুন</div>' +
+                '<div class="ba-instr-step">কনফার্মেশন থেকে <strong>TXID</strong> কপি করে নিচে দিন</div>' +
+                '<div class="ba-instr-footer">✅ TXID নিচের বক্সে দিন এবং <strong style="color:#7c3aed">সাবমিট</strong> ক্লিক করুন</div>';
+            baMerchantBox.style.display = 'block';
+        };
+
+        window.baUpdateMerchant = baUpdateMerchant;
+
+        // Copy number helper
+        window.baCopyNumber = () => {
+            const d = baPmData[baCurrentMethod];
+            if (!d || !baMerchantBox) return;
+            navigator.clipboard.writeText(d.number).then(() => {
+                const btn = baMerchantBox.querySelector('.ba-copy-btn');
+                if (btn) { const t = btn.innerHTML; btn.innerHTML = '<i class="fas fa-check"></i> কপি হয়েছে!'; setTimeout(() => { btn.innerHTML = t; }, 1500); }
+            });
+        };
+
         if (baProceedBtn) {
             baProceedBtn.addEventListener('click', () => {
                 baInfoStep?.classList.remove('active');
                 baPayStep?.classList.add('active');
+                baUpdateMerchant();
             });
         }
         if (baBackToInfo) {
             baBackToInfo.addEventListener('click', () => {
                 baPayStep?.classList.remove('active');
                 baInfoStep?.classList.add('active');
-                const fb = document.getElementById('baFeedback');
-                if (fb) { fb.classList.add('hidden'); fb.textContent = ''; }
+                if (baFeedback) { baFeedback.classList.add('hidden'); baFeedback.textContent = ''; }
             });
         }
         // Reset step when modal opened
@@ -1684,11 +1761,71 @@ class DreamBDApp {
                 setTimeout(() => {
                     baInfoStep?.classList.add('active');
                     baPayStep?.classList.remove('active');
-                    const fb = document.getElementById('baFeedback');
-                    if (fb) { fb.classList.add('hidden'); fb.textContent = ''; }
+                    if (baFeedback) { baFeedback.classList.add('hidden'); baFeedback.textContent = ''; }
                 }, 10);
             });
         });
+
+        // Payment method card selection
+        document.querySelectorAll('.ba-method-card').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.ba-method-card').forEach(c => {
+                    c.classList.remove('active');
+                    c.style.borderColor = ''; c.style.background = '';
+                });
+                card.classList.add('active');
+                const m = card.getAttribute('data-method');
+                const d = baPmData[m];
+                const colors = {bkash:'#E2136E', nagad:'#E8522E', rocket:'#CC0000'};
+                const bgColors = {bkash:'rgba(226,19,110,.05)', nagad:'rgba(232,82,46,.05)', rocket:'rgba(204,0,0,.05)'};
+                if (d) { 
+                    card.style.borderColor = colors[m]; 
+                    card.style.background = bgColors[m]; 
+                }
+                baCurrentMethod = m;
+                baUpdateMerchant();
+            });
+        });
+
+        // Payment submit
+        if (baPayBtn) {
+            baPayBtn.addEventListener('click', () => {
+                const phone = (baPhone ? baPhone.value : '').trim();
+                const txid = (baTxid ? baTxid.value : '').trim().toUpperCase();
+                if (!/^01[3-9]\d{8}$/.test(phone)) {
+                    if (baFeedback) { baFeedback.classList.remove('hidden'); baFeedback.textContent = 'Please enter a valid Bangladeshi phone number (01XXXXXXXXX).'; baFeedback.style.color = '#dc2626'; }
+                    return;
+                }
+                if (txid.length < 4) {
+                    if (baFeedback) { baFeedback.classList.remove('hidden'); baFeedback.textContent = 'Please enter a valid Transaction ID.'; baFeedback.style.color = '#dc2626'; }
+                    return;
+                }
+                baPayBtn.disabled = true;
+                baPayBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+                if (baFeedback) { baFeedback.classList.add('hidden'); baFeedback.textContent = ''; }
+                this._api({
+                    action: 'submit_payment',
+                    method: baCurrentMethod,
+                    sender_phone: phone,
+                    transaction_id: txid,
+                    amount: 500,
+                    purpose: 'agent_activation',
+                    csrf_token: csrf
+                }).then(res => {
+                    if (res.success) {
+                        this._showBaResult(true, '✅ পেমেন্ট সাবমিট!', 'পেমেন্ট সাবমিট হয়েছে! অ্যাডমিন ভেরিফাই করে আপনার একাউন্ট এক্টিভেট করবে।');
+                    } else {
+                        baPayBtn.disabled = false;
+                        baPayBtn.innerHTML = '<i class="fas fa-paper-plane"></i> সাবমিট করুন';
+                        this._showBaResult(false, '❌ সাবমিট ব্যর্থ', res.message || 'দয়া করে আবার চেষ্টা করুন।');
+                    }
+                }).catch(() => {
+                    baPayBtn.disabled = false;
+                    baPayBtn.innerHTML = '<i class="fas fa-paper-plane"></i> সাবমিট করুন';
+                    this._showBaResult(false, '❌ নেটওয়ার্ক এরর', 'সার্ভারে সংযোগ করা যায়নি। দয়া করে আবার চেষ্টা করুন।');
+                });
+            });
+        }
 
         // Init custom selects + re-init when any modal opens
         if (typeof initAllCustomSelects === 'function') initAllCustomSelects();
