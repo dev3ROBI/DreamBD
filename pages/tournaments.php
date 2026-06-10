@@ -32,6 +32,23 @@ if ($viewerId) {
     } catch (Throwable $e) {}
 }
 
+// Clubs data
+$myClubs = $viewerId ? getUserClubs($db, $viewerId) : [];
+$allClubs = getClubStandings($db);
+$clubDetail = null; $clubMembers = [];
+$clubId = isset($_GET['club_id']) ? (int)$_GET['club_id'] : 0;
+if ($clubId) {
+    $clubDetail = getClub($db, $clubId);
+    $clubMembers = $clubDetail ? getClubMembers($db, $clubId) : [];
+}
+
+// Player Market data
+$players = getMarketPlayers($db, 'free_agent');
+$auctions = getActiveAuctions($db);
+$playerDetail = null;
+$detailUserId = isset($_GET['user_id']) ? (int)$_GET['user_id'] : 0;
+if ($detailUserId) $playerDetail = getPlayerDetail($db, $detailUserId);
+
 $pmData = ['bkash' => ['number' => '01888780877', 'instruction' => 'send_money'],
            'nagad' => ['number' => '01888780877', 'instruction' => 'send_money'],
            'rocket' => ['number' => '01888780877', 'instruction' => 'send_money']];
@@ -119,11 +136,28 @@ if ($viewerId) {
 .gp-balance-value { font-size:15px; font-weight:800; color:var(--gp-green) }
 .gp-profile-bar-actions { display:flex; align-items:center; gap:6px }
 
-/* ═══ SECTION SWITCHER ═══ */
-.gp-section-switcher { display:flex; gap:8px; margin-bottom:20px; padding:4px; background:var(--gp-card); border:1px solid var(--gp-border); border-radius:16px; overflow:hidden }
-.gp-switcher-btn { flex:1; padding:10px 16px; border-radius:12px; border:0; font-size:.8rem; font-weight:700; cursor:pointer; transition:all .2s; background:transparent; color:var(--gp-muted); display:flex; align-items:center; justify-content:center; gap:6px; font-family:'Plus Jakarta Sans',sans-serif; text-decoration:none }
-.gp-switcher-btn:hover { color:var(--gp-text) }
-.gp-switcher-btn.active { background:rgba(139,92,246,.1); color:var(--gp-accent); box-shadow:0 2px 8px rgba(139,92,246,.08) }
+/* ═══ MOBILE BOTTOM NAV — PREMIUM ═══ */
+.gp-mobile-nav { position:fixed; bottom:0; left:0; right:0; z-index:9999; display:none; padding:0 0 env(safe-area-inset-bottom,0); background:linear-gradient(180deg,var(--gp-bg) 0%,var(--gp-card) 100%); border-top:1px solid var(--gp-border); box-shadow:0 -8px 32px rgba(0,0,0,.06) }
+.dark .gp-mobile-nav { box-shadow:0 -8px 32px rgba(0,0,0,.25) }
+.gp-mobile-nav-inner { display:flex; justify-content:space-around; align-items:flex-start; max-width:540px; margin:0 auto; padding-top:4px }
+.gp-mobile-nav-item { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:2px; padding:6px 0 8px; border:0; background:none; cursor:pointer; color:var(--gp-muted); font-size:.5rem; font-weight:600; transition:all .25s cubic-bezier(.4,0,.2,1); text-decoration:none; font-family:'Plus Jakarta Sans',sans-serif; letter-spacing:.2px; position:relative; -webkit-tap-highlight-color:transparent; user-select:none; flex:1; max-width:64px; min-height:52px }
+.gp-mobile-nav-item i { font-size:1.15rem; transition:all .25s cubic-bezier(.4,0,.2,1); margin-bottom:0 }
+.gp-mobile-nav-item .gp-nav-indicator { position:absolute; top:0; left:50%; transform:translateX(-50%) scaleX(0); width:18px; height:3px; border-radius:0 0 4px 4px; background:var(--gp-accent); transition:transform .25s cubic-bezier(.4,0,.2,1) }
+.gp-mobile-nav-item.active .gp-nav-indicator { transform:translateX(-50%) scaleX(1) }
+.gp-mobile-nav-item.active { color:var(--gp-accent); font-weight:700 }
+.gp-mobile-nav-item.active i { filter:drop-shadow(0 1px 4px rgba(139,92,246,.2)) }
+.gp-mobile-nav-item:active { transform:scale(.9) }
+.gp-mobile-nav-item.nav-spacer { flex:0.4 }
+.gp-mobile-nav-plus { position:relative; margin-top:-18px; z-index:2; flex:1; max-width:64px; display:flex; align-items:center; justify-content:center }
+.gp-mobile-nav-plus .gp-mobile-nav-plus-btn { width:58px; height:58px; border-radius:50%; border:0; display:flex; align-items:center; justify-content:center; cursor:pointer; position:relative; transition:transform .25s cubic-bezier(.4,0,.2,1),box-shadow .25s; background:linear-gradient(135deg,#8b5cf6,#7c3aed); color:#fff; font-size:1.6rem; box-shadow:0 6px 24px rgba(139,92,246,.35) }
+.gp-mobile-nav-plus .gp-mobile-nav-plus-btn::after { content:''; position:absolute; inset:-3px; border-radius:50%; background:linear-gradient(135deg,transparent 40%,rgba(255,255,255,.15) 100%); pointer-events:none }
+.gp-mobile-nav-plus .gp-mobile-nav-plus-btn:hover { transform:scale(1.05) translateY(-2px); box-shadow:0 10px 32px rgba(139,92,246,.45) }
+.gp-mobile-nav-plus .gp-mobile-nav-plus-btn:active { transform:scale(.92) translateY(0); box-shadow:0 3px 12px rgba(139,92,246,.2) }
+.gp-mobile-nav-plus .gp-mobile-nav-plus-btn > * { position:relative; z-index:1 }
+@media(max-width:768px) {
+  .gp-mobile-nav { display:block }
+  body { padding-bottom:78px }
+}
 
 /* ═══ SECTION ═══ */
 .gp-section { padding:16px 8px }
@@ -664,8 +698,6 @@ if ($viewerId) {
   .gp-profile-actions .gp-btn { width:30px; height:30px; font-size:.65rem; border-radius:9px; min-width:30px }
   .gp-profile-actions .gp-btn-accent span { display:none }
   .gp-profile-actions .gp-btn-accent { width:30px; padding:0; justify-content:center }
-  .gp-section-switcher { overflow-x:auto; -webkit-overflow-scrolling:touch; gap:0; padding:3px; border-radius:14px }
-  .gp-switcher-btn { white-space:nowrap; font-size:.75rem; padding:8px 12px; flex-shrink:0 }
   .gp-section { padding:10px 4px }
   .gp-section-header { flex-direction:column; gap:10px; padding:0 8px 12px }
   .gp-section-header h2 { font-size:1rem }
@@ -768,9 +800,120 @@ if ($viewerId) {
   .gp-hero-content h1 { font-size:clamp(20px,5vw,30px) }
   .gp-hero-content p { font-size:.78rem }
   .gp-my-grid { grid-template-columns:1fr }
-  .gp-section-switcher { gap:4px; padding:3px; border-radius:12px }
-  .gp-switcher-btn { font-size:.7rem; padding:8px 10px; border-radius:10px }
+
 }
+
+/* ═══ CLUBS (integrated) ═══ */
+:root { --cl-primary:#7c3aed; --cl-card:#fff; --cl-bg:#f5f7fa; --cl-border:#e2e8f0; --cl-text:#1f2937; --cl-muted:#6b7280; --cl-green:#059669; --cl-red:#dc2626 }
+.dark { --cl-card:#1e293b; --cl-bg:#0f172a; --cl-border:#334155; --cl-text:#f1f5f9; --cl-muted:#94a3b8 }
+.cl-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; margin-bottom:28px }
+.cl-card { background:var(--cl-card); border-radius:20px; padding:20px; border:1px solid var(--cl-border); box-shadow:0 1px 4px rgba(0,0,0,.03); transition:all .25s; cursor:pointer; position:relative; overflow:hidden }
+.cl-card:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,.06); border-color:var(--cl-primary, #7c3aed) }
+.cl-card-top { display:flex; align-items:center; gap:14px; margin-bottom:12px }
+.cl-card-logo { width:48px; height:48px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:1.3rem; font-weight:900; color:#fff; flex-shrink:0 }
+.cl-card-info { flex:1 }
+.cl-card-name { font-size:.95rem; font-weight:800; color:var(--cl-text); margin:0; line-height:1.2 }
+.cl-card-tag { font-size:.7rem; font-weight:700; color:var(--cl-primary, #7c3aed); text-transform:uppercase; letter-spacing:.5px }
+.cl-card-stats { display:flex; gap:12px; margin-top:10px; padding-top:10px; border-top:1px solid var(--cl-border) }
+.cl-card-stat { text-align:center; flex:1 }
+.cl-card-stat-value { font-size:1rem; font-weight:800; color:var(--cl-text) }
+.cl-card-stat-label { font-size:.6rem; font-weight:600; color:var(--cl-muted); text-transform:uppercase; letter-spacing:.3px }
+.cl-card-role { position:absolute; top:12px; right:12px; font-size:.6rem; font-weight:800; text-transform:uppercase; padding:3px 10px; border-radius:999px; background:rgba(124,58,237,.12); color:#7c3aed; letter-spacing:.3px }
+.cl-card-role.owner { background:rgba(245,158,11,.12); color:#d97706 }
+.cl-detail-header { display:flex; align-items:center; gap:20px; padding:24px; border-radius:24px; background:var(--cl-card); border:1px solid var(--cl-border); margin-bottom:16px }
+.cl-detail-logo { width:72px; height:72px; border-radius:18px; display:flex; align-items:center; justify-content:center; font-size:1.8rem; font-weight:900; color:#fff; flex-shrink:0 }
+.cl-detail-info { flex:1 }
+.cl-detail-name { font-size:1.4rem; font-weight:900; color:var(--cl-text); margin:0; line-height:1.1 }
+.cl-detail-tag { font-size:.75rem; font-weight:700; color:var(--cl-primary, #7c3aed) }
+.cl-detail-stats { display:flex; gap:20px; margin-top:10px; flex-wrap:wrap }
+.cl-detail-stat { text-align:center; padding:8px 18px; border-radius:12px; background:var(--cl-bg) }
+.cl-detail-stat-value { font-size:1.1rem; font-weight:800; color:var(--cl-text) }
+.cl-detail-stat-label { font-size:.65rem; font-weight:600; color:var(--cl-muted); text-transform:uppercase }
+.cl-leaderboard { background:var(--cl-card); border-radius:20px; border:1px solid var(--cl-border); overflow:hidden }
+.cl-lb-header { display:grid; grid-template-columns:40px 1fr 80px 80px 60px; gap:8px; padding:12px 16px; font-size:.7rem; font-weight:700; color:var(--cl-muted); text-transform:uppercase; background:var(--cl-bg); border-bottom:1px solid var(--cl-border) }
+.cl-lb-row { display:grid; grid-template-columns:40px 1fr 80px 80px 60px; gap:8px; padding:12px 16px; align-items:center; border-bottom:1px solid var(--cl-border); transition:background .15s; font-size:.82rem; text-decoration:none; color:inherit }
+.cl-lb-row:last-child { border-bottom:none }
+.cl-lb-row:hover { background:var(--cl-bg) }
+.cl-lb-rank { font-weight:800; color:var(--cl-muted); text-align:center }
+.cl-lb-rank.gold { color:#f59e0b } .cl-lb-rank.silver { color:#94a3b8 } .cl-lb-rank.bronze { color:#cd7f32 }
+.cl-lb-club { display:flex; align-items:center; gap:8px; font-weight:700; color:var(--cl-text) }
+.cl-lb-club-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0 }
+.cl-lb-val { font-weight:700; color:var(--cl-text); text-align:center }
+.cl-club-hero { padding:28px 24px; border-radius:24px; background:linear-gradient(135deg,#0f172a,#1e1b4b,#1a0533); margin:0 0 24px; position:relative; overflow:hidden; border:1px solid rgba(139,92,246,.15) }
+.cl-club-hero::before { content:''; position:absolute; top:-120px; right:-80px; width:350px; height:350px; border-radius:50%; background:radial-gradient(circle,rgba(139,92,246,.2),transparent 70%) }
+.cl-club-hero-content { position:relative; z-index:1 }
+.cl-club-hero h2 { font-size:1.7rem; font-weight:900; color:#fff; margin:0 0 4px; letter-spacing:-.03em }
+.cl-club-hero p { font-size:.85rem; color:#94a3b8; margin:0 }
+.cl-empty { text-align:center; padding:40px 20px; color:var(--cl-muted) }
+.cl-empty i { font-size:2.5rem; margin-bottom:12px; opacity:.4 }
+.cl-empty p { font-size:.9rem; margin:0 }
+.cl-members { display:flex; flex-direction:column; gap:8px }
+.cl-member { display:flex; align-items:center; gap:12px; padding:12px 16px; border-radius:14px; background:var(--cl-card); border:1px solid var(--cl-border); transition:all .15s }
+.cl-member:hover { border-color:var(--cl-primary, #7c3aed) }
+.cl-member-avatar { width:40px; height:40px; border-radius:50%; object-fit:cover; background:var(--cl-bg) }
+.cl-member-info { flex:1 }
+.cl-member-name { font-size:.85rem; font-weight:700; color:var(--cl-text) }
+.cl-member-joined { font-size:.7rem; color:var(--cl-muted) }
+.cl-member-role { font-size:.65rem; font-weight:800; padding:3px 10px; border-radius:999px; text-transform:uppercase; letter-spacing:.3px }
+.cl-member-role.owner { background:rgba(245,158,11,.12); color:#d97706 }
+.cl-member-role.manager { background:rgba(59,130,246,.12); color:#2563eb }
+.cl-member-role.player { background:rgba(16,185,129,.12); color:#059669 }
+
+/* ═══ PLAYER MARKET (integrated) ═══ */
+:root { --pm-primary:#7c3aed; --pm-card:#fff; --pm-bg:#f5f7fa; --pm-border:#e2e8f0; --pm-text:#1f2937; --pm-muted:#6b7280; --pm-green:#059669; --pm-red:#dc2626 }
+.dark { --pm-card:#1e293b; --pm-bg:#0f172a; --pm-border:#334155; --pm-text:#f1f5f9; --pm-muted:#94a3b8 }
+.pm-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px }
+.pm-card { background:var(--pm-card); border-radius:18px; padding:18px; border:1px solid var(--pm-border); transition:all .25s; position:relative; overflow:hidden }
+.pm-card:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,.06); border-color:var(--pm-primary, #7c3aed) }
+.pm-card-top { display:flex; align-items:center; gap:12px; margin-bottom:10px }
+.pm-card-avatar { width:44px; height:44px; border-radius:50%; object-fit:cover; border:2px solid var(--pm-border) }
+.pm-card-info { flex:1 }
+.pm-card-name { font-size:.88rem; font-weight:800; color:var(--pm-text); margin:0 }
+.pm-card-status { font-size:.65rem; font-weight:700; padding:2px 8px; border-radius:999px; display:inline-block }
+.pm-card-status.free_agent { background:rgba(148,163,184,.15); color:var(--pm-muted) }
+.pm-card-status.active { background:rgba(16,185,129,.12); color:var(--pm-green) }
+.pm-card-body { margin-bottom:10px }
+.pm-card-row { display:flex; justify-content:space-between; font-size:.75rem; color:var(--pm-muted); padding:3px 0; border-bottom:1px solid var(--pm-border) }
+.pm-card-row:last-child { border-bottom:none }
+.pm-card-row span:last-child { font-weight:700; color:var(--pm-text) }
+.pm-card-actions { display:flex; gap:6px; flex-wrap:wrap }
+.pm-card-badge { position:absolute; top:10px; right:10px; font-size:.55rem; font-weight:800; padding:3px 8px; border-radius:999px; text-transform:uppercase; letter-spacing:.3px }
+.pm-card-badge.auction { background:rgba(245,158,11,.12); color:#d97706 }
+.pm-tabs { display:flex; gap:4px; margin-bottom:20px; background:var(--pm-card); border-radius:14px; padding:4px; border:1px solid var(--pm-border) }
+.pm-tab { flex:1; padding:10px; border-radius:10px; border:none; font-size:.78rem; font-weight:700; cursor:pointer; background:transparent; color:var(--pm-muted); font-family:'Plus Jakarta Sans',sans-serif; transition:all .2s }
+.pm-tab:hover { color:var(--pm-text) }
+.pm-tab.active { background:#7c3aed; color:#fff }
+.pm-empty { text-align:center; padding:40px 20px; color:var(--pm-muted) }
+.pm-empty i { font-size:2.5rem; margin-bottom:12px; opacity:.4 }
+.pm-empty p { font-size:.9rem; margin:0 }
+.pm-hero { padding:28px 24px; border-radius:24px; background:linear-gradient(135deg,#0f172a,#1e1b4b,#1a0533); margin:0 0 24px; position:relative; overflow:hidden; border:1px solid rgba(139,92,246,.15) }
+.pm-hero::before { content:''; position:absolute; top:-120px; right:-80px; width:350px; height:350px; border-radius:50%; background:radial-gradient(circle,rgba(236,72,153,.15),transparent 70%) }
+.pm-hero-content { position:relative; z-index:1 }
+.pm-hero h2 { font-size:1.7rem; font-weight:900; color:#fff; margin:0; letter-spacing:-.03em }
+.pm-hero p { font-size:.85rem; color:#94a3b8; margin:4px 0 0 }
+.pm-detail { background:var(--pm-card); border-radius:24px; padding:24px; border:1px solid var(--pm-border); margin-bottom:24px; box-shadow:0 4px 20px rgba(0,0,0,.04) }
+.pm-detail-head { display:flex; align-items:center; gap:20px; margin-bottom:20px }
+.pm-detail-avatar { width:72px; height:72px; border-radius:50%; object-fit:cover; border:3px solid var(--pm-border) }
+.pm-detail-info { flex:1 }
+.pm-detail-name { font-size:1.3rem; font-weight:900; color:var(--pm-text); margin:0; line-height:1.2 }
+.pm-detail-meta { font-size:.8rem; color:var(--pm-muted); margin-top:2px }
+.pm-detail-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin-bottom:16px }
+.pm-detail-stat { padding:12px; border-radius:12px; background:var(--pm-bg); text-align:center }
+.pm-detail-stat-value { font-size:1.2rem; font-weight:800; color:var(--pm-text) }
+.pm-detail-stat-label { font-size:.65rem; font-weight:600; color:var(--pm-muted); text-transform:uppercase; letter-spacing:.3px }
+.pm-transfer-list { display:flex; flex-direction:column; gap:6px }
+.pm-transfer-item { display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:10px; background:var(--pm-bg); font-size:.78rem; color:var(--pm-text) }
+@media (max-width:768px) {
+    .cl-grid, .pm-grid { grid-template-columns:1fr }
+    .cl-detail-header, .pm-detail-head { flex-direction:column; text-align:center }
+    .cl-lb-header, .cl-lb-row { grid-template-columns:30px 1fr 60px 60px 50px; font-size:.75rem }
+}
+
+/* Ensure footer stays below bottom nav on mobile */
+.dream-footer { position: relative !important; z-index: 1 !important; }
+
+/* Offset for fixed top navbar when scrolling to sections */
+.gp-section { scroll-margin-top: 70px; }
 </style>
 <div class="gp-page" id="tournamentsPage" data-csrf="<?php echo htmlspecialchars($csrfToken); ?>" data-user-id="<?php echo (int)($viewerId ?? 0); ?>" data-role="<?php echo htmlspecialchars($userRole); ?>" data-balance="<?php echo $userBalance; ?>" data-has-profile="<?php echo !empty($_SESSION['nickname']) ? '1' : '0'; ?>">
 
@@ -784,7 +927,7 @@ if ($viewerId) {
             <!-- <div class="gp-hero-actions">
                 <?php if ($viewerId): ?>
                     <a href="#browse" class="gp-btn gp-btn-primary" data-scroll-to="browse"><i class="fas fa-gamepad"></i> Browse tournaments</a>
-                    <a href="#my-stuff" class="gp-btn gp-btn-ghost" data-scroll-to="my-stuff"><i class="fas fa-layer-group"></i> My tournaments</a>
+                    <a href="#dashboard" class="gp-btn gp-btn-ghost" data-scroll-to="dashboard"><i class="fas fa-chart-pie"></i> Dashboard</a>
                 <?php else: ?>
                     <a href="index.php?page=register" class="gp-btn gp-btn-primary" data-page="register"><i class="fas fa-user-plus"></i> Join free</a>
                     <a href="index.php?page=login" class="gp-btn gp-btn-ghost" data-page="login"><i class="fas fa-right-to-bracket"></i> Sign in</a>
@@ -854,23 +997,34 @@ if ($viewerId) {
     </section>
     <?php endif; ?>
 
-    <!-- ═══ SECTION SWITCHER ═══ -->
-    <div class="gp-section-switcher">
-        <a href="#browse" class="gp-switcher-btn active" data-scroll-to="browse">
-            <i class="fas fa-trophy"></i> Tournaments
-        </a>
-        <?php if ($viewerId): ?>
-        <a href="#my-stuff" class="gp-switcher-btn" data-scroll-to="my-stuff">
-            <i class="fas fa-layer-group"></i> My stuff
-        </a>
-        <a href="index.php?page=clubs" class="gp-switcher-btn" data-no-ajax>
-            <i class="fas fa-flag"></i> Clubs
-        </a>
-        <a href="index.php?page=player-market" class="gp-switcher-btn" data-no-ajax>
-            <i class="fas fa-gavel"></i> Market
-        </a>
-        <?php endif; ?>
-    </div>
+    <!-- ═══ MOBILE BOTTOM NAV ═══ -->
+    <nav class="gp-mobile-nav">
+        <div class="gp-mobile-nav-inner">
+            <button type="button" class="gp-mobile-nav-item active" data-scroll-to="browse">
+                <i class="fas fa-trophy"></i> Tournaments
+            </button>
+            <?php if ($viewerId): ?>
+            <button type="button" class="gp-mobile-nav-item" data-scroll-to="dashboard">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </button>
+            <div class="gp-mobile-nav-plus">
+                <button type="button" class="gp-mobile-nav-plus-btn" data-open-modal="<?php echo $userRole === 'agent' ? 'createTournamentModal' : 'becomeAgentModal'; ?>">
+                    <?php if ($userRole === 'agent'): ?>
+                    <i class="fas fa-plus"></i>
+                    <?php else: ?>
+                    <span style="font-size:1.5rem;line-height:1">👑</span>
+                    <?php endif; ?>
+                </button>
+            </div>
+            <button type="button" class="gp-mobile-nav-item" data-scroll-to="clubs">
+                <i class="fas fa-flag"></i> Club
+            </button>
+            <button type="button" class="gp-mobile-nav-item" data-scroll-to="hire">
+                <i class="fas fa-gavel"></i> Hire
+            </button>
+            <?php endif; ?>
+        </div>
+    </nav>
 
     <!-- ═══ TOURNAMENT LIST ═══ -->
     <section id="browse" class="gp-section">
@@ -1028,9 +1182,9 @@ if ($viewerId) {
 
     <!-- ═══ MY STUFF ═══ -->
     <?php if ($viewerId): ?>
-    <section id="my-stuff" class="gp-section">
+    <section id="dashboard" class="gp-section">
         <div class="gp-section-header">
-            <h2><i class="fas fa-layer-group"></i> My stuff</h2>
+            <h2><i class="fas fa-chart-pie"></i> Dashboard</h2>
         </div>
         <div class="gp-my-grid">
             <div class="gp-my-panel">
@@ -1122,6 +1276,227 @@ if ($viewerId) {
             </div>
         </div>
     </section>
+
+    <!-- ═══ CLUBS ═══ -->
+    <section id="clubs" class="gp-section">
+        <div class="cl-club-hero">
+            <div class="cl-club-hero-content">
+                <h2><i class="fas fa-flag"></i> Clubs & Teams</h2>
+                <p>Browse clubs, check standings, and manage your team.</p>
+                <?php if ($viewerId): ?>
+                <div style="margin-top:14px;display:flex;gap:8px">
+                    <button class="gp-btn gp-btn-sm gp-btn-primary" onclick="openClubModal()"><i class="fas fa-plus"></i> Create Club</button>
+                </div>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <?php if ($viewerId && $myClubs): ?>
+        <h2 style="font-size:1rem;font-weight:800;margin:0 0 12px;color:var(--cl-text)"><i class="fas fa-star"></i> My Clubs</h2>
+        <div class="cl-grid">
+            <?php foreach ($myClubs as $c): ?>
+            <div class="cl-card" onclick="window.location.href='?page=tournaments&club_id=<?php echo $c['id']; ?>#clubs'">
+                <span class="cl-card-role <?php echo $c['my_role']; ?>"><?php echo htmlspecialchars($c['my_role']); ?></span>
+                <div class="cl-card-top">
+                    <div class="cl-card-logo" style="background:<?php echo htmlspecialchars($c['colour'] ?? '#7c3aed'); ?>"><?php echo strtoupper(substr($c['tag'], 0, 2)); ?></div>
+                    <div class="cl-card-info">
+                        <div class="cl-card-name"><?php echo htmlspecialchars($c['name']); ?></div>
+                        <div class="cl-card-tag"><?php echo htmlspecialchars($c['tag']); ?></div>
+                    </div>
+                </div>
+                <div class="cl-card-stats">
+                    <div class="cl-card-stat"><div class="cl-card-stat-value"><?php echo (int)$c['member_count']; ?></div><div class="cl-card-stat-label">Members</div></div>
+                    <div class="cl-card-stat"><div class="cl-card-stat-value"><?php echo (int)$c['trophies']; ?></div><div class="cl-card-stat-label">Trophies</div></div>
+                    <div class="cl-card-stat"><div class="cl-card-stat-value">#<?php echo (int)$c['rank'] ?: '--'; ?></div><div class="cl-card-stat-label">Rank</div></div>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+
+        <?php if ($clubDetail): ?>
+        <div class="cl-detail-header">
+            <div class="cl-detail-logo" style="background:<?php echo htmlspecialchars($clubDetail['colour'] ?? '#7c3aed'); ?>"><?php echo strtoupper(substr($clubDetail['tag'], 0, 2)); ?></div>
+            <div class="cl-detail-info">
+                <div class="cl-detail-name"><?php echo htmlspecialchars($clubDetail['name']); ?></div>
+                <div class="cl-detail-tag">#<?php echo htmlspecialchars($clubDetail['tag']); ?> by <?php echo htmlspecialchars($clubDetail['owner_full'] ?: $clubDetail['owner_name']); ?></div>
+                <?php if ($clubDetail['description']): ?><p style="margin:6px 0 0;font-size:.82rem;color:var(--cl-muted)"><?php echo nl2br(htmlspecialchars($clubDetail['description'])); ?></p><?php endif; ?>
+                <div class="cl-detail-stats">
+                    <div class="cl-detail-stat"><div class="cl-detail-stat-value"><?php echo (int)$clubDetail['member_count']; ?></div><div class="cl-detail-stat-label">Members</div></div>
+                    <div class="cl-detail-stat"><div class="cl-detail-stat-value"><?php echo (int)$clubDetail['trophies']; ?></div><div class="cl-detail-stat-label">Trophies</div></div>
+                    <div class="cl-detail-stat"><div class="cl-detail-stat-value"><?php echo (int)$clubDetail['total_points']; ?></div><div class="cl-detail-stat-label">Points</div></div>
+                    <div class="cl-detail-stat"><div class="cl-detail-stat-value">#<?php echo (int)$clubDetail['rank'] ?: '--'; ?></div><div class="cl-detail-stat-label">Rank</div></div>
+                </div>
+            </div>
+            <?php if ($viewerId): $clubIsOwner = $clubDetail['owner_id'] == $viewerId; $clubIsMember = false; foreach ($clubMembers as $m) { if ((int)$m['id'] === $viewerId) { $clubIsMember = true; break; } } ?>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <?php if ($clubIsOwner): ?>
+                <button class="gp-btn gp-btn-sm gp-btn-accent" onclick="openEditClubModal(<?php echo $clubDetail['id']; ?>)"><i class="fas fa-edit"></i> Edit</button>
+                <?php elseif ($clubIsMember): ?>
+                <button class="gp-btn gp-btn-sm gp-btn-danger" onclick="leaveClub(<?php echo $clubDetail['id']; ?>)"><i class="fas fa-sign-out-alt"></i> Leave</button>
+                <?php else: ?>
+                <button class="gp-btn gp-btn-sm gp-btn-primary" onclick="joinClub(<?php echo $clubDetail['id']; ?>)"><i class="fas fa-plus"></i> Join</button>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
+        </div>
+        <div class="cl-members" style="margin-bottom:16px">
+            <?php foreach ($clubMembers as $m): ?>
+            <div class="cl-member">
+                <img src="assets/avatars/<?php echo htmlspecialchars($m['avatar'] ?? 'default.png'); ?>" alt="" class="cl-member-avatar" onerror="this.src='assets/avatars/default.png'">
+                <div class="cl-member-info">
+                    <div class="cl-member-name"><?php echo htmlspecialchars($m['full_name'] ?: $m['username']); ?></div>
+                    <div class="cl-member-joined">Joined <?php echo date('M j, Y', strtotime($m['joined_at'])); ?></div>
+                </div>
+                <span class="cl-member-role <?php echo $m['role']; ?>"><?php echo $m['role']; ?></span>
+            </div>
+            <?php endforeach; if (empty($clubMembers)): ?>
+            <div class="cl-empty"><i class="fas fa-users"></i><p>No members yet.</p></div>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
+
+        <h2 style="font-size:1rem;font-weight:800;margin:0 0 12px;color:var(--cl-text)"><i class="fas fa-trophy"></i> Club Rankings</h2>
+        <div class="cl-leaderboard">
+            <div class="cl-lb-header">
+                <span>#</span><span>Club</span><span>Points</span><span>Trophies</span><span>Members</span>
+            </div>
+            <?php $i=0; foreach ($allClubs as $c): $i++; ?>
+            <a href="?page=tournaments&club_id=<?php echo $c['id']; ?>#clubs" class="cl-lb-row">
+                <div class="cl-lb-rank <?php if ($i===1) echo 'gold'; elseif ($i===2) echo 'silver'; elseif ($i===3) echo 'bronze'; ?>"><?php echo $i; ?></div>
+                <div class="cl-lb-club"><span class="cl-lb-club-dot" style="background:<?php echo htmlspecialchars($c['colour'] ?? '#7c3aed'); ?>"></span><?php echo htmlspecialchars($c['name']); ?></div>
+                <div class="cl-lb-val"><?php echo number_format((int)$c['total_points']); ?></div>
+                <div class="cl-lb-val"><?php echo (int)$c['trophies']; ?></div>
+                <div class="cl-lb-val"><?php echo (int)$c['member_count']; ?></div>
+            </a>
+            <?php endforeach; if (empty($allClubs)): ?>
+            <div class="cl-empty" style="padding:30px"><i class="fas fa-flag"></i><p>No clubs yet.</p></div>
+            <?php endif; ?>
+        </div>
+    </section>
+
+    <!-- ═══ PLAYER MARKET / HIRE ═══ -->
+    <section id="hire" class="gp-section">
+        <div class="pm-hero">
+            <div class="pm-hero-content">
+                <h2><i class="fas fa-gavel"></i> Player Market</h2>
+                <p>Buy, sell, and bid on players. Build your dream squad.</p>
+            </div>
+        </div>
+
+        <?php if ($playerDetail): ?>
+        <div class="pm-detail">
+            <a href="?page=tournaments#hire" class="gp-btn gp-btn-sm gp-btn-ghost" style="margin-bottom:12px">&larr; Back to Market</a>
+            <div class="pm-detail-head">
+                <img src="assets/avatars/<?php echo htmlspecialchars($playerDetail['avatar'] ?? 'default.png'); ?>" alt="" class="pm-detail-avatar" onerror="this.src='assets/avatars/default.png'">
+                <div class="pm-detail-info">
+                    <div class="pm-detail-name"><?php echo htmlspecialchars($playerDetail['full_name'] ?: $playerDetail['username']); ?></div>
+                    <div class="pm-detail-meta">
+                        <?php if ($playerDetail['nickname']): ?>@<?php echo htmlspecialchars($playerDetail['nickname']); ?> · <?php endif; ?>
+                        Status: <?php echo $playerDetail['status']; ?>
+                        <?php if ($playerDetail['club_name']): ?> · <span style="color:<?php echo htmlspecialchars($playerDetail['club_colour'] ?? '#7c3aed'); ?>;font-weight:700"><?php echo htmlspecialchars($playerDetail['club_name']); ?></span><?php endif; ?>
+                    </div>
+                </div>
+            </div>
+            <?php if ($playerDetail['stats']): $s = $playerDetail['stats']; ?>
+            <div class="pm-detail-stats">
+                <div class="pm-detail-stat"><div class="pm-detail-stat-value"><?php echo (int)$s['total_matches']; ?></div><div class="pm-detail-stat-label">Matches</div></div>
+                <div class="pm-detail-stat"><div class="pm-detail-stat-value"><?php echo (int)$s['total_goals']; ?></div><div class="pm-detail-stat-label">Goals</div></div>
+                <div class="pm-detail-stat"><div class="pm-detail-stat-value"><?php echo (int)$s['total_assists']; ?></div><div class="pm-detail-stat-label">Assists</div></div>
+                <div class="pm-detail-stat"><div class="pm-detail-stat-value"><?php echo (int)$s['total_wins']; ?></div><div class="pm-detail-stat-label">Wins</div></div>
+                <div class="pm-detail-stat"><div class="pm-detail-stat-value"><?php echo (int)$s['total_kills']; ?></div><div class="pm-detail-stat-label">Kills</div></div>
+            </div>
+            <?php endif; ?>
+            <?php if ($viewerId && $playerDetail['status'] === 'free_agent' && $playerDetail['owner_id'] != $viewerId): ?>
+            <button class="gp-btn gp-btn-sm gp-btn-accent" onclick="openBuyModal(<?php echo $playerDetail['id']; ?>, '<?php echo htmlspecialchars($playerDetail['full_name'] ?: $playerDetail['username']); ?>', <?php echo $playerDetail['market_value'] ?: 0; ?>)"><i class="fas fa-shopping-cart"></i> Buy (৳<?php echo number_format($playerDetail['market_value'] ?: 0); ?>)</button>
+            <?php endif; ?>
+            <?php if (!empty($playerDetail['transfers'])): ?>
+            <h4 style="font-size:.85rem;font-weight:800;margin:20px 0 10px;color:var(--pm-text)"><i class="fas fa-exchange-alt"></i> Transfer History</h4>
+            <div class="pm-transfer-list">
+                <?php foreach ($playerDetail['transfers'] as $t): ?>
+                <div class="pm-transfer-item">
+                    <i class="fas fa-circle" style="color:<?php echo $t['type']==='auction'?'#f59e0b':($t['type']==='direct_sale'?'#10b981':'#dc2626'); ?>"></i>
+                    <span style="font-weight:700;text-transform:uppercase;font-size:.7rem"><?php echo $t['type']; ?></span>
+                    <?php if ($t['amount'] > 0): ?><span style="font-weight:700;color:var(--pm-green)">৳<?php echo number_format($t['amount']); ?></span><?php endif; ?>
+                    <span style="margin-left:auto;font-size:.7rem;color:var(--pm-muted)"><?php echo date('M j, Y', strtotime($t['created_at'])); ?></span>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
+
+        <div class="pm-tabs" id="pmTabs">
+            <button class="pm-tab active" data-tab="free"><i class="fas fa-users"></i> Free Agents (<?php echo count($players); ?>)</button>
+            <button class="pm-tab" data-tab="auctions"><i class="fas fa-gavel"></i> Live Auctions (<?php echo count($auctions); ?>)</button>
+        </div>
+
+        <div class="pm-tab-content active" id="tabFree">
+            <?php if (empty($players)): ?>
+            <div class="pm-empty"><i class="fas fa-users-slash"></i><p>No free agents available.</p></div>
+            <?php else: ?>
+            <div class="pm-grid">
+                <?php foreach ($players as $p): ?>
+                <div class="pm-card">
+                    <div class="pm-card-top">
+                        <img src="assets/avatars/<?php echo htmlspecialchars($p['avatar'] ?? 'default.png'); ?>" alt="" class="pm-card-avatar" onerror="this.src='assets/avatars/default.png'">
+                        <div class="pm-card-info">
+                            <div class="pm-card-name"><?php echo htmlspecialchars($p['full_name'] ?: $p['username']); ?></div>
+                            <span class="pm-card-status <?php echo $p['status']; ?>"><?php echo str_replace('_', ' ', $p['status']); ?></span>
+                        </div>
+                    </div>
+                    <div class="pm-card-body">
+                        <div class="pm-card-row"><span>Market Value</span><span>৳<?php echo number_format($p['market_value'] ?: 0); ?></span></div>
+                        <?php if ($p['rating'] > 0): ?>
+                        <div class="pm-card-row"><span>Rating</span><span><?php echo $p['rating']; ?> / 5.0</span></div>
+                        <?php endif; ?>
+                    </div>
+                    <div class="pm-card-actions">
+                        <a href="?page=tournaments&user_id=<?php echo $p['user_id']; ?>#hire" class="gp-btn gp-btn-sm gp-btn-ghost"><i class="fas fa-eye"></i> Details</a>
+                        <?php if ($viewerId && (int)$p['owner_id'] === $viewerId): ?>
+                        <button class="gp-btn gp-btn-sm gp-btn-outline" onclick="openAuctionModal(<?php echo $p['id']; ?>)"><i class="fas fa-gavel"></i> Auction</button>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
+        </div>
+
+        <div class="pm-tab-content" id="tabAuctions" style="display:none">
+            <?php if (empty($auctions)): ?>
+            <div class="pm-empty"><i class="fas fa-hourglass"></i><p>No active auctions right now.</p></div>
+            <?php else: ?>
+            <div class="pm-grid">
+                <?php foreach ($auctions as $a): ?>
+                <?php $timeLeft = max(0, strtotime($a['end_time']) - time()); $hours = floor($timeLeft / 3600); $mins = floor(($timeLeft % 3600) / 60); ?>
+                <div class="pm-card">
+                    <span class="pm-card-badge auction"><i class="fas fa-gavel"></i> LIVE</span>
+                    <div class="pm-card-top">
+                        <img src="assets/avatars/<?php echo htmlspecialchars($a['player_avatar'] ?? 'default.png'); ?>" alt="" class="pm-card-avatar" onerror="this.src='assets/avatars/default.png'">
+                        <div class="pm-card-info">
+                            <div class="pm-card-name"><?php echo htmlspecialchars($a['player_full'] ?: $a['player_name']); ?></div>
+                            <span style="font-size:.7rem;color:var(--pm-muted)">by <?php echo htmlspecialchars($a['seller_name']); ?></span>
+                        </div>
+                    </div>
+                    <div class="pm-card-body">
+                        <div class="pm-card-row"><span>Current Bid</span><span style="color:var(--pm-green);font-size:.9rem">৳<?php echo number_format($a['highest_bid'] ?: $a['base_price']); ?></span></div>
+                        <div class="pm-card-row"><span>Base Price</span><span>৳<?php echo number_format($a['base_price']); ?></span></div>
+                        <div class="pm-card-row"><span>Total Bids</span><span><?php echo (int)$a['total_bids']; ?></span></div>
+                        <div class="pm-card-row"><span>Time Left</span><span style="font-weight:800;color:<?php echo $timeLeft < 3600 ? '#dc2626' : 'var(--pm-text)'; ?>"><?php echo $hours; ?>h <?php echo $mins; ?>m</span></div>
+                    </div>
+                    <div class="pm-card-actions">
+                        <a href="?page=tournaments&user_id=<?php echo $a['player_id']; ?>#hire" class="gp-btn gp-btn-sm gp-btn-ghost"><i class="fas fa-eye"></i> Details</a>
+                        <?php if ($viewerId && (int)$a['seller_id'] !== $viewerId): ?>
+                        <button class="gp-btn gp-btn-sm gp-btn-primary" onclick="openBidModal(<?php echo $a['id']; ?>, <?php echo $a['highest_bid'] ?: $a['base_price']; ?>, <?php echo $a['min_increment'] ?: 50; ?>)"><i class="fas fa-gavel"></i> Bid</button>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
+        </div>
+    </section>
 </div>
 
 
@@ -1167,7 +1542,7 @@ function loadLeaderboard() {
                 html += '<div class="gp-lb-row" onclick="window.location.href=\'index.php?page=player-market&user_id=' + p.user_id + '\'">';
                 html += '<div class="gp-lb-rank ' + rankClass + '">' + (i+1) + '</div>';
                 html += '<div style="display:flex;align-items:center;gap:8px;font-weight:600;color:var(--gp-text)">';
-                if (p.avatar) html += '<img src="assets/images/avatars/' + p.avatar + '" style="width:28px;height:28px;border-radius:50%;object-fit:cover" onerror="this.style.display=\'none\'">';
+                if (p.avatar) html += '<img src="assets/avatars/' + p.avatar + '" style="width:28px;height:28px;border-radius:50%;object-fit:cover" onerror="this.style.display=\'none\'">';
                 html += (p.nickname || p.full_name || p.username) + '</div>';
                 html += '<div class="gp-lb-cell">' + (p.total_points || 0) + '</div>';
                 html += '<div class="gp-lb-prize">৳' + (parseFloat(p.total_prize) || 0).toLocaleString() + '</div>';
@@ -1929,6 +2304,140 @@ var filter = document.getElementById('lbFilter');
     </div>
 </div>
 
+<!-- ═══ CREATE CLUB MODAL ═══ -->
+<div class="gp-modal hidden" id="createClubModal">
+    <div class="gp-modal-panel sm">
+        <div class="gp-modal-head">
+            <h3><i class="fas fa-flag" style="color:#7c3aed"></i> Create New Club</h3>
+            <button class="gp-modal-close" data-close-modal><i class="fas fa-times"></i></button>
+        </div>
+        <div class="gp-modal-body">
+            <form id="createClubForm">
+                <input type="hidden" name="csrf_token" value="<?php echo $csrfToken; ?>">
+                <input type="hidden" name="action" value="create_club">
+                <div class="gp-form-group">
+                    <label>Club Name</label>
+                    <input class="gp-input" name="name" placeholder="e.g. Alpha Esports" required>
+                </div>
+                <div class="gp-form-grid two">
+                    <div class="gp-form-group">
+                        <label>Tag (2-10 chars)</label>
+                        <input class="gp-input" name="tag" placeholder="e.g. ALPHA" maxlength="10" required>
+                    </div>
+                    <div class="gp-form-group">
+                        <label>Region</label>
+                        <input class="gp-input" name="region" placeholder="e.g. Bangladesh">
+                    </div>
+                </div>
+                <div class="gp-form-group">
+                    <label>Club Colour</label>
+                    <div class="gp-color-picker" id="clubColorPicker">
+                        <?php $colors = ['#7c3aed','#2563eb','#059669','#d97706','#dc2626','#ec4899','#06b6d4','#8b5cf6','#10b981']; foreach ($colors as $cl): ?>
+                        <button type="button" class="gp-color-opt<?php if ($cl==='#7c3aed') echo ' active'; ?>" style="background:<?php echo $cl; ?>" data-color="<?php echo $cl; ?>"></button>
+                        <?php endforeach; ?>
+                    </div>
+                    <input type="hidden" name="colour" id="clubColourInput" value="#7c3aed">
+                </div>
+                <div class="gp-form-group">
+                    <label>Description (optional)</label>
+                    <textarea class="gp-input" name="description" rows="2" placeholder="Tell us about your club..."></textarea>
+                </div>
+                <div class="gp-modal-actions">
+                    <button type="button" class="gp-btn gp-btn-ghost" data-close-modal>Cancel</button>
+                    <button type="submit" class="gp-btn gp-btn-accent"><i class="fas fa-check"></i> Create Club</button>
+                </div>
+                <div class="gp-feedback hidden"></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ BUY PLAYER MODAL ═══ -->
+<div class="gp-modal hidden" id="buyModal">
+    <div class="gp-modal-panel sm">
+        <div class="gp-modal-head">
+            <h3><i class="fas fa-shopping-cart" style="color:#10b981"></i> Confirm Purchase</h3>
+            <button class="gp-modal-close" data-close-modal><i class="fas fa-times"></i></button>
+        </div>
+        <div class="gp-modal-body">
+            <form id="buyForm">
+                <input type="hidden" name="csrf_token" value="<?php echo $csrfToken; ?>">
+                <input type="hidden" name="action" value="buy_player">
+                <input type="hidden" name="player_id" id="buyPlayerId">
+                <input type="hidden" name="price" id="buyPrice">
+                <p id="buyInfo" style="font-size:.9rem;color:var(--gp-muted);margin:0 0 16px"></p>
+                <div class="gp-modal-actions">
+                    <button type="button" class="gp-btn gp-btn-ghost" data-close-modal>Cancel</button>
+                    <button type="submit" class="gp-btn gp-btn-accent"><i class="fas fa-shopping-cart"></i> Confirm Purchase</button>
+                </div>
+                <div class="gp-feedback hidden"></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ BID MODAL ═══ -->
+<div class="gp-modal hidden" id="bidModal">
+    <div class="gp-modal-panel sm">
+        <div class="gp-modal-head">
+            <h3><i class="fas fa-gavel" style="color:#f59e0b"></i> Place a Bid</h3>
+            <button class="gp-modal-close" data-close-modal><i class="fas fa-times"></i></button>
+        </div>
+        <div class="gp-modal-body">
+            <form id="bidForm">
+                <input type="hidden" name="csrf_token" value="<?php echo $csrfToken; ?>">
+                <input type="hidden" name="action" value="place_bid">
+                <input type="hidden" name="auction_id" id="bidAuctionId">
+                <div class="gp-form-group">
+                    <label>Your Bid Amount</label>
+                    <input class="gp-input" type="number" name="amount" id="bidAmount" min="0" step="50" required>
+                    <span id="bidInfo" style="font-size:.75rem;color:var(--gp-muted);margin-top:4px"></span>
+                </div>
+                <div class="gp-modal-actions">
+                    <button type="button" class="gp-btn gp-btn-ghost" data-close-modal>Cancel</button>
+                    <button type="submit" class="gp-btn gp-btn-accent"><i class="fas fa-gavel"></i> Place Bid</button>
+                </div>
+                <div class="gp-feedback hidden"></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ AUCTION MODAL ═══ -->
+<div class="gp-modal hidden" id="auctionModal">
+    <div class="gp-modal-panel sm">
+        <div class="gp-modal-head">
+            <h3><i class="fas fa-gavel" style="color:#f59e0b"></i> List Player for Auction</h3>
+            <button class="gp-modal-close" data-close-modal><i class="fas fa-times"></i></button>
+        </div>
+        <div class="gp-modal-body">
+            <form id="auctionForm">
+                <input type="hidden" name="csrf_token" value="<?php echo $csrfToken; ?>">
+                <input type="hidden" name="action" value="list_player_auction">
+                <input type="hidden" name="player_id" id="auctionPlayerId">
+                <div class="gp-form-group">
+                    <label>Base Price (৳)</label>
+                    <input class="gp-input" type="number" name="base_price" placeholder="e.g. 500" min="1" required>
+                </div>
+                <div class="gp-form-group">
+                    <label>Duration (hours)</label>
+                    <select class="gp-input" name="duration_hours">
+                        <option value="6">6 hours</option>
+                        <option value="12">12 hours</option>
+                        <option value="24" selected>24 hours</option>
+                        <option value="48">48 hours</option>
+                    </select>
+                </div>
+                <div class="gp-modal-actions">
+                    <button type="button" class="gp-btn gp-btn-ghost" data-close-modal>Cancel</button>
+                    <button type="submit" class="gp-btn gp-btn-accent"><i class="fas fa-check"></i> List for Auction</button>
+                </div>
+                <div class="gp-feedback hidden"></div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
 (function() {
 
@@ -2033,6 +2542,63 @@ var filter = document.getElementById('lbFilter');
         });
     });
 
+    // Nav active state is set manually by switchToSection on tab click
+
+    // Tab-based section switching — only show the active nav section
+    var sectionMap = {
+        'browse': ['browse', 'leaderboard'],
+        'dashboard': ['dashboard'],
+        'clubs': ['clubs'],
+        'hire': ['hire']
+    };
+
+    function switchToSection(id) {
+        var ids = sectionMap[id] || [id];
+        document.querySelectorAll('.gp-section').forEach(function(s) {
+            s.style.display = ids.indexOf(s.id) !== -1 ? '' : 'none';
+        });
+        // Update nav active state
+        document.querySelectorAll('.gp-mobile-nav-item[data-scroll-to]').forEach(function(n) {
+            n.classList.toggle('active', n.getAttribute('data-scroll-to') === id);
+        });
+        // Scroll to section — scroll-margin-top CSS handles the navbar offset
+        var section = document.getElementById(id);
+        if (section) {
+            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    // Bottom nav items: switch section on click
+    document.querySelectorAll('.gp-mobile-nav-item[data-scroll-to]').forEach(function(item) {
+        item.addEventListener('click', function() {
+            var targetId = this.getAttribute('data-scroll-to');
+            switchToSection(targetId);
+        });
+    });
+
+    // Hero buttons with data-scroll-to
+    document.querySelectorAll('[data-scroll-to]').forEach(function(item) {
+        if (!item.closest('.gp-mobile-nav')) {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                switchToSection(this.getAttribute('data-scroll-to'));
+            });
+        }
+    });
+
+    // If hash on load, switch to that section; else show tournaments by default
+    // Delay to let page render first
+    setTimeout(function() {
+        if (window.location.hash) {
+            var hashId = window.location.hash.slice(1);
+            if (sectionMap[hashId]) {
+                switchToSection(hashId);
+            }
+        } else {
+            switchToSection('browse');
+        }
+    }, 50);
+
     safe('Countdowns', function() {
         var els = document.querySelectorAll('.gp-countdown'); if (!els.length) return;
         var tick = function(el) {
@@ -2063,6 +2629,179 @@ var filter = document.getElementById('lbFilter');
         var baMerchantBox = document.getElementById('baMerchantBox');
 
         window.baPmData = <?php echo json_encode($pmData); ?>;
+
+    // ═══ CLUB FUNCTIONS ═══
+    window.openClubModal = function() {
+        var overlay = document.getElementById('gpOverlay');
+        if (overlay) overlay.classList.remove('hidden');
+        document.getElementById('createClubModal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    };
+
+    document.getElementById('clubColorPicker') && document.getElementById('clubColorPicker').addEventListener('click', function(e) {
+        var opt = e.target.closest('.gp-color-opt');
+        if (!opt) return;
+        this.querySelectorAll('.gp-color-opt').forEach(function(o) { o.classList.remove('active'); });
+        opt.classList.add('active');
+        document.getElementById('clubColourInput').value = opt.getAttribute('data-color');
+    });
+
+    document.getElementById('createClubForm') && document.getElementById('createClubForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        var btn = this.querySelector('button[type="submit"]');
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+        fetch('handlers/tournament_handler.php', { method:'POST', body:new URLSearchParams(new FormData(this)) })
+        .then(function(r) { return r.json(); }).then(function(res) {
+            btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Create Club';
+            if (res.success) { closeModal('createClubModal'); toast('Club created!','success'); setTimeout(function() { location.reload(); }, 800); }
+            else toast(res.message || 'Error','error');
+        }).catch(function() { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Create Club'; toast('Server error','error'); });
+    });
+
+    window.joinClub = function(id) {
+        var data = new URLSearchParams({ action:'join_club', club_id:id, csrf_token:csrfToken });
+        fetch('handlers/tournament_handler.php', { method:'POST', body:data })
+        .then(function(r) { return r.json(); }).then(function(res) {
+            if (res.success) { toast('Joined club!','success'); setTimeout(function() { location.reload(); }, 600); }
+            else toast(res.message || 'Error','error');
+        });
+    };
+
+    window.leaveClub = function(id) {
+        if (!confirm('Leave this club?')) return;
+        var data = new URLSearchParams({ action:'leave_club', club_id:id, csrf_token:csrfToken });
+        fetch('handlers/tournament_handler.php', { method:'POST', body:data })
+        .then(function(r) { return r.json(); }).then(function(res) {
+            if (res.success) { toast('Left club.','success'); setTimeout(function() { location.reload(); }, 600); }
+            else toast(res.message || 'Error','error');
+        });
+    };
+
+    window.removeMember = function(btn, clubId, userId) {
+        if (!confirm('Remove this member?')) return;
+        var data = new URLSearchParams({ action:'fire_player', club_id:clubId, player_user_id:userId, csrf_token:csrfToken });
+        fetch('handlers/tournament_handler.php', { method:'POST', body:data })
+        .then(function(r) { return r.json(); }).then(function(res) {
+            if (res.success) { btn.closest('.cl-member').remove(); toast('Member removed.','success'); }
+            else toast(res.message || 'Error','error');
+        });
+    };
+
+    // ═══ PLAYER MARKET FUNCTIONS ═══
+    window.openBuyModal = function(playerId, name, price) {
+        document.getElementById('buyPlayerId').value = playerId;
+        document.getElementById('buyPrice').value = price;
+        document.getElementById('buyInfo').textContent = 'Buy ' + name + ' for ৳' + price.toLocaleString() + '?';
+        document.getElementById('buyModal').classList.remove('hidden');
+        var overlay = document.getElementById('gpOverlay');
+        if (overlay) overlay.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    };
+
+    document.getElementById('buyForm') && document.getElementById('buyForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        var btn = this.querySelector('button[type="submit"]');
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        fetch('handlers/tournament_handler.php', { method:'POST', body:new URLSearchParams(new FormData(this)) })
+        .then(function(r) { return r.json(); }).then(function(res) {
+            btn.disabled = false; btn.innerHTML = '<i class="fas fa-shopping-cart"></i> Confirm Purchase';
+            if (res.success) { closeModal('buyModal'); toast('Player purchased!','success'); setTimeout(function() { location.reload(); }, 800); }
+            else toast(res.message || 'Error','error');
+        }).catch(function() { btn.disabled = false; btn.innerHTML = '<i class="fas fa-shopping-cart"></i> Confirm Purchase'; toast('Server error','error'); });
+    });
+
+    window.openBidModal = function(auctionId, currentPrice, minIncrement) {
+        document.getElementById('bidAuctionId').value = auctionId;
+        var minBid = Math.ceil((currentPrice + minIncrement) / 50) * 50;
+        document.getElementById('bidAmount').value = minBid;
+        document.getElementById('bidAmount').min = minBid;
+        document.getElementById('bidInfo').textContent = 'Min bid: ৳' + minBid.toLocaleString() + ' (current: ৳' + currentPrice.toLocaleString() + ')';
+        document.getElementById('bidModal').classList.remove('hidden');
+        var overlay = document.getElementById('gpOverlay');
+        if (overlay) overlay.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    };
+
+    document.getElementById('bidForm') && document.getElementById('bidForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        var btn = this.querySelector('button[type="submit"]');
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Placing...';
+        fetch('handlers/tournament_handler.php', { method:'POST', body:new URLSearchParams(new FormData(this)) })
+        .then(function(r) { return r.json(); }).then(function(res) {
+            btn.disabled = false; btn.innerHTML = '<i class="fas fa-gavel"></i> Place Bid';
+            if (res.success) { closeModal('bidModal'); toast('Bid placed!','success'); setTimeout(function() { location.reload(); }, 800); }
+            else toast(res.message || 'Error','error');
+        }).catch(function() { btn.disabled = false; btn.innerHTML = '<i class="fas fa-gavel"></i> Place Bid'; toast('Server error','error'); });
+    });
+
+    window.openAuctionModal = function(playerId) {
+        document.getElementById('auctionPlayerId').value = playerId;
+        document.getElementById('auctionModal').classList.remove('hidden');
+        var overlay = document.getElementById('gpOverlay');
+        if (overlay) overlay.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    };
+
+    document.getElementById('auctionForm') && document.getElementById('auctionForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        var btn = this.querySelector('button[type="submit"]');
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Listing...';
+        fetch('handlers/tournament_handler.php', { method:'POST', body:new URLSearchParams(new FormData(this)) })
+        .then(function(r) { return r.json(); }).then(function(res) {
+            btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> List for Auction';
+            if (res.success) { closeModal('auctionModal'); toast('Player listed!','success'); setTimeout(function() { location.reload(); }, 800); }
+            else toast(res.message || 'Error','error');
+        }).catch(function() { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> List for Auction'; toast('Server error','error'); });
+    });
+
+    window.releasePlayer = function(playerId) {
+        if (!confirm('Release this player? This cannot be undone.')) return;
+        var data = new URLSearchParams({ action:'release_player', player_id:playerId, csrf_token:csrfToken });
+        fetch('handlers/tournament_handler.php', { method:'POST', body:data })
+        .then(function(r) { return r.json(); }).then(function(res) {
+            if (res.success) { toast('Player released.','success'); setTimeout(function() { location.reload(); }, 600); }
+            else toast(res.message || 'Error','error');
+        });
+    };
+
+    window.hirePlayer = function(playerId, clubId) {
+        if (!confirm('Hire this player to your club?')) return;
+        var data = new URLSearchParams({ action:'hire_player', player_id:playerId, club_id:clubId, csrf_token:csrfToken });
+        fetch('handlers/tournament_handler.php', { method:'POST', body:data })
+        .then(function(r) { return r.json(); }).then(function(res) {
+            if (res.success) { toast('Player hired!','success'); setTimeout(function() { location.reload(); }, 600); }
+            else toast(res.message || 'Error','error');
+        });
+    };
+
+    // PM Tabs
+    var pmTabs = document.getElementById('pmTabs');
+    if (pmTabs) {
+        pmTabs.querySelectorAll('.pm-tab').forEach(function(tab) {
+            tab.addEventListener('click', function() {
+                pmTabs.querySelectorAll('.pm-tab').forEach(function(t) { t.classList.remove('active'); });
+                document.querySelectorAll('.pm-tab-content').forEach(function(c) { c.style.display = 'none'; });
+                this.classList.add('active');
+                var target = document.getElementById('tab' + this.dataset.tab.charAt(0).toUpperCase() + this.dataset.tab.slice(1));
+                if (target) target.style.display = 'block';
+            });
+        });
+    }
+
+    // Helper: close modal using existing gp-overlay pattern
+    function closeModal(id) {
+        document.getElementById(id).classList.add('hidden');
+        var overlay = document.getElementById('gpOverlay');
+        if (overlay) overlay.classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+    window.closeModal = closeModal;
+
+    // Move bottom nav to end of body so it's never trapped in a stacking context
+    var gpNav = document.querySelector('.gp-mobile-nav');
+    if (gpNav) {
+        document.body.appendChild(gpNav);
+    }
 
     })();
 </script>
