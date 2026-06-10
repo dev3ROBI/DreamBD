@@ -1118,7 +1118,7 @@ class DreamBDApp {
         const inits = [
             'initGPParticles', 'initGPCards', 'initGPCountdowns', 'initGPTabs',
             'initGPSearch', 'initGPModals', 'initGPForms', 'initGPUnregister',
-            'initGPViewParticipants', 'initGPTeamManage', 'initGPHistory',
+            'initGPViewParticipants', 'initGPTeamManage', 'initGPTeamDelete', 'initGPHistory',
             'initGPIcons', 'initGPColors', 'initGPScroll'
         ];
         inits.forEach(name => {
@@ -1945,6 +1945,60 @@ class DreamBDApp {
                     list.innerHTML = '<div class="gp-loading" style="padding:3rem"><i class="fas fa-users text-2xl mb-2 block opacity-40"></i><p>No participants yet.</p></div>';
                 }
             });
+        });
+    }
+
+    initGPTeamDelete() {
+        document.querySelectorAll('.gp-delete-team').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const tid = btn.getAttribute('data-team-id');
+                const tname = btn.getAttribute('data-team-name');
+                const confirmed = await this._gpConfirmDeleteTeam(tname);
+                if (!confirmed) return;
+                const csrf = document.getElementById('tournamentsPage')?.getAttribute('data-csrf') || '';
+                btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                const result = await this._api({ action: 'delete_team', team_id: tid, csrf_token: csrf });
+                if (result.success) { this._toast(result.message); setTimeout(() => window.location.reload(), 800); }
+                else { this._toast(result.message, 'error'); btn.disabled = false; btn.innerHTML = '<i class="fas fa-trash-can"></i>'; }
+            });
+        });
+    }
+
+    _gpConfirmDeleteTeam(teamName) {
+        return new Promise(resolve => {
+            const ov = document.createElement('div');
+            ov.style.cssText = 'position:fixed;inset:0;background:var(--bg-overlay,rgba(0,0,0,.5));z-index:99998;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center';
+            document.body.appendChild(ov);
+            document.body.style.overflow = 'hidden';
+
+            const p = document.createElement('div');
+            p.style.cssText = 'background:var(--bg-card,#fff);border-radius:20px;padding:24px;max-width:400px;width:90%;box-shadow:var(--shadow-2xl,0 25px 50px -12px rgba(0,0,0,.25));opacity:0;transform:translateY(30px) scale(.97);transition:opacity .35s cubic-bezier(.34,1.56,.64,1),transform .35s cubic-bezier(.34,1.56,.64,1)';
+            const safeName = this.escHtml(teamName);
+            p.innerHTML = '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px"><i class="fas fa-exclamation-triangle" style="color:#dc2626;font-size:1.2rem"></i><h3 style="margin:0;font-size:1rem;font-weight:700;color:var(--text-primary,#0f172a)">Delete <span style="color:#dc2626">' + safeName + '</span>?</h3></div>'
+                + '<div style="font-size:.82rem;color:var(--text-muted,#64748b);line-height:1.65;margin-bottom:2px">This action <strong>cannot</strong> be undone:</div>'
+                + '<ul style="font-size:.78rem;color:var(--text-secondary,#475569);line-height:1.85;margin:8px 0 0;padding-left:16px;list-style:none">'
+                + '<li style="position:relative;padding-left:18px;margin-bottom:4px"><span style="position:absolute;left:0;color:#ef4444">\u2716</span> All team members will be removed</li>'
+                + '<li style="position:relative;padding-left:18px;margin-bottom:4px"><span style="position:absolute;left:0;color:#ef4444">\u2716</span> Tournament registrations will be cancelled</li>'
+                + '<li style="position:relative;padding-left:18px"><span style="position:absolute;left:0;color:#ef4444">\u2716</span> Match history will be cleared</li>'
+                + '</ul>'
+                + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--border,#e2e8f0)">'
+                + '<button class="gp-btn gp-btn-ghost" id="_gpdcCancel" style="min-width:90px;justify-content:center">Cancel</button>'
+                + '<button class="gp-btn" id="_gpdcOk" style="min-width:90px;justify-content:center;background:#dc2626;color:#fff;border:0"><i class="fas fa-trash-can"></i> Delete</button>'
+                + '</div>';
+            ov.appendChild(p);
+
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    p.style.opacity = '1';
+                    p.style.transform = 'translateY(0) scale(1)';
+                });
+            });
+
+            const cleanup = () => { ov.remove(); document.body.style.overflow = ''; };
+            document.getElementById('_gpdcOk').onclick = () => { cleanup(); resolve(true); };
+            const nope = () => { cleanup(); resolve(false); };
+            document.getElementById('_gpdcCancel').onclick = nope;
+            ov.addEventListener('click', e => { if (e.target === ov) nope(); });
         });
     }
 

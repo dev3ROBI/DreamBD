@@ -198,6 +198,14 @@ try {
             $response = array_merge($response, $result);
             break;
 
+        case 'delete_team':
+            if (!$userId) { $response['message'] = 'Please log in.'; break; }
+            $teamId = (int)($req['team_id'] ?? 0);
+            if (!$teamId) { $response['message'] = 'Invalid team.'; break; }
+            $result = deleteTeam($db, $teamId, $userId);
+            $response = array_merge($response, $result);
+            break;
+
         // ─── TOURNAMENT PARTICIPATION ───
         case 'register':
             if (!$userId) { $response['message'] = 'Please log in.'; break; }

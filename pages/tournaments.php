@@ -140,20 +140,24 @@ if ($viewerId) {
 .gp-mobile-nav { position:fixed; bottom:0; left:0; right:0; z-index:9999; display:none; padding:0 0 env(safe-area-inset-bottom,0); background:linear-gradient(180deg,var(--gp-bg) 0%,var(--gp-card) 100%); border-top:1px solid var(--gp-border); box-shadow:0 -8px 32px rgba(0,0,0,.06) }
 .dark .gp-mobile-nav { box-shadow:0 -8px 32px rgba(0,0,0,.25) }
 .gp-mobile-nav-inner { display:flex; justify-content:space-around; align-items:flex-start; max-width:540px; margin:0 auto; padding-top:4px }
-.gp-mobile-nav-item { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:2px; padding:6px 0 8px; border:0; background:none; cursor:pointer; color:var(--gp-muted); font-size:.5rem; font-weight:600; transition:all .25s cubic-bezier(.4,0,.2,1); text-decoration:none; font-family:'Plus Jakarta Sans',sans-serif; letter-spacing:.2px; position:relative; -webkit-tap-highlight-color:transparent; user-select:none; flex:1; max-width:64px; min-height:52px }
-.gp-mobile-nav-item i { font-size:1.15rem; transition:all .25s cubic-bezier(.4,0,.2,1); margin-bottom:0 }
-.gp-mobile-nav-item .gp-nav-indicator { position:absolute; top:0; left:50%; transform:translateX(-50%) scaleX(0); width:18px; height:3px; border-radius:0 0 4px 4px; background:var(--gp-accent); transition:transform .25s cubic-bezier(.4,0,.2,1) }
+.gp-mobile-nav-item { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:2px; padding:6px 0 8px; border:0; background:none; cursor:pointer; color:var(--gp-muted); font-size:.5rem; font-weight:600; transition:color .3s cubic-bezier(.4,0,.2,1); text-decoration:none; font-family:'Plus Jakarta Sans',sans-serif; letter-spacing:.2px; position:relative; -webkit-tap-highlight-color:transparent; user-select:none; flex:1; max-width:64px; min-height:52px }
+.gp-mobile-nav-item i { font-size:1.15rem; transition:transform .4s cubic-bezier(.34,1.56,.64,1),color .3s; margin-bottom:0 }
+.gp-mobile-nav-item .gp-nav-indicator { position:absolute; bottom:4px; left:50%; transform:translateX(-50%) scaleX(0); width:18px; height:3px; border-radius:4px; background:var(--gp-accent); transition:transform .35s cubic-bezier(.34,1.56,.64,1) }
 .gp-mobile-nav-item.active .gp-nav-indicator { transform:translateX(-50%) scaleX(1) }
 .gp-mobile-nav-item.active { color:var(--gp-accent); font-weight:700 }
-.gp-mobile-nav-item.active i { filter:drop-shadow(0 1px 4px rgba(139,92,246,.2)) }
-.gp-mobile-nav-item:active { transform:scale(.9) }
+.gp-mobile-nav-item.active i { transform:translateY(-2px) scale(1.2); filter:drop-shadow(0 2px 6px rgba(139,92,246,.25)) }
+.gp-mobile-nav-item:active i { transform:scale(.85) }
 .gp-mobile-nav-item.nav-spacer { flex:0.4 }
 .gp-mobile-nav-plus { position:relative; margin-top:-18px; z-index:2; flex:1; max-width:64px; display:flex; align-items:center; justify-content:center }
-.gp-mobile-nav-plus .gp-mobile-nav-plus-btn { width:58px; height:58px; border-radius:50%; border:0; display:flex; align-items:center; justify-content:center; cursor:pointer; position:relative; transition:transform .25s cubic-bezier(.4,0,.2,1),box-shadow .25s; background:linear-gradient(135deg,#8b5cf6,#7c3aed); color:#fff; font-size:1.6rem; box-shadow:0 6px 24px rgba(139,92,246,.35) }
+.gp-mobile-nav-plus .gp-mobile-nav-plus-btn { width:58px; height:58px; border-radius:50%; border:0; display:flex; align-items:center; justify-content:center; cursor:pointer; position:relative; transition:transform .4s cubic-bezier(.34,1.56,.64,1),box-shadow .3s; background:linear-gradient(135deg,#8b5cf6,#7c3aed); color:#fff; font-size:1.6rem; box-shadow:0 6px 24px rgba(139,92,246,.35) }
 .gp-mobile-nav-plus .gp-mobile-nav-plus-btn::after { content:''; position:absolute; inset:-3px; border-radius:50%; background:linear-gradient(135deg,transparent 40%,rgba(255,255,255,.15) 100%); pointer-events:none }
-.gp-mobile-nav-plus .gp-mobile-nav-plus-btn:hover { transform:scale(1.05) translateY(-2px); box-shadow:0 10px 32px rgba(139,92,246,.45) }
-.gp-mobile-nav-plus .gp-mobile-nav-plus-btn:active { transform:scale(.92) translateY(0); box-shadow:0 3px 12px rgba(139,92,246,.2) }
-.gp-mobile-nav-plus .gp-mobile-nav-plus-btn > * { position:relative; z-index:1 }
+.gp-mobile-nav-plus .gp-mobile-nav-plus-btn:active { transform:scale(.88); box-shadow:0 3px 12px rgba(139,92,246,.2) }
+@keyframes navPlusPulse { 0%,100% { box-shadow:0 6px 24px rgba(139,92,246,.35) } 50% { box-shadow:0 6px 36px rgba(139,92,246,.55),0 0 0 6px rgba(139,92,246,.1) } }
+.gp-mobile-nav-plus .gp-mobile-nav-plus-btn { animation:navPlusPulse 3s ease-in-out infinite }
+@media(hover:hover) {
+  .gp-mobile-nav-plus .gp-mobile-nav-plus-btn:hover { transform:scale(1.06) translateY(-3px); box-shadow:0 10px 32px rgba(139,92,246,.45) }
+  .gp-mobile-nav-item:hover i { transform:translateY(-1px) }
+}
 @media(max-width:768px) {
   .gp-mobile-nav { display:block }
   body { padding-bottom:78px }
@@ -913,7 +917,12 @@ if ($viewerId) {
 .dream-footer { position: relative !important; z-index: 1 !important; }
 
 /* Offset for fixed top navbar when scrolling to sections */
-.gp-section { scroll-margin-top: 70px; }
+.gp-section { scroll-margin-top: 70px; transition: transform .4s cubic-bezier(.4,0,.2,1), opacity .4s cubic-bezier(.4,0,.2,1); }
+.gp-section.slide-out-left { transform: translateX(-40px); opacity: 0; }
+.gp-section.slide-out-right { transform: translateX(40px); opacity: 0; }
+.gp-section.slide-in-right { transform: translateX(40px); opacity: 0; }
+.gp-section.slide-in-left { transform: translateX(-40px); opacity: 0; }
+.gp-section.slide-in { transform: translateX(0); opacity: 1; }
 </style>
 <div class="gp-page" id="tournamentsPage" data-csrf="<?php echo htmlspecialchars($csrfToken); ?>" data-user-id="<?php echo (int)($viewerId ?? 0); ?>" data-role="<?php echo htmlspecialchars($userRole); ?>" data-balance="<?php echo $userBalance; ?>" data-has-profile="<?php echo !empty($_SESSION['nickname']) ? '1' : '0'; ?>">
 
@@ -1002,10 +1011,12 @@ if ($viewerId) {
         <div class="gp-mobile-nav-inner">
             <button type="button" class="gp-mobile-nav-item active" data-scroll-to="browse">
                 <i class="fas fa-trophy"></i> Tournaments
+                <span class="gp-nav-indicator"></span>
             </button>
             <?php if ($viewerId): ?>
             <button type="button" class="gp-mobile-nav-item" data-scroll-to="dashboard">
                 <i class="fas fa-chart-pie"></i> Dashboard
+                <span class="gp-nav-indicator"></span>
             </button>
             <div class="gp-mobile-nav-plus">
                 <button type="button" class="gp-mobile-nav-plus-btn" data-open-modal="<?php echo $userRole === 'agent' ? 'createTournamentModal' : 'becomeAgentModal'; ?>">
@@ -1018,9 +1029,11 @@ if ($viewerId) {
             </div>
             <button type="button" class="gp-mobile-nav-item" data-scroll-to="clubs">
                 <i class="fas fa-flag"></i> Club
+                <span class="gp-nav-indicator"></span>
             </button>
             <button type="button" class="gp-mobile-nav-item" data-scroll-to="hire">
                 <i class="fas fa-gavel"></i> Hire
+                <span class="gp-nav-indicator"></span>
             </button>
             <?php endif; ?>
         </div>
@@ -1233,6 +1246,9 @@ if ($viewerId) {
                             <span><?php echo $memberCount; ?> members <?php if ($tGame): ?>&middot; <?php echo $tGame; ?><?php endif; ?> &middot; <?php echo ucfirst($tRole); ?></span>
                         </div>
                         <button class="gp-btn gp-btn-xs gp-btn-outline gp-manage-team" data-team-id="<?php echo $tId; ?>" data-team-name="<?php echo htmlspecialchars($tName, ENT_QUOTES); ?>"><i class="fas fa-users-gear"></i> Manage</button>
+                        <?php if ($tRole === 'captain'): ?>
+                        <button class="gp-btn gp-btn-xs gp-btn-ghost gp-delete-team" data-team-id="<?php echo $tId; ?>" data-team-name="<?php echo htmlspecialchars($tName, ENT_QUOTES); ?>" style="color:#dc2626"><i class="fas fa-trash-can"></i></button>
+                        <?php endif; ?>
                     </div>
                     <?php endforeach; endif; ?>
                 </div>
@@ -2552,16 +2568,66 @@ var filter = document.getElementById('lbFilter');
         'hire': ['hire']
     };
 
+    var _firstLoad = true;
+    var _currentSectionId = 'browse';
+    var _navOrder = ['browse', 'dashboard', 'clubs', 'hire'];
+
     function switchToSection(id) {
         var ids = sectionMap[id] || [id];
-        document.querySelectorAll('.gp-section').forEach(function(s) {
-            s.style.display = ids.indexOf(s.id) !== -1 ? '' : 'none';
-        });
+        var dir = _navOrder.indexOf(id) > _navOrder.indexOf(_currentSectionId) ? 'forward' : 'backward';
+
+        if (_firstLoad) {
+            var allSections = document.querySelectorAll('.gp-section');
+            allSections.forEach(function(s) {
+                s.style.display = ids.indexOf(s.id) !== -1 ? '' : 'none';
+                s.classList.remove('slide-out-left', 'slide-out-right', 'slide-in-left', 'slide-in-right', 'slide-in');
+            });
+            _firstLoad = false;
+        } else {
+            var slideOutClass = dir === 'forward' ? 'slide-out-left' : 'slide-out-right';
+            var slideInPrepClass = dir === 'forward' ? 'slide-in-right' : 'slide-in-left';
+
+            // Find currently visible section(s) to slide out
+            var visible = [];
+            document.querySelectorAll('.gp-section').forEach(function(s) {
+                if (s.style.display !== 'none') {
+                    visible.push(s);
+                    s.classList.remove('slide-in', 'slide-in-left', 'slide-in-right');
+                    s.classList.add(slideOutClass);
+                }
+            });
+
+            // After slide-out completes, swap and slide in new section from opposite side
+            setTimeout(function() {
+                visible.forEach(function(s) { s.style.display = 'none'; s.classList.remove(slideOutClass); });
+
+                document.querySelectorAll('.gp-section').forEach(function(s) {
+                    var show = ids.indexOf(s.id) !== -1;
+                    s.style.display = show ? '' : 'none';
+                    if (show) {
+                        s.classList.add(slideInPrepClass);
+                    }
+                });
+
+                // Force reflow, then slide to center
+                void document.body.offsetHeight;
+                document.querySelectorAll('.gp-section').forEach(function(s) {
+                    if (ids.indexOf(s.id) !== -1) {
+                        s.classList.remove(slideInPrepClass);
+                        s.classList.add('slide-in');
+                    }
+                });
+            }, 380);
+        }
+
+        _currentSectionId = id;
+
         // Update nav active state
         document.querySelectorAll('.gp-mobile-nav-item[data-scroll-to]').forEach(function(n) {
             n.classList.toggle('active', n.getAttribute('data-scroll-to') === id);
         });
-        // Scroll to section — scroll-margin-top CSS handles the navbar offset
+
+        // Scroll to section
         var section = document.getElementById(id);
         if (section) {
             section.scrollIntoView({ behavior: 'smooth', block: 'start' });

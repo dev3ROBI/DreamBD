@@ -2539,6 +2539,29 @@ function removeTeamMember(PDO $pdo, int $teamId, int $userId): array {
     return ['success' => false, 'message' => 'Cannot remove captain.'];
 }
 
+function deleteTeam(PDO $pdo, int $teamId, int $userId): array {
+    try {
+        // Verify user is captain
+        $stmt = $pdo->prepare("SELECT role FROM team_members WHERE team_id = ? AND user_id = ?");
+        $stmt->execute([$teamId, $userId]);
+        $member = $stmt->fetch();
+        if (!$member || $member['role'] !== 'captain') {
+            return ['success' => false, 'message' => 'Only the team captain can delete the team.'];
+        }
+        $pdo->beginTransaction();
+        $pdo->prepare("DELETE FROM team_members WHERE team_id = ?")->execute([$teamId]);
+        $pdo->prepare("DELETE FROM tournament_participants WHERE team_id = ?")->execute([$teamId]);
+        $pdo->prepare("DELETE FROM tournament_matches WHERE team1_id = ? OR team2_id = ?")->execute([$teamId, $teamId]);
+        $pdo->prepare("DELETE FROM tournament_results WHERE team_id = ?")->execute([$teamId]);
+        $pdo->prepare("DELETE FROM teams WHERE id = ?")->execute([$teamId]);
+        $pdo->commit();
+        return ['success' => true, 'message' => 'Team deleted successfully.'];
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        return ['success' => false, 'message' => 'Could not delete team.'];
+    }
+}
+
 // ─── TEAM TOURNAMENT JOIN ─────────────────────────────────
 
 function joinTournamentWithTeam(PDO $pdo, int $teamId, int $tournamentId, int $userId): array {
